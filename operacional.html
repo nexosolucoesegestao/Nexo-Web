@@ -1,0 +1,143 @@
+<!-- NEXO Intelligence Web — Operacional por Loja -->
+
+<div id="oper-area">
+    <div class="loading-state"><div class="spinner"></div><span>Carregando operacional...</span></div>
+</div>
+
+<script>
+window.initOperacional = async () => {
+    const area = document.getElementById('oper-area');
+    try {
+        const filters = NEXO.getFilters();
+        const lojas = await NEXO.api.getLojas(filters.redeId || null);
+        const produtos = await NEXO.api.getProdutos();
+        const prodMap = {}; produtos.forEach(p => prodMap[p.id] = p.corte || p.id);
+
+        if (!filters.lojaId && lojas.length > 1) {
+            area.innerHTML = `<div class="card"><div class="card-body" style="text-align:center;padding:3rem;">
+                <p style="font-size:1.1rem;font-weight:500;margin-bottom:.5rem;">Selecione uma loja no filtro lateral</p>
+                <p class="text-muted">O módulo operacional mostra dados detalhados de uma loja específica.</p>
+                <div style="margin-top:1.5rem;display:flex;flex-wrap:wrap;gap:.75rem;justify-content:center;">
+                ${lojas.map(l => `<button class="btn btn-ghost" onclick="document.getElementById('filtro-loja').value='${l.id}';document.getElementById('filtro-loja').dispatchEvent(new Event('change'));">${l.nome}</button>`).join('')}
+                </div>
+            </div></div>`;
+            return;
+        }
+
+        const lojaId = filters.lojaId || lojas[0]?.id;
+        const loja = lojas.find(l => l.id === lojaId);
+        if (!loja) { area.innerHTML = '<div class="empty-state">Loja não encontrada.</div>'; return; }
+
+        const [disp, quebra, temp, pres] = await Promise.all([
+            NEXO.api.getDisponibilidade(30, lojaId),
+            NEXO.api.getQuebra(30, lojaId),
+            NEXO.api.getTemperatura(30, lojaId),
+            NEXO.api.getPresenca(30, lojaId)
+        ]);
+
+        const sc = NEXO.engine.calculateScorecard(disp, quebra, temp, pres, lojaId);
+
+        area.innerHTML = `
+        <div style="margin-bottom:1.5rem;">
+            <h3 style="font-size:1.15rem;font-weight:600;">${loja.nome}</h3>
+            <p class="text-muted">${loja.redes?.nome || loja.rede || ''} · ${loja.cidade}/${loja.uf} · Score: <strong style="color:${sc.score >= 80 ? 'var(--success)' : sc.score >= 60 ? 'var(--warning)' : 'var(--danger)'}">${sc.score}</strong></p>
+        </div>
+
+        <div class="metrics-grid">
+            <div class="metric-card ${sc.ruptura.taxa > 15 ? 'danger' : sc.ruptura.taxa > 8 ? 'warning' : 'success'}">
+                <div class="metric-label">Ruptura</div><div class="metric-value">${sc.ruptura.taxa}%</div>
+            </div>
+            <div class="metric-card ${sc.disponibilidade.taxa < 85 ? 'warning' : 'success'}">
+                <div class="metric-label">Disp. AT</div><div class="metric-value">${sc.disponibilidade.taxa}%</div>
+            </div>
+            <div class="metric-card ${sc.quebra.porDia > 50 ? 'danger' : 'warning'}">
+                <div class="metric-label">Quebra/dia</div><div class="metric-value">R$ ${sc.quebra.porDia}</div>
+            </div>
+            <div class="metric-card ${sc.temperatura.conformidade < 90 ? 'danger' : 'success'}">
+                <div class="metric-label">Temp. OK</div><div class="metric-value">${sc.temperatura.conformidade}%</div>
+            </div>
+            <div class="metric-card ${sc.presenca.taxa < 80 ? 'warning' : 'success'}">
+                <div class="metric-label">Presença</div><div class="metric-value">${sc.presenca.taxa}%</div>
+            </div>
+        </div>
+
+        <div class="chart-row">
+            <div class="card"><div class="card-header"><h3>Ruptura diária</h3></div><div class="card-body"><canvas id="oper-ruptura"></canvas></div></div>
+            <div class="card"><div class="card-header"><h3>Temperatura (últimos 30 dias)</h3></div><div class="card-body"><canvas id="oper-temp"></canvas></div></div>
+        </div>
+
+        <div class="card" style="margin-bottom:1rem;">
+            <div class="card-header"><h3>Ruptura por produto</h3></div>
+            <div class="card-body"><table class="data-table" id="oper-table-rup"></table></div>
+        </div>
+
+        <div class="card" style="margin-bottom:1rem;">
+            <div class="card-header"><h3>Últimas quebras</h3></div>
+            <div class="card-body"><table class="data-table" id="oper-table-quebra"></table></div>
+        </div>
+
+        <div class="card">
+            <div class="card-header"><h3>Presença da equipe (últimos 7 dias)</h3></div>
+            <div class="card-body"><table class="data-table" id="oper-table-pres"></table></div>
+        </div>`;
+
+        // Chart: Ruptura diária
+        const dispByDate = NEXO.engine.groupBy(disp, 'data');
+        const dts = Object.keys(dispByDate).sort().slice(-30);
+        new Chart(document.getElementById('oper-ruptura'), {
+            type: 'bar',
+            data: { labels: dts.map(d => d.slice(5)), datasets: [{
+                data: dts.map(d => { const items = dispByDate[d]; return NEXO.engine.pct(items.filter(i => i.tem_estoque === 'NÃO').length, items.length); }),
+                backgroundColor: '#fecaca', borderColor: '#dc2626', borderWidth: 1, borderRadius: 3 }] },
+            options: { responsive: true, plugins: { legend: { display: false }, datalabels: { display: false } }, scales: { y: { beginAtZero: true, ticks: { callback: v => v + '%' } }, x: { ticks: { maxRotation: 45, font: { size: 10 } } } } }
+        });
+
+        // Chart: Temperatura
+        const tempByEquip = NEXO.engine.groupBy(temp, 'equipamento');
+        const tempColors = { 'Câmara Fria': '#2563eb', 'Balcão Refrigerado': '#16a34a', 'Balcão Congelados': '#7c3aed' };
+        const tempDates = [...new Set(temp.map(t => t.data))].sort().slice(-30);
+        const datasets = Object.entries(tempByEquip).map(([equip, recs]) => {
+            const byDate = {};
+            recs.forEach(r => byDate[r.data] = r.temperatura);
+            return { label: equip, data: tempDates.map(d => byDate[d] ?? null), borderColor: tempColors[equip] || '#64748b', backgroundColor: 'transparent', tension: .3, pointRadius: 2 };
+        });
+
+        new Chart(document.getElementById('oper-temp'), {
+            type: 'line',
+            data: { labels: tempDates.map(d => d.slice(5)), datasets },
+            options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { font: { size: 10 } } }, datalabels: { display: false } }, scales: { x: { ticks: { maxRotation: 45, font: { size: 10 } } } } }
+        });
+
+        // Table: Ruptura por produto
+        const ruptByProd = {};
+        disp.forEach(d => {
+            if (!ruptByProd[d.produto_id]) ruptByProd[d.produto_id] = { total: 0, rupturas: 0 };
+            ruptByProd[d.produto_id].total++;
+            if (d.tem_estoque === 'NÃO') ruptByProd[d.produto_id].rupturas++;
+        });
+        const prodRows = Object.entries(ruptByProd).map(([id, v]) => ({ nome: prodMap[id] || id, ...v, taxa: NEXO.engine.pct(v.rupturas, v.total) })).sort((a, b) => b.taxa - a.taxa);
+
+        document.getElementById('oper-table-rup').innerHTML = '<thead><tr><th>Produto</th><th>Rupturas</th><th>Total</th><th>Taxa</th></tr></thead><tbody>' +
+            prodRows.slice(0, 15).map(r => `<tr><td style="font-weight:500">${r.nome}</td><td>${r.rupturas}</td><td>${r.total}</td><td><span class="badge badge-${r.taxa > 15 ? 'danger' : r.taxa > 8 ? 'warning' : 'success'}">${r.taxa}%</span></td></tr>`).join('') + '</tbody>';
+
+        // Table: Últimas quebras
+        document.getElementById('oper-table-quebra').innerHTML = '<thead><tr><th>Data</th><th>Produto</th><th>Peso</th><th>Valor</th><th>Motivo</th></tr></thead><tbody>' +
+            quebra.slice(-10).reverse().map(q => `<tr><td>${q.data?.slice(5)}</td><td>${prodMap[q.produto_id] || q.produto_id}</td><td>${q.peso_kg} kg</td><td>R$ ${parseFloat(q.valor_estimado).toFixed(0)}</td><td class="text-muted">${q.motivo || '-'}</td></tr>`).join('') + '</tbody>';
+
+        // Table: Presença
+        const presLast7 = pres.filter(p => { const d = new Date(p.data + 'T12:00:00'); return (Date.now() - d.getTime()) < 7 * 86400000; });
+        const presByPessoa = NEXO.engine.groupBy(presLast7, 'pessoa_id');
+        document.getElementById('oper-table-pres').innerHTML = '<thead><tr><th>Funcionário</th><th>Presentes</th><th>Faltas</th><th>Taxa</th></tr></thead><tbody>' +
+            Object.entries(presByPessoa).map(([id, recs]) => {
+                const p = recs.filter(r => r.presente).length;
+                const f = recs.length - p;
+                const taxa = NEXO.engine.pct(p, recs.length);
+                return `<tr><td>${id}</td><td>${p}</td><td>${f}</td><td><span class="badge badge-${taxa < 70 ? 'danger' : taxa < 85 ? 'warning' : 'success'}">${taxa}%</span></td></tr>`;
+            }).join('') + '</tbody>';
+
+    } catch (err) {
+        area.innerHTML = `<div class="error-state"><p>Erro.</p><p class="text-muted">${err.message}</p></div>`;
+        console.error(err);
+    }
+};
+</script>

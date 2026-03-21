@@ -1,0 +1,116 @@
+<!-- NEXO Intelligence Web — Mercado & Clima -->
+
+<div id="mercado-area">
+    <div class="loading-state"><div class="spinner"></div><span>Carregando dados de mercado...</span></div>
+</div>
+
+<script>
+window.initMercado = async () => {
+    const area = document.getElementById('mercado-area');
+    try {
+        const { insights, mercado, clima } = NEXO.engine.analyzeMarketClimate();
+
+        const cotacoes = [
+            { nome: 'Boi gordo (@)', preco: mercado.boi_gordo.preco, var: mercado.boi_gordo.variacao, unidade: 'R$/@' },
+            { nome: 'Suíno vivo', preco: mercado.suino_vivo.preco, var: mercado.suino_vivo.variacao, unidade: 'R$/kg' },
+            { nome: 'Frango congelado', preco: mercado.frango_congelado.preco, var: mercado.frango_congelado.variacao, unidade: 'R$/kg' },
+            { nome: 'Atacado traseiro', preco: mercado.atacado_traseiro.preco, var: mercado.atacado_traseiro.variacao, unidade: 'R$/kg' },
+            { nome: 'Atacado dianteiro', preco: mercado.atacado_dianteiro.preco, var: mercado.atacado_dianteiro.variacao, unidade: 'R$/kg' },
+        ];
+
+        // Dados simulados de histórico semanal
+        const historico = {
+            boi: [318, 316, 314.5, 312.5],
+            suino: [9.10, 8.90, 8.65, 8.45],
+            frango: [7.05, 7.10, 7.15, 7.20],
+        };
+
+        area.innerHTML = `
+        <div class="chart-row">
+            <div class="card">
+                <div class="card-header"><h3>Cotações CEPEA/Esalq</h3><span class="badge badge-info">Dados simulados v1</span></div>
+                <div class="card-body">
+                    ${cotacoes.map(c => `
+                    <div class="market-card">
+                        <div><div class="market-name">${c.nome}</div><div class="text-muted" style="font-size:.75rem;">${c.unidade}</div></div>
+                        <div style="text-align:right;">
+                            <div class="market-price">R$ ${c.preco.toFixed(2)}</div>
+                            <div class="market-change ${c.var < 0 ? 'down' : 'up'}">${c.var > 0 ? '+' : ''}${c.var.toFixed(1)}%</div>
+                        </div>
+                    </div>`).join('')}
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header"><h3>Clima — São Paulo</h3><span class="badge badge-info">Simulado</span></div>
+                <div class="card-body">
+                    <div style="text-align:center;padding:1.5rem;">
+                        <div style="font-size:3rem;font-weight:700;color:var(--warning);">${clima.temperatura_max}°C</div>
+                        <div class="text-muted" style="margin-top:.5rem;">${clima.previsao}</div>
+                        <div style="margin-top:1rem;padding:1rem;background:var(--bg-secondary);border-radius:var(--radius);">
+                            <div style="font-size:.8rem;font-weight:500;color:var(--text-secondary);">Fim de semana</div>
+                            <div>${clima.fim_de_semana}</div>
+                        </div>
+                    </div>
+                    <div style="border-top:1px solid var(--border);padding-top:1rem;margin-top:.5rem;">
+                        <div style="font-size:.85rem;font-weight:500;margin-bottom:.5rem;">Impacto na operação:</div>
+                        <ul style="list-style:none;font-size:.85rem;color:var(--text-secondary);">
+                            ${clima.temperatura_max >= 30 ? '<li style="margin-bottom:.35rem;">🔥 Calor forte — demanda de churrasco aumenta</li>' : ''}
+                            ${clima.temperatura_max >= 30 ? '<li style="margin-bottom:.35rem;">🥩 Reforçar: costela, linguiça, picanha, asa de frango</li>' : ''}
+                            ${clima.temperatura_max >= 32 ? '<li style="margin-bottom:.35rem;">⚠️ Atenção redobrada com cadeia do frio</li>' : ''}
+                            <li>🌡️ Monitorar temperatura dos balcões com mais frequência</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card" style="margin-bottom:1rem;">
+            <div class="card-header"><h3>Evolução semanal</h3></div>
+            <div class="card-body"><canvas id="chart-mercado-hist"></canvas></div>
+        </div>
+
+        ${insights.length > 0 ? `
+        <div class="briefing-section">
+            <div class="briefing-title"><span class="dot dot-info"></span> Oportunidades identificadas</div>
+            ${insights.map(i => `<div class="insight-card info"><div class="insight-action">${i.acao}</div><div class="insight-meta">Motor N5 · ${i.type.replace(/_/g, ' ')}</div></div>`).join('')}
+        </div>` : ''}
+
+        <div class="card">
+            <div class="card-header"><h3>Sobre os dados de mercado</h3></div>
+            <div class="card-body" style="font-size:.85rem;color:var(--text-secondary);line-height:1.8;">
+                <p>Na versão 1 (atual), os dados de mercado são simulados para demonstração. Na versão 2, serão integrados automaticamente via:</p>
+                <p style="margin-top:.5rem;">
+                    <strong>CEPEA/Esalq:</strong> Cotações diárias de boi gordo, suíno vivo e atacado (web scraping).<br>
+                    <strong>IBGE/SIDRA:</strong> IPCA alimentação e variação de consumo (API pública).<br>
+                    <strong>OpenWeather:</strong> Previsão 7 dias por cidade da loja (API free tier).
+                </p>
+            </div>
+        </div>`;
+
+        // Chart: Histórico semanal
+        new Chart(document.getElementById('chart-mercado-hist'), {
+            type: 'line',
+            data: {
+                labels: ['Sem -3', 'Sem -2', 'Sem -1', 'Atual'],
+                datasets: [
+                    { label: 'Boi gordo (R$/@)', data: historico.boi, borderColor: '#dc2626', tension: .3, pointRadius: 4, yAxisID: 'y' },
+                    { label: 'Suíno vivo (R$/kg)', data: historico.suino, borderColor: '#2563eb', tension: .3, pointRadius: 4, yAxisID: 'y1' },
+                    { label: 'Frango cong. (R$/kg)', data: historico.frango, borderColor: '#16a34a', tension: .3, pointRadius: 4, yAxisID: 'y1' },
+                ]
+            },
+            options: {
+                responsive: true,
+                plugins: { datalabels: { display: false } },
+                scales: {
+                    y: { type: 'linear', position: 'left', title: { display: true, text: 'R$/@' } },
+                    y1: { type: 'linear', position: 'right', title: { display: true, text: 'R$/kg' }, grid: { drawOnChartArea: false } }
+                }
+            }
+        });
+
+    } catch (err) {
+        area.innerHTML = `<div class="error-state"><p>Erro.</p><p class="text-muted">${err.message}</p></div>`;
+    }
+};
+</script>

@@ -1,0 +1,146 @@
+<!-- NEXO Intelligence Web — Comparativo -->
+
+<div id="comp-area">
+    <div class="loading-state"><div class="spinner"></div><span>Carregando comparativo...</span></div>
+</div>
+
+<script>
+window.initComparativo = async () => {
+    const area = document.getElementById('comp-area');
+    try {
+        const data = await NEXO.api.loadAllData(30);
+        const filters = NEXO.getFilters();
+        let lojas = data.lojas;
+        if (filters.redeId) lojas = lojas.filter(l => l.id_rede === filters.redeId);
+
+        if (lojas.length < 2) {
+            area.innerHTML = '<div class="card"><div class="card-body" style="text-align:center;padding:3rem;"><p>O comparativo requer pelo menos 2 lojas. Selecione uma rede com múltiplas lojas.</p></div></div>';
+            return;
+        }
+
+        const scorecards = lojas.map(loja => ({
+            loja,
+            ...NEXO.engine.calculateScorecard(data.disponibilidade, data.quebra, data.temperatura, data.presenca, loja.id)
+        })).sort((a, b) => b.score - a.score);
+
+        area.innerHTML = `
+        <div class="card" style="margin-bottom:1.5rem;">
+            <div class="card-header"><h3>Ranking geral (${lojas.length} lojas)</h3></div>
+            <div class="card-body">
+                <canvas id="comp-radar"></canvas>
+            </div>
+        </div>
+
+        <div class="card" style="margin-bottom:1.5rem;">
+            <div class="card-header"><h3>Comparativo detalhado</h3></div>
+            <div class="card-body">
+                <table class="data-table">
+                    <thead><tr><th>#</th><th>Loja</th><th>Score</th><th>Ruptura</th><th>Disp. AT</th><th>Quebra/dia</th><th>Temp. OK</th><th>Presença</th></tr></thead>
+                    <tbody>
+                    ${scorecards.map((s, i) => {
+                        const scoreColor = s.score >= 80 ? 'var(--success)' : s.score >= 60 ? 'var(--warning)' : 'var(--danger)';
+                        return `<tr>
+                            <td><span class="ranking-pos ${i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : 'normal'}" style="width:24px;height:24px;font-size:.7rem;">${i+1}</span></td>
+                            <td style="font-weight:500">${s.loja.nome}</td>
+                            <td style="font-weight:700;color:${scoreColor}">${s.score}</td>
+                            <td><span class="badge badge-${s.ruptura.taxa > 15 ? 'danger' : s.ruptura.taxa > 8 ? 'warning' : 'success'}">${s.ruptura.taxa}%</span></td>
+                            <td>${s.disponibilidade.taxa}%</td>
+                            <td>R$ ${s.quebra.porDia}</td>
+                            <td><span class="badge badge-${s.temperatura.conformidade < 90 ? 'danger' : 'success'}">${s.temperatura.conformidade}%</span></td>
+                            <td>${s.presenca.taxa}%</td>
+                        </tr>`;
+                    }).join('')}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="chart-row">
+            <div class="card">
+                <div class="card-header"><h3>Score por loja</h3></div>
+                <div class="card-body"><canvas id="comp-bar"></canvas></div>
+            </div>
+            <div class="card">
+                <div class="card-header"><h3>Quebra por loja (R$)</h3></div>
+                <div class="card-body"><canvas id="comp-quebra"></canvas></div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header"><h3>Gap analysis — maior potencial de melhoria</h3></div>
+            <div class="card-body">
+                <table class="data-table" id="comp-gaps"></table>
+            </div>
+        </div>`;
+
+        // Chart: Radar (top 4 lojas)
+        const top4 = scorecards.slice(0, 4);
+        const radarColors = ['#2563eb', '#dc2626', '#16a34a', '#d97706'];
+
+        new Chart(document.getElementById('comp-radar'), {
+            type: 'radar',
+            data: {
+                labels: ['Ruptura', 'Disp. AT', 'Quebra', 'Temperatura', 'Presença'],
+                datasets: top4.map((s, i) => ({
+                    label: s.loja.nome.split(' - ')[1] || s.loja.nome,
+                    data: [s.ruptura.nota, s.disponibilidade.nota, s.quebra.nota, s.temperatura.nota, s.presenca.nota],
+                    borderColor: radarColors[i], backgroundColor: radarColors[i] + '20', pointRadius: 3
+                }))
+            },
+            options: { responsive: true, scales: { r: { beginAtZero: true, max: 100, ticks: { stepSize: 25 } } }, plugins: { datalabels: { display: false }, legend: { position: 'bottom' } } }
+        });
+
+        // Chart: Score por loja (bar)
+        new Chart(document.getElementById('comp-bar'), {
+            type: 'bar',
+            data: {
+                labels: scorecards.map(s => s.loja.nome.split(' - ')[1] || s.loja.nome),
+                datasets: [{
+                    data: scorecards.map(s => s.score),
+                    backgroundColor: scorecards.map(s => s.score >= 80 ? '#bbf7d0' : s.score >= 60 ? '#fde68a' : '#fecaca'),
+                    borderColor: scorecards.map(s => s.score >= 80 ? '#16a34a' : s.score >= 60 ? '#d97706' : '#dc2626'),
+                    borderWidth: 1, borderRadius: 4
+                }]
+            },
+            options: { responsive: true, plugins: { legend: { display: false }, datalabels: { display: false } }, scales: { y: { beginAtZero: true, max: 100 } } }
+        });
+
+        // Chart: Quebra por loja
+        const quebraByLoja = {};
+        data.quebra.forEach(q => { quebraByLoja[q.loja_id] = (quebraByLoja[q.loja_id] || 0) + (parseFloat(q.valor_estimado) || 0); });
+
+        new Chart(document.getElementById('comp-quebra'), {
+            type: 'bar',
+            data: {
+                labels: scorecards.map(s => s.loja.nome.split(' - ')[1] || s.loja.nome),
+                datasets: [{ data: scorecards.map(s => Math.round(quebraByLoja[s.loja.id] || 0)), backgroundColor: '#fecaca', borderColor: '#dc2626', borderWidth: 1, borderRadius: 4 }]
+            },
+            options: { responsive: true, plugins: { legend: { display: false }, datalabels: { display: false } }, scales: { y: { ticks: { callback: v => 'R$' + v } } } }
+        });
+
+        // Gap analysis
+        const gaps = [];
+        scorecards.forEach(s => {
+            const metrics = [
+                { nome: 'Ruptura', nota: s.ruptura.nota, loja: s.loja.nome },
+                { nome: 'Disponibilidade', nota: s.disponibilidade.nota, loja: s.loja.nome },
+                { nome: 'Quebra', nota: s.quebra.nota, loja: s.loja.nome },
+                { nome: 'Temperatura', nota: s.temperatura.nota, loja: s.loja.nome },
+                { nome: 'Presença', nota: s.presenca.nota, loja: s.loja.nome },
+            ];
+            metrics.forEach(m => { if (m.nota < 70) gaps.push(m); });
+        });
+        gaps.sort((a, b) => a.nota - b.nota);
+
+        document.getElementById('comp-gaps').innerHTML = '<thead><tr><th>Loja</th><th>Indicador</th><th>Nota atual</th><th>Gap</th><th>Prioridade</th></tr></thead><tbody>' +
+            gaps.slice(0, 10).map(g => {
+                const gap = 100 - g.nota;
+                const prio = g.nota < 40 ? 'danger' : g.nota < 60 ? 'warning' : 'info';
+                return `<tr><td>${g.loja}</td><td style="font-weight:500">${g.nome}</td><td>${g.nota}</td><td>${gap} pts</td><td><span class="badge badge-${prio}">${g.nota < 40 ? 'URGENTE' : g.nota < 60 ? 'ALTO' : 'MÉDIO'}</span></td></tr>`;
+            }).join('') + '</tbody>';
+
+    } catch (err) {
+        area.innerHTML = `<div class="error-state"><p>Erro.</p><p class="text-muted">${err.message}</p></div>`;
+    }
+};
+</script>
