@@ -1,80 +1,64 @@
 // ============================================================
-// NEXO Intelligence Web — Router (SPA hash-based)
+// NEXO Intelligence Web v2 — SPA Router (hash-based)
 // ============================================================
-window.NEXO = window.NEXO || {};
+const Router = {
+  pages: {},
 
-window.NEXO.router = (() => {
-    let container = null;
-    const routes = {};
-    const pageCache = {};
+  register(name, handler) {
+    this.pages[name] = handler;
+  },
 
-    function setContainer(sel) { container = document.querySelector(sel); }
+  init() {
+    // Nav clicks
+    document.querySelectorAll('.nav-item[data-page]').forEach(item => {
+      item.addEventListener('click', (e) => {
+        e.preventDefault();
+        window.location.hash = '#/' + item.dataset.page;
+      });
+    });
 
-    function register(map) { Object.assign(routes, map); }
+    // Hash change
+    window.addEventListener('hashchange', () => this.route());
 
-    async function navigate(route) {
-        if (!container || !routes[route]) return;
-        window.location.hash = '#/' + route;
+    // Initial route
+    if (!window.location.hash || window.location.hash === '#/') {
+      window.location.hash = '#/ruptura';
+    } else {
+      this.route();
     }
+  },
 
-    async function loadRoute(route) {
-        if (!container || !routes[route]) { route = 'copiloto'; }
-        const cfg = routes[route];
+  route() {
+    const hash = window.location.hash.replace('#/', '') || 'ruptura';
 
-        // Update active state
-        document.querySelectorAll('.sidebar-link').forEach(el => {
-            el.classList.toggle('active', el.dataset.route === route);
-        });
+    // Update nav active state
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    const activeNav = document.querySelector('.nav-item[data-page="' + hash + '"]');
+    if (activeNav) activeNav.classList.add('active');
 
-        // Update page title
-        const titles = {
-            copiloto: 'Copiloto Estratégico',
-            dashboard: 'Dashboard Executivo',
-            operacional: 'Operacional por Loja',
-            mercado: 'Mercado & Clima',
-            financeiro: 'Financeiro',
-            comparativo: 'Comparativo'
-        };
-        const titleEl = document.getElementById('page-title');
-        if (titleEl) titleEl.textContent = titles[route] || route;
+    // Page titles
+    const titles = {
+      copiloto: ['Copiloto Estratégico', 'Insights cruzados narrativos'],
+      onepage: ['OnePage', 'Painel de avião — visão consolidada'],
+      ruptura: ['Ruptura & Disponibilidade', 'Estoque → Balcão AT → Self-service AS'],
+      quebra: ['Quebra & Perdas', 'Controle de margem e desperdício'],
+      equipe: ['Quadro de Pessoal', 'Presença, escala e absenteísmo'],
+      temperatura: ['Temperatura & Equipamentos', 'Cadeia do frio — conformidade'],
+      mercado: ['Mercado & Clima', 'Dados externos e sazonalidade'],
+      financeiro: ['Financeiro', 'Impacto em R$ e ROI'],
+      comparativo: ['Comparativo', 'Benchmark entre lojas']
+    };
 
-        // Load page content
-        container.innerHTML = '<div class="loading-state"><div class="spinner"></div><span>Carregando...</span></div>';
+    const t = titles[hash] || ['NEXO Intelligence', ''];
+    document.getElementById('headerTitle').textContent = t[0];
+    document.getElementById('headerSub').textContent = t[1];
 
-        try {
-            let html;
-            if (pageCache[route]) {
-                html = pageCache[route];
-            } else {
-                const resp = await fetch(cfg.file);
-                html = await resp.text();
-                pageCache[route] = html;
-            }
-            container.innerHTML = html;
-
-            // Execute inline scripts
-            const scripts = container.querySelectorAll('script');
-            for (const s of scripts) {
-                const newScript = document.createElement('script');
-                newScript.textContent = s.textContent;
-                s.replaceWith(newScript);
-            }
-
-            if (cfg.init) await cfg.init();
-        } catch (err) {
-            container.innerHTML = `<div class="error-state"><p>Erro ao carregar a página.</p><p class="text-muted">${err.message}</p></div>`;
-        }
+    // Render page
+    const main = document.getElementById('mainContent');
+    if (this.pages[hash]) {
+      this.pages[hash](main);
+    } else {
+      main.innerHTML = '<div class="page-loading">Módulo "' + hash + '" — em desenvolvimento</div>';
     }
-
-    function init() {
-        window.addEventListener('hashchange', () => {
-            const route = window.location.hash.replace('#/', '') || 'copiloto';
-            loadRoute(route);
-        });
-
-        const route = window.location.hash.replace('#/', '') || 'copiloto';
-        loadRoute(route);
-    }
-
-    return { setContainer, register, navigate, loadRoute, init };
-})();
+  }
+};
