@@ -1,462 +1,340 @@
 // ============================================================
-// NEXO Intelligence Web — Engine v1.0
-// Motor de inteligência rules-based (Níveis 1-5)
-// Sem dependência de API de IA — roda 100% no browser
+// NEXO Intelligence Web v2 — Engine (Motor de Inteligência)
+// Processa dados e gera: aggregations, rankings, insights cruzados
 // ============================================================
-window.NEXO = window.NEXO || {};
-
-window.NEXO.engine = (() => {
-
-    // ══════════════════════════════════════════════════════════
-    // HELPERS
-    // ══════════════════════════════════════════════════════════
-
-    function groupBy(arr, fn) {
-        return arr.reduce((acc, item) => {
-            const key = typeof fn === 'string' ? item[fn] : fn(item);
-            (acc[key] = acc[key] || []).push(item);
-            return acc;
-        }, {});
-    }
-
-    function dayOfWeek(dateStr) {
-        const d = new Date(dateStr + 'T12:00:00');
-        return d.getDay();
-    }
-
-    function dayName(dow) {
-        return ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'][dow];
-    }
-
-    function last(arr, n) { return arr.slice(-n); }
-
-    function pct(part, total) { return total === 0 ? 0 : Math.round((part / total) * 1000) / 10; }
-
-    function avg(arr) { return arr.length === 0 ? 0 : arr.reduce((a, b) => a + b, 0) / arr.length; }
-
-    // ══════════════════════════════════════════════════════════
-    // NÍVEL 1 — Padrões Temporais
-    // "Pernil tem ruptura em 4 das 5 últimas segundas"
-    // ══════════════════════════════════════════════════════════
-
-    function analyzeTemporalPatterns(disponibilidade, produtos) {
-        const insights = [];
-        const prodMap = {};
-        produtos.forEach(p => prodMap[p.id] = p.corte_pai || p.id);
-
-        const rupturas = disponibilidade.filter(d => d.tem_estoque === 'NÃO');
-        const byProduto = groupBy(rupturas, 'produto_id');
-
-        Object.entries(byProduto).forEach(([prodId, records]) => {
-            const byDow = groupBy(records, r => dayOfWeek(r.data));
-
-            Object.entries(byDow).forEach(([dow, dayRecords]) => {
-                const totalDaysForDow = [...new Set(
-                    disponibilidade.filter(d => d.produto_id === prodId && dayOfWeek(d.data) === parseInt(dow))
-                        .map(d => d.data)
-                )].length;
-
-                const ruptureDays = [...new Set(dayRecords.map(d => d.data))].length;
-                const rate = pct(ruptureDays, totalDaysForDow);
-
-                if (rate >= 60 && ruptureDays >= 3) {
-                    insights.push({
-                        level: 1,
-                        type: 'ruptura_recorrente',
-                        severity: rate >= 80 ? 'critical' : 'warning',
-                        produto: prodMap[prodId] || prodId,
-                        produto_id: prodId,
-                        dia: dayName(parseInt(dow)),
-                        dow: parseInt(dow),
-                        ocorrencias: ruptureDays,
-                        total: totalDaysForDow,
-                        taxa: rate,
-                        acao: `Aumentar pedido de ${prodMap[prodId] || prodId} para ${dayName(parseInt(dow))}. Ruptura em ${ruptureDays} de ${totalDaysForDow} ${dayName(parseInt(dow))}s.`
-                    });
-                }
-            });
-        });
-
-        // Padrão de indisponibilidade AT
-        const semEstoqueAT = disponibilidade.filter(d => d.tem_estoque === 'SIM' && d.disponivel_at === 'NÃO');
-        const byProdAT = groupBy(semEstoqueAT, 'produto_id');
-
-        Object.entries(byProdAT).forEach(([prodId, records]) => {
-            const totalComEstoque = disponibilidade.filter(d => d.produto_id === prodId && d.tem_estoque === 'SIM').length;
-            const rate = pct(records.length, totalComEstoque);
-
-            if (rate >= 15 && records.length >= 5) {
-                insights.push({
-                    level: 1,
-                    type: 'indisponibilidade_at',
-                    severity: 'warning',
-                    produto: prodMap[prodId] || prodId,
-                    taxa: rate,
-                    ocorrencias: records.length,
-                    acao: `${prodMap[prodId] || prodId} tem estoque mas não chega ao balcão AT em ${rate}% das vezes. Verificar fluxo de reposição.`
-                });
-            }
-        });
-
-        return insights.sort((a, b) => b.taxa - a.taxa);
-    }
-
-    // ══════════════════════════════════════════════════════════
-    // NÍVEL 2 — Correlações Operacionais
-    // "Costela exposta na segunda, quebra na quarta"
-    // ══════════════════════════════════════════════════════════
-
-    function analyzeCorrelations(disponibilidade, quebra, presenca, produtos) {
-        const insights = [];
-        const prodMap = {};
-        produtos.forEach(p => prodMap[p.id] = p.corte_pai || p.id);
-
-        // Correlação: disponibilidade → quebra (produto exposto D, quebra D+2/D+3)
-        const quebraByProd = groupBy(quebra, 'produto_id');
-        const dispByProd = groupBy(disponibilidade.filter(d => d.tem_estoque === 'SIM'), 'produto_id');
-
-        Object.entries(quebraByProd).forEach(([prodId, quebras]) => {
-            if (quebras.length < 3) return;
-            const quebraDates = quebras.map(q => q.data);
-            const dispDates = (dispByProd[prodId] || []).map(d => d.data);
-
-            let correlatedCount = 0;
-            quebraDates.forEach(qd => {
-                const qdDate = new Date(qd + 'T12:00:00');
-                for (let offset = 1; offset <= 3; offset++) {
-                    const checkDate = new Date(qdDate);
-                    checkDate.setDate(checkDate.getDate() - offset);
-                    const checkStr = checkDate.toISOString().slice(0, 10);
-                    if (dispDates.includes(checkStr)) { correlatedCount++; break; }
-                }
-            });
-
-            const rate = pct(correlatedCount, quebras.length);
-            if (rate >= 50 && correlatedCount >= 3) {
-                insights.push({
-                    level: 2,
-                    type: 'exposicao_quebra',
-                    severity: 'warning',
-                    produto: prodMap[prodId] || prodId,
-                    correlacao: rate,
-                    ocorrencias: correlatedCount,
-                    acao: `${prodMap[prodId] || prodId}: ${rate}% das quebras ocorrem 1-3 dias após exposição. Ação: reduzir batch de exposição.`
-                });
-            }
-        });
-
-        // Correlação: faltas → ruptura (dias com falta têm mais ruptura?)
-        const presByDate = groupBy(presenca, 'data');
-        const dispByDate = groupBy(disponibilidade, 'data');
-
-        let diasComFalta = 0, rupturaComFalta = 0, rupturaSemFalta = 0, diasSemFalta = 0;
-
-        Object.entries(dispByDate).forEach(([data, disps]) => {
-            const presDay = presByDate[data] || [];
-            const faltas = presDay.filter(p => !p.presente).length;
-            const totalRuptura = disps.filter(d => d.tem_estoque === 'NÃO').length;
-            const totalDisp = disps.length;
-
-            if (faltas > 0) {
-                diasComFalta++;
-                rupturaComFalta += pct(totalRuptura, totalDisp);
-            } else {
-                diasSemFalta++;
-                rupturaSemFalta += pct(totalRuptura, totalDisp);
-            }
-        });
-
-        const avgRuptComFalta = diasComFalta > 0 ? rupturaComFalta / diasComFalta : 0;
-        const avgRuptSemFalta = diasSemFalta > 0 ? rupturaSemFalta / diasSemFalta : 0;
-
-        if (avgRuptComFalta > avgRuptSemFalta * 1.3 && diasComFalta >= 3) {
-            insights.push({
-                level: 2,
-                type: 'falta_ruptura',
-                severity: 'warning',
-                taxaComFalta: Math.round(avgRuptComFalta * 10) / 10,
-                taxaSemFalta: Math.round(avgRuptSemFalta * 10) / 10,
-                acao: `Dias com faltas de funcionários têm ${Math.round(avgRuptComFalta * 10) / 10}% de ruptura vs ${Math.round(avgRuptSemFalta * 10) / 10}% nos dias completos. Plano de contingência recomendado.`
-            });
-        }
-
-        return insights;
-    }
-
-    // ══════════════════════════════════════════════════════════
-    // NÍVEL 3 — Impacto Financeiro
-    // "Quebra de costela: R$420 em 4 semanas"
-    // ══════════════════════════════════════════════════════════
-
-    function analyzeFinancialImpact(quebra, disponibilidade, produtos) {
-        const insights = [];
-        const prodMap = {};
-        produtos.forEach(p => prodMap[p.id] = p.corte_pai || p.id);
-
-        // Total de quebra por produto em R$
-        const quebraByProd = groupBy(quebra, 'produto_id');
-        const quebraRanking = Object.entries(quebraByProd).map(([prodId, records]) => {
-            const totalValor = records.reduce((sum, r) => sum + (parseFloat(r.valor_estimado) || 0), 0);
-            const totalPeso = records.reduce((sum, r) => sum + (parseFloat(r.peso_kg) || 0), 0);
-            return {
-                produto: prodMap[prodId] || prodId,
-                produto_id: prodId,
-                valor: Math.round(totalValor * 100) / 100,
-                peso: Math.round(totalPeso * 100) / 100,
-                ocorrencias: records.length
-            };
-        }).sort((a, b) => b.valor - a.valor);
-
-        const totalQuebra = quebraRanking.reduce((s, r) => s + r.valor, 0);
-
-        if (quebraRanking.length > 0) {
-            insights.push({
-                level: 3,
-                type: 'quebra_total',
-                severity: totalQuebra > 2000 ? 'critical' : totalQuebra > 800 ? 'warning' : 'info',
-                valor: Math.round(totalQuebra * 100) / 100,
-                ranking: quebraRanking.slice(0, 5),
-                acao: `Quebra total no período: R$ ${totalQuebra.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}. Top 3: ${quebraRanking.slice(0, 3).map(r => r.produto).join(', ')}.`
-            });
-        }
-
-        // Custo estimado de ruptura (venda perdida)
-        const totalDisp = disponibilidade.length;
-        const totalRuptura = disponibilidade.filter(d => d.tem_estoque === 'NÃO').length;
-        const taxaRuptura = pct(totalRuptura, totalDisp);
-        const PRECO_MEDIO_KG = 42;
-        const VENDA_MEDIA_KG_DIA = 2.5;
-        const vendaPerdidaEstimada = totalRuptura * VENDA_MEDIA_KG_DIA * PRECO_MEDIO_KG * 0.3;
-
-        if (vendaPerdidaEstimada > 500) {
-            insights.push({
-                level: 3,
-                type: 'venda_perdida',
-                severity: vendaPerdidaEstimada > 5000 ? 'critical' : 'warning',
-                valor: Math.round(vendaPerdidaEstimada),
-                taxaRuptura: taxaRuptura,
-                totalRupturas: totalRuptura,
-                acao: `Venda perdida estimada por ruptura: R$ ${Math.round(vendaPerdidaEstimada).toLocaleString('pt-BR')}. Taxa de ruptura: ${taxaRuptura}%.`
-            });
-        }
-
-        return insights;
-    }
-
-    // ══════════════════════════════════════════════════════════
-    // NÍVEL 4 — Score Preditivo
-    // "Amanhã é segunda. Risco ruptura: Pernil 85%"
-    // ══════════════════════════════════════════════════════════
-
-    function analyzePredictiveScore(disponibilidade, produtos) {
-        const insights = [];
-        const prodMap = {};
-        produtos.forEach(p => prodMap[p.id] = p.corte_pai || p.id);
-
-        const tomorrow = new Date();
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        const tomorrowDow = tomorrow.getDay();
-        const tomorrowName = dayName(tomorrowDow);
-
-        if (tomorrowDow === 0) return insights;
-
-        const byProduto = groupBy(disponibilidade, 'produto_id');
-        const predictions = [];
-
-        Object.entries(byProduto).forEach(([prodId, records]) => {
-            const sameDow = records.filter(r => dayOfWeek(r.data) === tomorrowDow);
-            if (sameDow.length < 3) return;
-
-            const rupturas = sameDow.filter(r => r.tem_estoque === 'NÃO').length;
-            const riskScore = pct(rupturas, sameDow.length);
-
-            if (riskScore >= 40) {
-                predictions.push({
-                    produto: prodMap[prodId] || prodId,
-                    produto_id: prodId,
-                    risco: riskScore,
-                    historico: `${rupturas}/${sameDow.length} ${tomorrowName}s`
-                });
-            }
-        });
-
-        predictions.sort((a, b) => b.risco - a.risco);
-
-        if (predictions.length > 0) {
-            insights.push({
-                level: 4,
-                type: 'previsao_ruptura',
-                severity: predictions[0].risco >= 70 ? 'critical' : 'warning',
-                dia: tomorrowName,
-                predictions: predictions.slice(0, 5),
-                acao: `Amanhã (${tomorrowName}): ${predictions.length} produtos com risco elevado de ruptura. Top: ${predictions.slice(0, 3).map(p => `${p.produto} (${p.risco}%)`).join(', ')}.`
-            });
-        }
-
-        return insights;
-    }
-
-    // ══════════════════════════════════════════════════════════
-    // NÍVEL 5 — Mercado + Clima (dados simulados na v1)
-    // "CEPEA mostra queda de 3% no suíno"
-    // ══════════════════════════════════════════════════════════
-
-    function analyzeMarketClimate() {
-        const insights = [];
-
-        // Dados simulados — na v2, virão de web scraping CEPEA + API clima
-        const mercado = {
-            boi_gordo: { preco: 312.50, variacao: -1.8 },
-            suino_vivo: { preco: 8.45, variacao: -3.2 },
-            frango_congelado: { preco: 7.20, variacao: 0.5 },
-            atacado_traseiro: { preco: 22.80, variacao: -2.1 },
-            atacado_dianteiro: { preco: 16.50, variacao: 1.3 },
-        };
-
-        const clima = {
-            temperatura_max: 34,
-            previsao: 'Ensolarado, máxima 34°C',
-            fim_de_semana: 'Sol com nuvens, máx 32°C'
-        };
-
-        // Oportunidades de compra
-        Object.entries(mercado).forEach(([item, data]) => {
-            if (data.variacao <= -2.5) {
-                const nomeFormatado = item.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-                insights.push({
-                    level: 5,
-                    type: 'oportunidade_compra',
-                    severity: 'info',
-                    item: nomeFormatado,
-                    preco: data.preco,
-                    variacao: data.variacao,
-                    acao: `${nomeFormatado} caiu ${Math.abs(data.variacao)}% na semana. Oportunidade de compra para melhorar margem.`
-                });
-            }
-        });
-
-        // Clima quente = mais churrasco
-        if (clima.temperatura_max >= 32) {
-            insights.push({
-                level: 5,
-                type: 'clima_oportunidade',
-                severity: 'info',
-                temperatura: clima.temperatura_max,
-                previsao: clima.previsao,
-                acao: `Previsão ${clima.temperatura_max}°C — reforçar mix de churrasco: costela, linguiça, picanha. Fim de semana: ${clima.fim_de_semana}.`
-            });
-        }
-
-        return { insights, mercado, clima };
-    }
-
-    // ══════════════════════════════════════════════════════════
-    // SCORECARD — Nota consolidada por loja
-    // ══════════════════════════════════════════════════════════
-
-    function calculateScorecard(disponibilidade, quebra, temperatura, presenca, lojaId) {
-        const dispLoja = lojaId ? disponibilidade.filter(d => d.loja_id === lojaId) : disponibilidade;
-        const quebraLoja = lojaId ? quebra.filter(q => q.loja_id === lojaId) : quebra;
-        const tempLoja = lojaId ? temperatura.filter(t => t.loja_id === lojaId) : temperatura;
-        const presLoja = lojaId ? presenca.filter(p => p.loja_id === lojaId) : presenca;
-
-        // Ruptura: % sem estoque (menor = melhor)
-        const totalDisp = dispLoja.length;
-        const rupturas = dispLoja.filter(d => d.tem_estoque === 'NÃO').length;
-        const taxaRuptura = pct(rupturas, totalDisp);
-        const notaRuptura = Math.max(0, 100 - (taxaRuptura * 4));
-
-        // Disponibilidade AT: % com estoque E no balcão
-        const comEstoque = dispLoja.filter(d => d.tem_estoque === 'SIM');
-        const noAT = comEstoque.filter(d => d.disponivel_at === 'SIM').length;
-        const notaDisponibilidade = pct(noAT, comEstoque.length);
-
-        // Quebra: valor/dia (menor = melhor)
-        const dias = [...new Set(quebraLoja.map(q => q.data))].length || 1;
-        const totalQuebraValor = quebraLoja.reduce((s, q) => s + (parseFloat(q.valor_estimado) || 0), 0);
-        const quebraDia = totalQuebraValor / dias;
-        const notaQuebra = Math.max(0, 100 - (quebraDia * 0.8));
-
-        // Temperatura: % dentro da faixa
-        const FAIXAS = {
-            'Câmara Fria': { min: -2, max: 4 },
-            'Balcão Refrigerado': { min: 0, max: 8 },
-            'Balcão Congelados': { min: -25, max: -12 }
-        };
-        const tempConformes = tempLoja.filter(t => {
-            const faixa = FAIXAS[t.equipamento];
-            if (!faixa) return true;
-            return t.temperatura >= faixa.min && t.temperatura <= faixa.max;
-        }).length;
-        const notaTemperatura = pct(tempConformes, tempLoja.length);
-
-        // Presença: % presentes
-        const presentes = presLoja.filter(p => p.presente).length;
-        const notaPresenca = pct(presentes, presLoja.length);
-
-        // Score final ponderado
-        const score = Math.round(
-            notaRuptura * 0.25 +
-            notaDisponibilidade * 0.20 +
-            notaQuebra * 0.20 +
-            notaTemperatura * 0.20 +
-            notaPresenca * 0.15
-        );
-
-        return {
-            score,
-            ruptura: { taxa: taxaRuptura, nota: Math.round(notaRuptura), total: rupturas, registros: totalDisp },
-            disponibilidade: { taxa: pct(noAT, comEstoque.length), nota: Math.round(notaDisponibilidade) },
-            quebra: { valorTotal: Math.round(totalQuebraValor), porDia: Math.round(quebraDia), nota: Math.round(notaQuebra), ocorrencias: quebraLoja.length },
-            temperatura: { conformidade: pct(tempConformes, tempLoja.length), nota: Math.round(notaTemperatura), anomalias: tempLoja.length - tempConformes },
-            presenca: { taxa: pct(presentes, presLoja.length), nota: Math.round(notaPresenca) }
-        };
-    }
-
-    // ══════════════════════════════════════════════════════════
-    // BRIEFING — Gera briefing estruturado para o Copiloto
-    // ══════════════════════════════════════════════════════════
-
-    function generateBriefing(data) {
-        const { disponibilidade, quebra, temperatura, presenca, produtos, lojas } = data;
-
-        const n1 = analyzeTemporalPatterns(disponibilidade, produtos);
-        const n2 = analyzeCorrelations(disponibilidade, quebra, presenca, produtos);
-        const n3 = analyzeFinancialImpact(quebra, disponibilidade, produtos);
-        const n4 = analyzePredictiveScore(disponibilidade, produtos);
-        const { insights: n5, mercado, clima } = analyzeMarketClimate();
-
-        const allInsights = [...n1, ...n2, ...n3, ...n4, ...n5];
-        const critical = allInsights.filter(i => i.severity === 'critical');
-        const warnings = allInsights.filter(i => i.severity === 'warning');
-        const info = allInsights.filter(i => i.severity === 'info');
-
-        // Scorecard geral
-        const scorecard = calculateScorecard(disponibilidade, quebra, temperatura, presenca);
-
-        // Scorecard por loja
-        const scorecardLojas = lojas.map(loja => ({
-            loja: loja,
-            ...calculateScorecard(disponibilidade, quebra, temperatura, presenca, loja.id)
-        })).sort((a, b) => b.score - a.score);
-
-        return {
-            geradoEm: new Date().toISOString(),
-            scorecard,
-            scorecardLojas,
-            alertas: critical,
-            atencao: warnings,
-            oportunidades: info,
-            insights: { n1, n2, n3, n4, n5 },
-            mercado,
-            clima,
-            totalInsights: allInsights.length
-        };
-    }
+const Engine = {
+
+  // ---- PRODUCT MAP: produto_id → corte_pai ----
+  _prodMap: {},
+
+  async buildProdMap() {
+    const prods = await API.getProdutos();
+    prods.forEach(p => { this._prodMap[p.id] = p.corte_pai; });
+    return this._prodMap;
+  },
+
+  prodName(id) {
+    return this._prodMap[id] || id;
+  },
+
+  // ---- LOJA MAP ----
+  _lojaMap: {},
+
+  async buildLojaMap(redeId) {
+    const lojas = await API.getLojas(redeId);
+    lojas.forEach(l => { this._lojaMap[l.id] = l.nome; });
+    return this._lojaMap;
+  },
+
+  lojaName(id) {
+    return this._lojaMap[id] || id;
+  },
+
+  // ============================================================
+  // RUPTURA KPI
+  // ============================================================
+  processRuptura(disponibilidade, periodDias) {
+    const { desde, ate, desdeAnterior, ateAnterior } = Utils.periodRange(periodDias);
+
+    const atual = disponibilidade.filter(d => d.data >= desde && d.data <= ate);
+    const anterior = disponibilidade.filter(d => d.data >= desdeAnterior && d.data <= ateAnterior);
 
     return {
-        analyzeTemporalPatterns, analyzeCorrelations, analyzeFinancialImpact,
-        analyzePredictiveScore, analyzeMarketClimate, calculateScorecard,
-        generateBriefing, groupBy, pct, dayName
+      ruptura: this._calcRuptura(atual, anterior),
+      dispAT: this._calcDispAT(atual, anterior),
+      dispAS: this._calcDispAS(atual, anterior),
+      motivos: this._calcMotivos(atual),
+      porDiaSemana: this._calcPorDiaSemana(atual),
+      heatmap: this._calcHeatmap(atual),
+      evolutivoMensal: this._calcEvoMensal(disponibilidade)
     };
-})();
+  },
+
+  // --- Ruptura (sem estoque) ---
+  _calcRuptura(atual, anterior) {
+    const totalAtual = atual.length;
+    const rupAtual = atual.filter(d => d.tem_estoque === 'NÃO').length;
+    const taxaAtual = Utils.pct(rupAtual, totalAtual);
+
+    const totalAnt = anterior.length;
+    const rupAnt = anterior.filter(d => d.tem_estoque === 'NÃO').length;
+    const taxaAnt = Utils.pct(rupAnt, totalAnt);
+
+    const variacao = Utils.round1(taxaAtual - taxaAnt);
+
+    // Ranking por loja
+    const byLoja = Utils.groupBy(atual, 'loja_id');
+    const byLojaAnt = Utils.groupBy(anterior, 'loja_id');
+    const rankLojas = Object.entries(byLoja).map(([lojaId, records]) => {
+      const rup = records.filter(d => d.tem_estoque === 'NÃO').length;
+      const taxa = Utils.pct(rup, records.length);
+      const recAnt = byLojaAnt[lojaId] || [];
+      const taxaAnt = Utils.pct(recAnt.filter(d => d.tem_estoque === 'NÃO').length, recAnt.length);
+      return { id: lojaId, nome: this.lojaName(lojaId), taxa, variacao: Utils.round1(taxa - taxaAnt) };
+    });
+    rankLojas.sort((a, b) => b.taxa - a.taxa); // pior primeiro
+
+    // Ranking por produto
+    const byProd = Utils.groupBy(atual, 'produto_id');
+    const byProdAnt = Utils.groupBy(anterior, 'produto_id');
+    const rankProdutos = Object.entries(byProd).map(([prodId, records]) => {
+      const rup = records.filter(d => d.tem_estoque === 'NÃO').length;
+      const taxa = Utils.pct(rup, records.length);
+      const recAnt = byProdAnt[prodId] || [];
+      const taxaAnt = Utils.pct(recAnt.filter(d => d.tem_estoque === 'NÃO').length, recAnt.length);
+      return { id: prodId, nome: this.prodName(prodId), taxa, variacao: Utils.round1(taxa - taxaAnt) };
+    });
+    rankProdutos.sort((a, b) => b.taxa - a.taxa);
+
+    return { taxa: taxaAtual, variacao, total: rupAtual, rankLojas, rankProdutos };
+  },
+
+  // --- Disponibilidade AT ---
+  _calcDispAT(atual, anterior) {
+    const comEstoque = atual.filter(d => d.tem_estoque === 'SIM');
+    const dispAT = comEstoque.filter(d => d.disponivel_at === 'SIM').length;
+    const taxaAtual = Utils.pct(dispAT, comEstoque.length);
+
+    const comEstoqueAnt = anterior.filter(d => d.tem_estoque === 'SIM');
+    const dispATAnt = comEstoqueAnt.filter(d => d.disponivel_at === 'SIM').length;
+    const taxaAnt = Utils.pct(dispATAnt, comEstoqueAnt.length);
+
+    const variacao = Utils.round1(taxaAtual - taxaAnt);
+
+    // Ranking por loja
+    const byLoja = Utils.groupBy(comEstoque, 'loja_id');
+    const byLojaAnt = Utils.groupBy(comEstoqueAnt, 'loja_id');
+    const rankLojas = Object.entries(byLoja).map(([lojaId, records]) => {
+      const disp = records.filter(d => d.disponivel_at === 'SIM').length;
+      const taxa = Utils.pct(disp, records.length);
+      const recAnt = (byLojaAnt[lojaId] || []);
+      const taxaAnt = Utils.pct(recAnt.filter(d => d.disponivel_at === 'SIM').length, recAnt.length);
+      return { id: lojaId, nome: this.lojaName(lojaId), taxa, variacao: Utils.round1(taxa - taxaAnt) };
+    });
+    rankLojas.sort((a, b) => a.taxa - b.taxa); // pior primeiro (menor disp)
+
+    // Ranking por produto
+    const byProd = Utils.groupBy(comEstoque, 'produto_id');
+    const byProdAnt = Utils.groupBy(comEstoqueAnt, 'produto_id');
+    const rankProdutos = Object.entries(byProd).map(([prodId, records]) => {
+      const disp = records.filter(d => d.disponivel_at === 'SIM').length;
+      const taxa = Utils.pct(disp, records.length);
+      const recAnt = (byProdAnt[prodId] || []);
+      const taxaAnt = Utils.pct(recAnt.filter(d => d.disponivel_at === 'SIM').length, recAnt.length);
+      return { id: prodId, nome: this.prodName(prodId), taxa, variacao: Utils.round1(taxa - taxaAnt) };
+    });
+    rankProdutos.sort((a, b) => a.taxa - b.taxa);
+
+    return { taxa: taxaAtual, variacao, rankLojas, rankProdutos };
+  },
+
+  // --- Disponibilidade AS ---
+  _calcDispAS(atual, anterior) {
+    const comEstoque = atual.filter(d => d.tem_estoque === 'SIM');
+    const dispAS = comEstoque.filter(d => d.disponivel_as === 'SIM').length;
+    const taxaAtual = Utils.pct(dispAS, comEstoque.length);
+
+    const comEstoqueAnt = anterior.filter(d => d.tem_estoque === 'SIM');
+    const dispASAnt = comEstoqueAnt.filter(d => d.disponivel_as === 'SIM').length;
+    const taxaAnt = Utils.pct(dispASAnt, comEstoqueAnt.length);
+
+    const variacao = Utils.round1(taxaAtual - taxaAnt);
+
+    const byLoja = Utils.groupBy(comEstoque, 'loja_id');
+    const byLojaAnt = Utils.groupBy(comEstoqueAnt, 'loja_id');
+    const rankLojas = Object.entries(byLoja).map(([lojaId, records]) => {
+      const disp = records.filter(d => d.disponivel_as === 'SIM').length;
+      const taxa = Utils.pct(disp, records.length);
+      const recAnt = (byLojaAnt[lojaId] || []);
+      const taxaAnt = Utils.pct(recAnt.filter(d => d.disponivel_as === 'SIM').length, recAnt.length);
+      return { id: lojaId, nome: this.lojaName(lojaId), taxa, variacao: Utils.round1(taxa - taxaAnt) };
+    });
+    rankLojas.sort((a, b) => a.taxa - b.taxa);
+
+    const byProd = Utils.groupBy(comEstoque, 'produto_id');
+    const byProdAnt = Utils.groupBy(comEstoqueAnt, 'produto_id');
+    const rankProdutos = Object.entries(byProd).map(([prodId, records]) => {
+      const disp = records.filter(d => d.disponivel_as === 'SIM').length;
+      const taxa = Utils.pct(disp, records.length);
+      const recAnt = (byProdAnt[prodId] || []);
+      const taxaAnt = Utils.pct(recAnt.filter(d => d.disponivel_as === 'SIM').length, recAnt.length);
+      return { id: prodId, nome: this.prodName(prodId), taxa, variacao: Utils.round1(taxa - taxaAnt) };
+    });
+    rankProdutos.sort((a, b) => a.taxa - b.taxa);
+
+    return { taxa: taxaAtual, variacao, rankLojas, rankProdutos };
+  },
+
+  // --- Motivos ---
+  _calcMotivos(atual) {
+    // Motivos de ruptura (sem estoque)
+    const semEstoque = atual.filter(d => d.tem_estoque === 'NÃO' && d.motivo_ruptura);
+    const motRuptura = {};
+    semEstoque.forEach(d => {
+      const m = d.motivo_ruptura;
+      motRuptura[m] = (motRuptura[m] || 0) + 1;
+    });
+
+    // Motivos de indisponibilidade AT
+    const naoDispAT = atual.filter(d => d.tem_estoque === 'SIM' && d.disponivel_at === 'NÃO' && d.motivo_at);
+    const motAT = {};
+    naoDispAT.forEach(d => {
+      const m = d.motivo_at;
+      motAT[m] = (motAT[m] || 0) + 1;
+    });
+
+    // Motivos de indisponibilidade AS
+    const naoDispAS = atual.filter(d => d.tem_estoque === 'SIM' && d.disponivel_as === 'NÃO' && d.motivo_as);
+    const motAS = {};
+    naoDispAS.forEach(d => {
+      const m = d.motivo_as;
+      motAS[m] = (motAS[m] || 0) + 1;
+    });
+
+    // Merge AT + AS motivos (ambos são de execução)
+    const motIndisponibilidade = {};
+    [motAT, motAS].forEach(obj => {
+      Object.entries(obj).forEach(([k, v]) => {
+        motIndisponibilidade[k] = (motIndisponibilidade[k] || 0) + v;
+      });
+    });
+
+    return { ruptura: motRuptura, indisponibilidade: motIndisponibilidade };
+  },
+
+  // --- Por dia da semana ---
+  _calcPorDiaSemana(atual) {
+    const dias = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+    const byDow = {};
+    dias.forEach((d, i) => { byDow[i] = { total: 0, ruptura: 0 }; });
+
+    atual.forEach(d => {
+      const dow = Utils.dowIndex(d.data);
+      byDow[dow].total++;
+      if (d.tem_estoque === 'NÃO') byDow[dow].ruptura++;
+    });
+
+    return dias.map((nome, i) => ({
+      dia: nome,
+      taxa: Utils.pct(byDow[i].ruptura, byDow[i].total)
+    }));
+  },
+
+  // --- Heatmap: produto × dia ---
+  _calcHeatmap(atual) {
+    const dias = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+    const prodIds = [...new Set(atual.map(d => d.produto_id))];
+    const matrix = {};
+
+    prodIds.forEach(pid => {
+      matrix[pid] = {};
+      dias.forEach((_, di) => { matrix[pid][di] = { total: 0, rup: 0 }; });
+    });
+
+    atual.forEach(d => {
+      const dow = Utils.dowIndex(d.data);
+      if (matrix[d.produto_id]) {
+        matrix[d.produto_id][dow].total++;
+        if (d.tem_estoque === 'NÃO') matrix[d.produto_id][dow].rup++;
+      }
+    });
+
+    return prodIds.map(pid => ({
+      produto: this.prodName(pid),
+      dias: dias.map((_, di) => Utils.pct(matrix[pid][di].rup, matrix[pid][di].total))
+    }));
+  },
+
+  // --- Evolutivo mensal ---
+  _calcEvoMensal(disponibilidade) {
+    const byMonth = Utils.groupBy(disponibilidade, d => Utils.monthKey(d.data));
+    const months = Object.keys(byMonth).sort();
+
+    return {
+      ruptura: months.map(m => {
+        const recs = byMonth[m];
+        const rup = recs.filter(d => d.tem_estoque === 'NÃO').length;
+        return { mes: m, label: Utils.monthName(recs[0].data), valor: rup, taxa: Utils.pct(rup, recs.length) };
+      }),
+      dispAT: months.map(m => {
+        const recs = byMonth[m].filter(d => d.tem_estoque === 'SIM');
+        const disp = recs.filter(d => d.disponivel_at === 'SIM').length;
+        return { mes: m, label: Utils.monthName(byMonth[m][0].data), valor: disp, taxa: Utils.pct(disp, recs.length) };
+      }),
+      dispAS: months.map(m => {
+        const recs = byMonth[m].filter(d => d.tem_estoque === 'SIM');
+        const disp = recs.filter(d => d.disponivel_as === 'SIM').length;
+        return { mes: m, label: Utils.monthName(byMonth[m][0].data), valor: disp, taxa: Utils.pct(disp, recs.length) };
+      })
+    };
+  },
+
+  // ============================================================
+  // COPILOTO — Insights Cruzados (Engine v2)
+  // ============================================================
+  generateInsights(data) {
+    const insights = { criticos: [], oportunidades: [], previsao: [], evolucao: [] };
+
+    // Data é o resultado de processRuptura + dados de presença, temperatura, quebra
+    if (data.ruptura) this._insightsRuptura(data, insights);
+    if (data.temperatura) this._insightsTemperatura(data, insights);
+    if (data.presenca) this._insightsPresenca(data, insights);
+    if (data.quebra) this._insightsQuebra(data, insights);
+
+    // Limitar a 3-4 por bloco (qualidade > quantidade)
+    Object.keys(insights).forEach(k => {
+      insights[k] = insights[k].slice(0, 4);
+    });
+
+    return insights;
+  },
+
+  _insightsRuptura(data, insights) {
+    const rup = data.ruptura;
+
+    // Crítico: produtos com ruptura alta
+    rup.ruptura.rankProdutos.filter(p => p.taxa >= 15).forEach(p => {
+      insights.criticos.push({
+        titulo: p.nome + ': ' + p.taxa + '% de ruptura',
+        narrativa: p.nome + ' está sem estoque em ' + p.taxa + '% das verificações. ' +
+          (p.variacao > 0 ? 'Piorou ' + p.variacao + ' p.p. vs período anterior.' : 'Estável vs período anterior.'),
+        acao: 'Revisar pedido de ' + p.nome + ' — verificar frequência e volume com fornecedor.',
+        severity: p.taxa >= 20 ? 'critical' : 'warning'
+      });
+    });
+
+    // Previsão: padrão semanal
+    const pioresDias = rup.porDiaSemana.filter(d => d.taxa >= 15).sort((a, b) => b.taxa - a.taxa);
+    if (pioresDias.length > 0) {
+      const d = pioresDias[0];
+      insights.previsao.push({
+        titulo: d.dia + '-feira: ' + d.taxa + '% de ruptura',
+        narrativa: d.dia + ' é o dia com maior taxa de ruptura. Padrão recorrente que indica pedido insuficiente para cobrir a demanda deste dia.',
+        acao: 'Aumentar pedido para cobertura de ' + d.dia + ' — ajustar volume com 1 dia de antecedência.'
+      });
+    }
+
+    // Evolução: variação geral
+    if (rup.ruptura.variacao !== 0) {
+      const melhorou = rup.ruptura.variacao < 0;
+      insights.evolucao.push({
+        titulo: 'Ruptura ' + (melhorou ? 'caiu' : 'subiu') + ' ' + Math.abs(rup.ruptura.variacao) + ' p.p.',
+        narrativa: 'Taxa de ruptura foi de ' + rup.ruptura.taxa + '% no período atual. ' +
+          (melhorou ? 'Melhoria consistente.' : 'Atenção: tendência de piora.'),
+        acao: melhorou ? 'Manter estratégia atual de pedido.' : 'Investigar causa da piora — fornecedor ou demanda?'
+      });
+    }
+  },
+
+  _insightsTemperatura(data, insights) {
+    // Placeholder — será ativado quando a tela de Temperatura estiver pronta
+  },
+
+  _insightsPresenca(data, insights) {
+    // Placeholder — será ativado quando a tela de Equipe estiver pronta
+  },
+
+  _insightsQuebra(data, insights) {
+    // Placeholder — será ativado quando a tela de Quebra estiver pronta
+  }
+};
