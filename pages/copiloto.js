@@ -1,16 +1,12 @@
 // ============================================================
 // NEXO Intelligence Web v2 — Página Copiloto Estratégico
 // Insights cruzados narrativos em 4 blocos
-// FIX: error handling robusto + debug logging
 // ============================================================
-console.log('[Copiloto] Arquivo carregado, registrando rota...');
-
 (function() {
 
   Router.register('copiloto', async function(container) {
-    console.log('[Copiloto] Rota ativada, renderizando...');
 
-    container.innerHTML = 
+    container.innerHTML =
       '<div class="toolbar anim">' +
         '<div class="period-pills">' +
           '<button class="pp" data-d="7">7d</button>' +
@@ -34,14 +30,13 @@ console.log('[Copiloto] Arquivo carregado, registrando rota...');
         '</div>' +
       '</div>';
 
-    // Load all data with error handling
+    // Load data with error handling
     var disponibilidade = [];
     var temperatura = [];
     var presenca = [];
     var quebra = [];
 
     try {
-      console.log('[Copiloto] Carregando dados...');
       var results = await Promise.allSettled([
         API.getDisponibilidade({}),
         API.getTemperatura({}),
@@ -52,9 +47,8 @@ console.log('[Copiloto] Arquivo carregado, registrando rota...');
       temperatura = (results[1].status === 'fulfilled') ? results[1].value : [];
       presenca = (results[2].status === 'fulfilled') ? results[2].value : [];
       quebra = (results[3].status === 'fulfilled') ? results[3].value : [];
-      console.log('[Copiloto] Dados carregados - disp:', disponibilidade.length, 'temp:', temperatura.length, 'pres:', presenca.length, 'quebra:', quebra.length);
     } catch(e) {
-      console.error('[Copiloto] Erro ao carregar dados:', e);
+      console.error('[Copiloto] Erro:', e);
     }
 
     if (disponibilidade.length === 0) {
@@ -66,7 +60,7 @@ console.log('[Copiloto] Arquivo carregado, registrando rota...');
 
     var rupData = Engine.processRuptura(disponibilidade, 15);
 
-    // Generate insights
+    // Insights
     var insights = Engine.generateInsights({
       ruptura: rupData,
       temperatura: temperatura,
@@ -74,18 +68,14 @@ console.log('[Copiloto] Arquivo carregado, registrando rota...');
       quebra: quebra
     });
 
-    console.log('[Copiloto] Insights gerados:', JSON.stringify({
-      criticos: insights.criticos.length,
-      oportunidades: insights.oportunidades.length,
-      previsao: insights.previsao.length,
-      evolucao: insights.evolucao.length
-    }));
-
     // Score Ring
     var score = Math.round((rupData.dispAT.taxa + rupData.dispAS.taxa + (100 - rupData.ruptura.taxa)) / 3);
     document.getElementById('scoreVal').textContent = score;
-    document.getElementById('scoreDelta').textContent = score >= 80 ? '✓ Bom' : score >= 60 ? '⚠ Atenção' : '✗ Crítico';
-    document.getElementById('scoreDelta').className = 'score-delta ' + (score >= 80 ? 'up' : score >= 60 ? '' : 'down');
+
+    var scoreClass = score >= 80 ? 'up' : score >= 60 ? '' : 'down';
+    var scoreLabel = score >= 80 ? 'Bom' : score >= 60 ? 'Atencao' : 'Critico';
+    document.getElementById('scoreDelta').textContent = scoreLabel;
+    document.getElementById('scoreDelta').className = 'score-delta ' + scoreClass;
 
     new Chart(document.getElementById('scoreRing').getContext('2d'), {
       type: 'doughnut',
@@ -107,12 +97,12 @@ console.log('[Copiloto] Arquivo carregado, registrando rota...');
     });
     document.getElementById('scoreBreakdown').innerHTML = bdHtml;
 
-    // Render 4 blocks
+    // 4 Blocks
     var blocks = [
-      { key: 'criticos', cls: 'critical', icon: '🚨', title: 'Alertas Críticos' },
+      { key: 'criticos', cls: 'critical', icon: '🚨', title: 'Alertas Criticos' },
       { key: 'oportunidades', cls: 'opportunity', icon: '💡', title: 'Oportunidades' },
-      { key: 'previsao', cls: 'forecast', icon: '🔮', title: 'Previsão' },
-      { key: 'evolucao', cls: 'evolution', icon: '📈', title: 'Evolução' }
+      { key: 'previsao', cls: 'forecast', icon: '🔮', title: 'Previsao' },
+      { key: 'evolucao', cls: 'evolution', icon: '📈', title: 'Evolucao' }
     ];
 
     var gridHtml = '';
@@ -125,13 +115,13 @@ console.log('[Copiloto] Arquivo carregado, registrando rota...');
         '<div class="block-insights">';
 
       if (items.length === 0) {
-        gridHtml += '<div class="insight-card ' + block.cls + '"><div class="insight-narrative">Sem alertas no período selecionado.</div></div>';
+        gridHtml += '<div class="insight-card ' + block.cls + '"><div class="insight-narrative">Sem alertas no periodo selecionado.</div></div>';
       } else {
         items.forEach(function(ins) {
           gridHtml += '<div class="insight-card ' + block.cls + '">' +
             '<div class="insight-headline">' + ins.titulo + '</div>' +
             '<div class="insight-narrative">' + ins.narrativa + '</div>' +
-            '<div class="insight-action"><span class="action-arrow">→</span> ' + ins.acao + '</div>' +
+            '<div class="insight-action"><span class="action-arrow">&rarr;</span> ' + ins.acao + '</div>' +
             '</div>';
         });
       }
@@ -145,6 +135,4 @@ console.log('[Copiloto] Arquivo carregado, registrando rota...');
       Router.pages['copiloto'](container);
     });
   });
-
-  console.log('[Copiloto] Rota registrada com sucesso. Router.pages:', Object.keys(Router.pages));
 })();
