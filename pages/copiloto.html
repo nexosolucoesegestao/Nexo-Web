@@ -1,182 +1,119 @@
-<!-- NEXO Intelligence Web — Copiloto Estratégico -->
+// ============================================================
+// NEXO Intelligence Web v2 — Página Copiloto Estratégico
+// Insights cruzados narrativos em 4 blocos
+// ============================================================
+(function() {
 
-<div id="copiloto-area">
-    <div class="loading-state"><div class="spinner"></div><span>Analisando dados operacionais...</span></div>
-</div>
+  Router.register('copiloto', async function(container) {
 
-<script>
-window.initCopiloto = async () => {
-    const area = document.getElementById('copiloto-area');
-    try {
-        const filters = NEXO.getFilters();
-        const data = await NEXO.api.loadAllData(30);
+    container.innerHTML = `
+      <div class="toolbar anim">
+        <div class="period-pills">
+          <button class="pp" data-d="7">7d</button>
+          <button class="pp active" data-d="15">15d</button>
+          <button class="pp" data-d="30">30d</button>
+          <button class="pp" data-d="60">60d</button>
+          <button class="pp" data-d="90">90d</button>
+        </div>
+      </div>
 
-        // Filtrar por loja se selecionada
-        if (filters.lojaId) {
-            data.disponibilidade = data.disponibilidade.filter(d => d.loja_id === filters.lojaId);
-            data.quebra = data.quebra.filter(q => q.loja_id === filters.lojaId);
-            data.temperatura = data.temperatura.filter(t => t.loja_id === filters.lojaId);
-            data.presenca = data.presenca.filter(p => p.loja_id === filters.lojaId);
-            data.lojas = data.lojas.filter(l => l.id === filters.lojaId);
-        } else if (filters.redeId) {
-            const lojaIds = data.lojas.filter(l => l.id_rede === filters.redeId).map(l => l.id);
-            data.disponibilidade = data.disponibilidade.filter(d => lojaIds.includes(d.loja_id));
-            data.quebra = data.quebra.filter(q => lojaIds.includes(q.loja_id));
-            data.temperatura = data.temperatura.filter(t => lojaIds.includes(t.loja_id));
-            data.presenca = data.presenca.filter(p => lojaIds.includes(p.loja_id));
-            data.lojas = data.lojas.filter(l => lojaIds.includes(l.id));
-        }
+      <div class="score-section anim d1">
+        <!-- Score Ring -->
+        <div class="score-card">
+          <div class="score-ring-container"><canvas id="scoreRing"></canvas>
+            <div class="score-center"><div class="score-value" id="scoreVal">—</div><div class="score-label">SCORE GERAL</div></div>
+          </div>
+          <div class="score-delta" id="scoreDelta">Calculando...</div>
+          <div style="width:100%;margin-top:16px" id="scoreBreakdown"></div>
+        </div>
 
-        const briefing = NEXO.engine.generateBriefing(data);
+        <!-- 4 Blocos -->
+        <div class="copiloto-grid" id="copilotoGrid">
+          <div class="page-loading">Gerando insights...</div>
+        </div>
+      </div>
+    `;
 
-        // Score color
-        const sc = briefing.scorecard.score;
-        const scoreColor = sc >= 80 ? 'var(--success)' : sc >= 60 ? 'var(--warning)' : 'var(--danger)';
-        const circumference = 2 * Math.PI * 48;
-        const offset = circumference - (sc / 100) * circumference;
+    // Load all data
+    const filters = { desde: Utils.daysAgo(90) };
+    const [disponibilidade, temperatura, presenca, quebra] = await Promise.all([
+      API.getDisponibilidade(filters),
+      API.getTemperatura(filters),
+      API.getPresenca(filters),
+      API.getQuebra(filters)
+    ]);
 
-        // Greeting
-        const hora = new Date().getHours();
-        const saudacao = hora < 12 ? 'Bom dia' : hora < 18 ? 'Boa tarde' : 'Boa noite';
-        const user = await NEXO.auth.getUser();
-        const nome = NEXO.auth.getNome(user).split(' ')[0];
+    const rupData = Engine.processRuptura(disponibilidade, 15);
 
-        let html = `
-        <div class="copiloto-header">
-            <div class="copiloto-score">
-                <div class="score-ring">
-                    <svg width="120" height="120" viewBox="0 0 120 120">
-                        <circle cx="60" cy="60" r="48" fill="none" stroke="${'var(--bg-tertiary)'}" stroke-width="8"/>
-                        <circle cx="60" cy="60" r="48" fill="none" stroke="${scoreColor}" stroke-width="8"
-                            stroke-dasharray="${circumference}" stroke-dashoffset="${offset}"
-                            stroke-linecap="round"/>
-                    </svg>
-                    <div class="value" style="color:${scoreColor}">${sc}</div>
-                </div>
-                <div class="score-label">Score geral</div>
-            </div>
-            <div class="copiloto-greeting">
-                <h2>${saudacao}, ${nome}.</h2>
-                <p>Aqui está seu briefing dos últimos 30 dias.
-                ${briefing.alertas.length > 0 ? `<strong style="color:var(--danger)">Há ${briefing.alertas.length} alerta(s) crítico(s) que precisam de atenção imediata.</strong>` : 'A operação está dentro dos parâmetros esperados.'}
-                ${briefing.oportunidades.length > 0 ? ` Identifiquei ${briefing.oportunidades.length} oportunidade(s) para melhorar resultados.` : ''}
-                </p>
-            </div>
-        </div>`;
+    // Generate insights
+    const insights = Engine.generateInsights({
+      ruptura: rupData,
+      temperatura,
+      presenca,
+      quebra
+    });
 
-        // Alertas Críticos
-        if (briefing.alertas.length > 0) {
-            html += `<div class="briefing-section">
-                <div class="briefing-title"><span class="dot dot-danger"></span> Alertas críticos</div>`;
-            briefing.alertas.forEach(a => {
-                html += `<div class="insight-card critical">
-                    <div class="insight-action">${a.acao}</div>
-                    <div class="insight-meta">Motor N${a.level} · ${a.type.replace(/_/g, ' ')}</div>
-                </div>`;
-            });
-            html += `</div>`;
-        }
+    // Score Ring
+    const score = Math.round((rupData.dispAT.taxa + rupData.dispAS.taxa + (100 - rupData.ruptura.taxa)) / 3);
+    document.getElementById('scoreVal').textContent = score;
 
-        // Atenção
-        if (briefing.atencao.length > 0) {
-            html += `<div class="briefing-section">
-                <div class="briefing-title"><span class="dot dot-warning"></span> Pontos de atenção (${briefing.atencao.length})</div>`;
-            briefing.atencao.slice(0, 8).forEach(a => {
-                html += `<div class="insight-card warning">
-                    <div class="insight-action">${a.acao}</div>
-                    <div class="insight-meta">Motor N${a.level} · ${a.type.replace(/_/g, ' ')}</div>
-                </div>`;
-            });
-            html += `</div>`;
-        }
+    new Chart(document.getElementById('scoreRing').getContext('2d'), {
+      type: 'doughnut',
+      data: { datasets: [{ data: [score, 100 - score], backgroundColor: [Charts.COLORS.gold, 'rgba(0,0,0,0.04)'], borderWidth: 0, cutout: '78%' }] },
+      options: { responsive: false, plugins: { tooltip: { enabled: false } }, animation: { animateRotate: true, duration: 1200 } }
+    });
 
-        // Oportunidades
-        if (briefing.oportunidades.length > 0) {
-            html += `<div class="briefing-section">
-                <div class="briefing-title"><span class="dot dot-info"></span> Oportunidades</div>`;
-            briefing.oportunidades.forEach(a => {
-                html += `<div class="insight-card info">
-                    <div class="insight-action">${a.acao}</div>
-                    <div class="insight-meta">Motor N${a.level} · ${a.type.replace(/_/g, ' ')}</div>
-                </div>`;
-            });
-            html += `</div>`;
-        }
+    // Breakdown
+    const breakItems = [
+      { label: 'Disponibilidade AT', val: rupData.dispAT.taxa, color: Charts.COLORS.orange },
+      { label: 'Disponibilidade AS', val: rupData.dispAS.taxa, color: Charts.COLORS.blue },
+      { label: 'Ruptura (inverso)', val: 100 - rupData.ruptura.taxa, color: Charts.COLORS.red }
+    ];
+    let bdHtml = '';
+    breakItems.forEach(b => {
+      bdHtml += '<div class="breakdown-item"><span class="breakdown-label">' + b.label + '</span>' +
+        '<div class="breakdown-bar"><div class="breakdown-fill" style="width:' + b.val + '%;background:' + b.color + '"></div></div>' +
+        '<span class="breakdown-score" style="color:' + b.color + '">' + b.val + '</span></div>';
+    });
+    document.getElementById('scoreBreakdown').innerHTML = bdHtml;
 
-        // Previsão para amanhã
-        const n4 = briefing.insights.n4;
-        if (n4.length > 0 && n4[0].predictions) {
-            html += `<div class="briefing-section">
-                <div class="briefing-title"><span class="dot dot-warning"></span> Previsão para amanhã (${n4[0].dia})</div>
-                <div class="card"><div class="card-body">
-                    <table class="data-table"><thead><tr><th>Produto</th><th>Risco de ruptura</th><th>Histórico</th></tr></thead><tbody>`;
-            n4[0].predictions.forEach(p => {
-                const badge = p.risco >= 70 ? 'danger' : p.risco >= 50 ? 'warning' : 'info';
-                html += `<tr><td style="font-weight:500">${p.produto}</td><td><span class="badge badge-${badge}">${p.risco}%</span></td><td class="text-muted">${p.historico}</td></tr>`;
-            });
-            html += `</tbody></table></div></div></div>`;
-        }
+    // Render 4 blocks
+    const blocks = [
+      { key: 'criticos', cls: 'critical', icon: '🚨', title: 'Alertas Críticos' },
+      { key: 'oportunidades', cls: 'opportunity', icon: '💡', title: 'Oportunidades' },
+      { key: 'previsao', cls: 'forecast', icon: '🔮', title: 'Previsão' },
+      { key: 'evolucao', cls: 'evolution', icon: '📈', title: 'Evolução' }
+    ];
 
-        // Scorecard KPIs
-        html += `<div class="briefing-section">
-            <div class="briefing-title"><span class="dot dot-success"></span> Indicadores do período</div>
-            <div class="metrics-grid">
-                <div class="metric-card ${briefing.scorecard.ruptura.taxa > 15 ? 'danger' : briefing.scorecard.ruptura.taxa > 8 ? 'warning' : 'success'}">
-                    <div class="metric-label">Ruptura</div>
-                    <div class="metric-value">${briefing.scorecard.ruptura.taxa}%</div>
-                    <div class="metric-sub">${briefing.scorecard.ruptura.total} de ${briefing.scorecard.ruptura.registros} registros</div>
-                </div>
-                <div class="metric-card ${briefing.scorecard.disponibilidade.taxa < 85 ? 'warning' : 'success'}">
-                    <div class="metric-label">Disponibilidade AT</div>
-                    <div class="metric-value">${briefing.scorecard.disponibilidade.taxa}%</div>
-                    <div class="metric-sub">Produtos com estoque no balcão</div>
-                </div>
-                <div class="metric-card ${briefing.scorecard.quebra.porDia > 50 ? 'danger' : briefing.scorecard.quebra.porDia > 20 ? 'warning' : 'success'}">
-                    <div class="metric-label">Quebra</div>
-                    <div class="metric-value">R$ ${briefing.scorecard.quebra.valorTotal.toLocaleString('pt-BR')}</div>
-                    <div class="metric-sub">${briefing.scorecard.quebra.ocorrencias} ocorrências · R$ ${briefing.scorecard.quebra.porDia}/dia</div>
-                </div>
-                <div class="metric-card ${briefing.scorecard.temperatura.conformidade < 90 ? 'danger' : 'success'}">
-                    <div class="metric-label">Temperatura</div>
-                    <div class="metric-value">${briefing.scorecard.temperatura.conformidade}%</div>
-                    <div class="metric-sub">${briefing.scorecard.temperatura.anomalias} anomalias no período</div>
-                </div>
-                <div class="metric-card ${briefing.scorecard.presenca.taxa < 80 ? 'warning' : 'success'}">
-                    <div class="metric-label">Presença</div>
-                    <div class="metric-value">${briefing.scorecard.presenca.taxa}%</div>
-                    <div class="metric-sub">Taxa de presença da equipe</div>
-                </div>
-            </div>
-        </div>`;
+    let gridHtml = '';
+    blocks.forEach(block => {
+      const items = insights[block.key] || [];
+      gridHtml += '<div class="copiloto-block ' + block.cls + '">' +
+        '<div class="block-header"><div class="block-icon ' + block.cls + '">' + block.icon + '</div>' +
+        '<div><div class="block-title">' + block.title + '</div></div>' +
+        '<span class="block-count">' + items.length + '</span></div>' +
+        '<div class="block-insights">';
 
-        // Ranking de lojas (se multi-loja)
-        if (briefing.scorecardLojas.length > 1) {
-            html += `<div class="briefing-section">
-                <div class="briefing-title"><span class="dot dot-success"></span> Ranking de lojas</div>
-                <div class="card"><div class="card-body"><ul class="ranking-list">`;
-            briefing.scorecardLojas.forEach((sl, i) => {
-                const posClass = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : 'normal';
-                const barColor = sl.score >= 80 ? 'var(--success)' : sl.score >= 60 ? 'var(--warning)' : 'var(--danger)';
-                html += `<li class="ranking-item">
-                    <span class="ranking-pos ${posClass}">${i + 1}°</span>
-                    <div class="ranking-info">
-                        <div class="ranking-name">${sl.loja.nome}</div>
-                        <div class="ranking-sub">${sl.loja.redes?.nome || sl.loja.rede || ''} · ${sl.loja.cidade}</div>
-                        <div class="ranking-bar"><div class="ranking-bar-fill" style="width:${sl.score}%;background:${barColor}"></div></div>
-                    </div>
-                    <span class="ranking-score" style="color:${barColor}">${sl.score}</span>
-                </li>`;
-            });
-            html += `</ul></div></div></div>`;
-        }
+      if (items.length === 0) {
+        gridHtml += '<div class="insight-card ' + block.cls + '"><div class="insight-narrative">Sem alertas no período selecionado.</div></div>';
+      } else {
+        items.forEach(ins => {
+          gridHtml += '<div class="insight-card ' + block.cls + '">' +
+            '<div class="insight-headline">' + ins.titulo + '</div>' +
+            '<div class="insight-narrative">' + ins.narrativa + '</div>' +
+            '<div class="insight-action"><span class="action-arrow">→</span> ' + ins.acao + '</div>' +
+            '</div>';
+        });
+      }
+      gridHtml += '</div></div>';
+    });
 
-        html += `<p class="text-muted" style="font-size:.75rem;margin-top:1rem;">Briefing gerado em ${new Date(briefing.geradoEm).toLocaleString('pt-BR')} · Motor de Inteligência v1.0 · ${briefing.totalInsights} insights analisados</p>`;
+    document.getElementById('copilotoGrid').innerHTML = gridHtml;
 
-        area.innerHTML = html;
-
-    } catch (err) {
-        area.innerHTML = `<div class="error-state"><p>Erro ao gerar briefing.</p><p class="text-muted">${err.message}</p></div>`;
-        console.error(err);
-    }
-};
-</script>
+    // Period pills
+    UI.initPeriodPills(() => {
+      // Reload with new period — re-route
+      Router.pages['copiloto'](container);
+    });
+  });
+})();
