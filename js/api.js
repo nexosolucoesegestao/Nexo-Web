@@ -1,11 +1,12 @@
 // ============================================================
 // NEXO Intelligence Web v2 — API Layer
-// Supabase REST — com mappers e normalizers
+// Supabase REST — com normalizers
+// FIX: handles empty filters, maps column names
 // ============================================================
-const API = {
+var API = {
   _cache: {},
 
-  _headers() {
+  _headers: function() {
     return {
       'apikey': NEXO_CONFIG.SUPABASE_ANON_KEY,
       'Authorization': 'Bearer ' + NEXO_CONFIG.SUPABASE_ANON_KEY,
@@ -13,17 +14,17 @@ const API = {
     };
   },
 
-  _url(table, query) {
+  _url: function(table, query) {
     return NEXO_CONFIG.SUPABASE_URL + '/rest/v1/' + table + (query ? '?' + query : '');
   },
 
-  async _get(table, query) {
-    const key = table + '|' + (query || '');
+  _get: async function(table, query) {
+    var key = table + '|' + (query || '');
     if (this._cache[key]) return this._cache[key];
     try {
-      const res = await fetch(this._url(table, query), { headers: this._headers() });
+      var res = await fetch(this._url(table, query), { headers: this._headers() });
       if (!res.ok) throw new Error('API ' + res.status);
-      const data = await res.json();
+      var data = await res.json();
       this._cache[key] = data;
       return data;
     } catch (e) {
@@ -32,11 +33,10 @@ const API = {
     }
   },
 
-  clearCache() { this._cache = {}; },
+  clearCache: function() { this._cache = {}; },
 
-  // ---- NORMALIZERS: Supabase boolean → string ----
-  // ---- NORMALIZERS: Supabase boolean → string + fix nulls ----
-  _normDisp(d) {
+  // ---- NORMALIZERS ----
+  _normDisp: function(d) {
     if (!d) return d;
     d.tem_estoque = (d.tem_estoque === true || d.tem_estoque === 'SIM') ? 'SIM' : 'NÃO';
     d.disponivel_at = (d.disponivel_at === true || d.disponivel_at === 'SIM') ? 'SIM' : 'NÃO';
@@ -46,15 +46,10 @@ const API = {
     if (!d.motivo_as && d.motivo_indisponivel_as) d.motivo_as = d.motivo_indisponivel_as;
     // Use created_at as fallback for data if null
     if (!d.data && d.created_at) d.data = d.created_at.slice(0, 10);
-    // Use registro_id prefix as loja fallback if loja_id is null
-    if (!d.loja_id && d.registro_id) {
-      // registro_id format is REG-XXX, try to find loja from registros
-      // For now, assign based on producto_id hash to distribute across lojas
-    }
     return d;
   },
 
-  _normTemp(t) {
+  _normTemp: function(t) {
     if (!t) return t;
     t.conforme_balcao = (t.conforme_balcao === true || t.conforme_balcao === 'CONFORME') ? 'CONFORME' : 'NÃO CONFORME';
     t.conforme_camara_resf = (t.conforme_camara_resf === true || t.conforme_camara_resf === 'CONFORME') ? 'CONFORME' : 'NÃO CONFORME';
@@ -62,7 +57,7 @@ const API = {
     return t;
   },
 
-  _normPres(p) {
+  _normPres: function(p) {
     if (!p) return p;
     if (typeof p.presentes === 'string') p.presentes = parseInt(p.presentes) || 0;
     if (typeof p.escala === 'string') p.escala = parseInt(p.escala) || 0;
@@ -71,76 +66,78 @@ const API = {
 
   // ---- QUERIES ----
 
-  async getRedes() {
+  getRedes: async function() {
     return this._get('redes', 'select=*&order=nome');
   },
 
-  async getLojas(redeId) {
-    const q = redeId ? 'select=*&rede_id=eq.' + redeId + '&order=nome' : 'select=*&order=nome';
+  getLojas: async function(redeId) {
+    var q = (redeId) ? 'select=*&rede_id=eq.' + redeId + '&order=nome' : 'select=*&order=nome';
     return this._get('lojas', q);
   },
 
-  async getProdutos() {
-    const data = await this._get('produtos', 'select=*&order=corte_pai');
-    return data;
+  getProdutos: async function() {
+    return this._get('produtos', 'select=*&order=corte_pai');
   },
 
-  async getProdutosLoja(lojaId) {
-    const data = await this._get('loja_produtos', 'select=*,produtos(*)&loja_id=eq.' + lojaId);
-    return data;
-  },
-
-  async getPessoas(lojaId) {
-    const q = lojaId ? 'select=*&loja_id=eq.' + lojaId + '&order=nome' : 'select=*&order=nome';
+  getPessoas: async function(lojaId) {
+    var q = (lojaId) ? 'select=*&loja_id=eq.' + lojaId + '&order=nome' : 'select=*&order=nome';
     return this._get('pessoas', q);
   },
 
-  async getMotivos() {
+  getMotivos: async function() {
     return this._get('motivos', 'select=*&order=contexto,motivo');
   },
 
-  async getDisponibilidade(filters) {
-    let q = 'select=*&order=data.desc';
+  getDisponibilidade: async function(filters) {
+    var q = 'select=*&order=data.desc';
     if (filters) {
       if (filters.lojaId) q += '&loja_id=eq.' + filters.lojaId;
       if (filters.desde) q += '&data=gte.' + filters.desde;
       if (filters.ate) q += '&data=lte.' + filters.ate;
     }
-    const data = await this._get('disponibilidade', q);
-    return data.map(d => this._normDisp(d));
+    // Limit to avoid massive payloads
+    q += '&limit=10000';
+    var data = await this._get('disponibilidade', q);
+    var self = this;
+    return data.map(function(d) { return self._normDisp(d); }).filter(function(d) { return d.data; });
   },
 
-  async getTemperatura(filters) {
-    let q = 'select=*&order=data.desc';
+  getTemperatura: async function(filters) {
+    var q = 'select=*&order=data.desc';
     if (filters) {
       if (filters.lojaId) q += '&loja_id=eq.' + filters.lojaId;
       if (filters.desde) q += '&data=gte.' + filters.desde;
     }
-    const data = await this._get('temperatura', q);
-    return data.map(t => this._normTemp(t));
+    q += '&limit=5000';
+    var data = await this._get('temperatura', q);
+    var self = this;
+    return data.map(function(t) { return self._normTemp(t); });
   },
 
-  async getPresenca(filters) {
-    let q = 'select=*&order=data.desc';
+  getPresenca: async function(filters) {
+    var q = 'select=*&order=data.desc';
     if (filters) {
       if (filters.lojaId) q += '&loja_id=eq.' + filters.lojaId;
       if (filters.desde) q += '&data=gte.' + filters.desde;
     }
-    const data = await this._get('presenca', q);
-    return data.map(p => this._normPres(p));
+    q += '&limit=5000';
+    var data = await this._get('presenca', q);
+    var self = this;
+    return data.map(function(p) { return self._normPres(p); });
   },
 
-  async getQuebra(filters) {
-    let q = 'select=*&order=data.desc';
+  getQuebra: async function(filters) {
+    var q = 'select=*&order=data.desc';
     if (filters) {
       if (filters.lojaId) q += '&loja_id=eq.' + filters.lojaId;
       if (filters.desde) q += '&data=gte.' + filters.desde;
     }
+    q += '&limit=5000';
     return this._get('quebra', q);
   },
 
-  async getOcorrencias(filters) {
-    let q = 'select=*,ocorrencias_acoes(*)&order=data_abertura.desc';
+  getOcorrencias: async function(filters) {
+    var q = 'select=*,ocorrencias_acoes(*)&order=data_abertura.desc';
     if (filters) {
       if (filters.lojaId) q += '&loja_id=eq.' + filters.lojaId;
       if (filters.status) q += '&status=eq.' + filters.status;
