@@ -150,7 +150,7 @@ window.NEXO.api = (() => {
     // ── Produtos ──
     async function getProdutos() {
         return _cached('produtos', 600000, async () => {
-            const { data, error } = await sb().from('produtos').select('*').order('corte');
+            const { data, error } = await sb().from('produtos').select('*').order('corte_pai');
             if (error) throw error;
             return data || [];
         });
