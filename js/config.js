@@ -4,8 +4,8 @@
 window.NEXO = window.NEXO || {};
 
 window.NEXO.config = {
-    SUPABASE_URL: 'https://kkjfqltpykkuwshtfhow.supabase.com',
-  SUPABASE_ANON_KEY: 'sb-publishable-x-ADwva...',
+    SUPABASE_URL: 'https://kkjfqltpykkuwshtfhow.supabase.co',
+  SUPABASE_ANON_KEY: 'sb_publishable_x-ADwvaQzwBqIRSZuLKsuw_NWPS_qwC',
     APP_VERSION: '1.0.0',
     CACHE_TTL: 300000,
 };
