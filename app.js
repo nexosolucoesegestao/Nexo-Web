@@ -1,131 +1,195 @@
 // ============================================================
-// NEXO Intelligence Web — App Init
+// NEXO Intelligence Web — API Module
 // ============================================================
-(async () => {
+window.NEXO = window.NEXO || {};
 
-    // ── Login handler ──
-    document.getElementById('btn-login').addEventListener('click', async () => {
-        const email = document.getElementById('login-email').value;
-        const senha = document.getElementById('login-senha').value;
-        const errEl = document.getElementById('login-error');
-        const btn = document.getElementById('btn-login');
+window.NEXO.api = (() => {
+    const sb = () => NEXO.supabase;
+    const _cache = {};
 
-        if (!email || !senha) { errEl.textContent = 'Preencha email e senha.'; return; }
-        btn.disabled = true; btn.textContent = 'Entrando...'; errEl.textContent = '';
-
-        try {
-            await NEXO.auth.login(email, senha);
-            window.location.reload();
-        } catch (err) {
-            errEl.textContent = err.message;
-            btn.disabled = false; btn.textContent = 'Entrar';
-        }
-    });
-
-    document.getElementById('login-senha').addEventListener('keydown', e => {
-        if (e.key === 'Enter') document.getElementById('btn-login').click();
-    });
-
-    // ── Auth check ──
-    const user = await NEXO.auth.requireAuth();
-    if (!user) return;
-
-    const isSuperAdmin = NEXO.auth.isSuperAdmin(user);
-    const nome = NEXO.auth.getNome(user);
-
-    document.getElementById('user-name').textContent = nome;
-    document.getElementById('user-role').textContent = isSuperAdmin ? 'Super Admin' : 'Gestor de Rede';
-    document.getElementById('user-avatar').textContent = nome.charAt(0).toUpperCase();
-
-    // ── Date ──
-    const now = new Date();
-    document.getElementById('header-date').textContent = now.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-
-    // ── Sidebar toggle ──
-    const sidebar = document.getElementById('sidebar');
-    const backdrop = document.getElementById('sidebar-backdrop');
-    document.getElementById('menu-toggle').addEventListener('click', () => {
-        sidebar.classList.toggle('sidebar-open');
-        backdrop.classList.toggle('visible');
-    });
-    backdrop.addEventListener('click', () => {
-        sidebar.classList.remove('sidebar-open');
-        backdrop.classList.remove('visible');
-    });
-    document.querySelectorAll('.sidebar-link').forEach(link => {
-        link.addEventListener('click', () => {
-            if (window.innerWidth <= 900) {
-                sidebar.classList.remove('sidebar-open');
-                backdrop.classList.remove('visible');
-            }
-        });
-    });
-
-    // ── Logout ──
-    document.getElementById('btn-logout').addEventListener('click', () => {
-        if (confirm('Sair do painel?')) NEXO.auth.logout();
-    });
-
-    // ── Filters ──
-    document.getElementById('nav-filtro-rede').style.display = '';
-
-    try {
-        const redes = await NEXO.api.getRedes();
-        const redeSelect = document.getElementById('filtro-rede');
-        redes.forEach(r => {
-            const opt = document.createElement('option');
-            opt.value = r.id; opt.textContent = r.nome;
-            redeSelect.appendChild(opt);
-        });
-
-        const lojas = await NEXO.api.getLojas();
-        const lojaSelect = document.getElementById('filtro-loja');
-        lojas.forEach(l => {
-            const opt = document.createElement('option');
-            opt.value = l.id; opt.textContent = l.nome;
-            lojaSelect.appendChild(opt);
-        });
-
-        redeSelect.addEventListener('change', async () => {
-            NEXO.api.clearCache();
-            const redeId = redeSelect.value;
-            const filteredLojas = redeId ? lojas.filter(l => l.id_rede === redeId) : lojas;
-            lojaSelect.innerHTML = '<option value="">Todas as lojas</option>';
-            filteredLojas.forEach(l => {
-                const opt = document.createElement('option');
-                opt.value = l.id; opt.textContent = l.nome;
-                lojaSelect.appendChild(opt);
-            });
-            // Reload current page
-            const route = window.location.hash.replace('#/', '') || 'copiloto';
-            NEXO.router.loadRoute(route);
-        });
-
-        lojaSelect.addEventListener('change', () => {
-            NEXO.api.clearCache();
-            const route = window.location.hash.replace('#/', '') || 'copiloto';
-            NEXO.router.loadRoute(route);
-        });
-    } catch (err) {
-        console.error('Erro ao carregar filtros:', err);
+    function _cached(key, ttl, fn) {
+        if (_cache[key] && Date.now() - _cache[key].ts < ttl) return Promise.resolve(_cache[key].data);
+        return fn().then(d => { _cache[key] = { data: d, ts: Date.now() }; return d; });
     }
 
-    // Helper global para pegar filtros
-    window.NEXO.getFilters = () => ({
-        redeId: document.getElementById('filtro-rede')?.value || null,
-        lojaId: document.getElementById('filtro-loja')?.value || null
-    });
+    function clearCache() { Object.keys(_cache).forEach(k => delete _cache[k]); }
 
-    // ── Router setup ──
-    NEXO.router.setContainer('#page-container');
-    NEXO.router.register({
-        copiloto:     { file: 'pages/copiloto.html',     init: () => window.initCopiloto?.() },
-        dashboard:    { file: 'pages/dashboard.html',     init: () => window.initDashboard?.() },
-        operacional:  { file: 'pages/operacional.html',   init: () => window.initOperacional?.() },
-        mercado:      { file: 'pages/mercado.html',       init: () => window.initMercado?.() },
-        financeiro:   { file: 'pages/financeiro.html',    init: () => window.initFinanceiro?.() },
-        comparativo:  { file: 'pages/comparativo.html',   init: () => window.initComparativo?.() },
-    });
-    NEXO.router.init();
+    // ── Normalização: Supabase retorna boolean, engine espera 'SIM'/'NÃO' ──
+    function _normDisp(d) {
+        return {
+            ...d,
+            tem_estoque: d.tem_estoque === true ? 'SIM' : d.tem_estoque === false ? 'NÃO' : d.tem_estoque,
+            disponivel_at: d.disponivel_at === true ? 'SIM' : d.disponivel_at === false ? 'NÃO' : d.disponivel_at,
+            disponivel_as: d.disponivel_as === true ? 'SIM' : d.disponivel_as === false ? 'NÃO' : d.disponivel_as,
+            // Mapear nomes de campo: motivo_indisponivel_at → motivo_at (compat engine)
+            motivo_ruptura: d.motivo_ruptura || null,
+            motivo_at: d.motivo_indisponivel_at || d.motivo_at || null,
+            motivo_as: d.motivo_indisponivel_as || d.motivo_as || null,
+        };
+    }
 
+    function _normPres(p) {
+        return {
+            ...p,
+            presente: p.presente === true ? true : p.presente === false ? false : p.presente,
+            motivo_falta: p.motivo_ausencia || p.motivo_falta || null,
+        };
+    }
+
+    function _normTemp(t) {
+        return {
+            ...t,
+            temperatura: t.temperatura_valor ?? t.temperatura ?? t.balcao_refrigerado ?? 0,
+        };
+    }
+
+    // ── Filtros contextuais ──
+    async function _redeFilter() {
+        const u = await NEXO.auth.getUser();
+        if (!u) return null;
+        if (NEXO.auth.isSuperAdmin(u)) return null;
+        return NEXO.auth.getIdRede(u);
+    }
+
+    // ── Redes ──
+    async function getRedes() {
+        return _cached('redes', 300000, async () => {
+            const rf = await _redeFilter();
+            let q = sb().from('redes').select('*').eq('ativo', true).order('nome');
+            if (rf) q = q.eq('id', rf);
+            const { data, error } = await q;
+            if (error) throw error;
+            return data || [];
+        });
+    }
+
+    // ── Lojas ──
+    async function getLojas(redeId) {
+        const key = 'lojas_' + (redeId || 'all');
+        return _cached(key, 300000, async () => {
+            const rf = await _redeFilter();
+            let q = sb().from('lojas').select('*, redes(nome)').order('nome');
+            if (redeId) q = q.eq('id_rede', redeId);
+            else if (rf) q = q.eq('id_rede', rf);
+            const { data, error } = await q;
+            if (error) throw error;
+            return data || [];
+        });
+    }
+
+    // ── Disponibilidade (ruptura) — últimos N dias ──
+    async function getDisponibilidade(dias, lojaId) {
+        const desde = new Date(); desde.setDate(desde.getDate() - dias);
+        const desdeStr = desde.toISOString().slice(0, 10);
+        const key = 'disp_' + dias + '_' + (lojaId || 'all');
+        return _cached(key, 120000, async () => {
+            let q = sb().from('disponibilidade').select('*').gte('data', desdeStr).order('data');
+            if (lojaId) q = q.eq('loja_id', lojaId);
+            const { data, error } = await q;
+            if (error) throw error;
+            return (data || []).map(_normDisp);
+        });
+    }
+
+    // ── Quebra — últimos N dias ──
+    async function getQuebra(dias, lojaId) {
+        const desde = new Date(); desde.setDate(desde.getDate() - dias);
+        const desdeStr = desde.toISOString().slice(0, 10);
+        const key = 'quebra_' + dias + '_' + (lojaId || 'all');
+        return _cached(key, 120000, async () => {
+            let q = sb().from('quebra').select('*').gte('data', desdeStr).order('data');
+            if (lojaId) q = q.eq('loja_id', lojaId);
+            const { data, error } = await q;
+            if (error) throw error;
+            return data || [];
+        });
+    }
+
+    // ── Temperatura — últimos N dias ──
+    async function getTemperatura(dias, lojaId) {
+        const desde = new Date(); desde.setDate(desde.getDate() - dias);
+        const desdeStr = desde.toISOString().slice(0, 10);
+        const key = 'temp_' + dias + '_' + (lojaId || 'all');
+        return _cached(key, 120000, async () => {
+            let q = sb().from('temperatura').select('*').gte('data', desdeStr).order('data');
+            if (lojaId) q = q.eq('loja_id', lojaId);
+            const { data, error } = await q;
+            if (error) throw error;
+            return (data || []).map(_normTemp);
+        });
+    }
+
+    // ── Presença — últimos N dias ──
+    async function getPresenca(dias, lojaId) {
+        const desde = new Date(); desde.setDate(desde.getDate() - dias);
+        const desdeStr = desde.toISOString().slice(0, 10);
+        const key = 'pres_' + dias + '_' + (lojaId || 'all');
+        return _cached(key, 120000, async () => {
+            let q = sb().from('presenca').select('*').gte('data', desdeStr).order('data');
+            if (lojaId) q = q.eq('loja_id', lojaId);
+            const { data, error } = await q;
+            if (error) throw error;
+            return (data || []).map(_normPres);
+        });
+    }
+
+    // ── Registros (check-in) — últimos N dias ──
+    async function getRegistros(dias, lojaId) {
+        const desde = new Date(); desde.setDate(desde.getDate() - dias);
+        const desdeStr = desde.toISOString().slice(0, 10);
+        const key = 'reg_' + dias + '_' + (lojaId || 'all');
+        return _cached(key, 120000, async () => {
+            let q = sb().from('registros').select('*').gte('data', desdeStr).order('data');
+            if (lojaId) q = q.eq('loja_id', lojaId);
+            const { data, error } = await q;
+            if (error) throw error;
+            return data || [];
+        });
+    }
+
+    // ── Produtos ──
+    async function getProdutos() {
+        return _cached('produtos', 600000, async () => {
+            const { data, error } = await sb().from('produtos').select('*').order('corte');
+            if (error) throw error;
+            return data || [];
+        });
+    }
+
+    // ── Contratos ──
+    async function getContratos() {
+        return _cached('contratos', 300000, async () => {
+            const { data, error } = await sb().from('contratos').select('*, redes(nome)').order('data_inicio', { ascending: false });
+            if (error) throw error;
+            return data || [];
+        });
+    }
+
+    // ── Ocorrências ──
+    async function getOcorrencias(lojaId) {
+        const key = 'oc_' + (lojaId || 'all');
+        return _cached(key, 120000, async () => {
+            let q = sb().from('ocorrencias').select('*').order('created_at', { ascending: false });
+            if (lojaId) q = q.eq('loja_id', lojaId);
+            const { data, error } = await q;
+            if (error) throw error;
+            return data || [];
+        });
+    }
+
+    // ── Bulk loader — carrega tudo de uma vez para o engine ──
+    async function loadAllData(dias) {
+        dias = dias || 30;
+        const [redes, lojas, disp, quebra, temp, pres, produtos] = await Promise.all([
+            getRedes(), getLojas(), getDisponibilidade(dias),
+            getQuebra(dias), getTemperatura(dias), getPresenca(dias), getProdutos()
+        ]);
+        return { redes, lojas, disponibilidade: disp, quebra, temperatura: temp, presenca: pres, produtos };
+    }
+
+    return {
+        getRedes, getLojas, getDisponibilidade, getQuebra, getTemperatura,
+        getPresenca, getRegistros, getProdutos, getContratos, getOcorrencias,
+        loadAllData, clearCache
+    };
 })();
