@@ -1,7 +1,6 @@
 // ============================================================
 // NEXO Intelligence Web v2 — Página Ruptura & Disponibilidade
 // Template KPI principal — padrão Seara (3 faixas)
-// FIX: evolutivo usa TODOS os dados, período só afeta rankings
 // ============================================================
 (function() {
   var currentPeriod = 15;
@@ -16,7 +15,7 @@
   Router.register('ruptura', async function(container) {
     destroyCharts();
 
-    container.innerHTML = 
+    container.innerHTML =
       '<div class="toolbar anim">' +
         '<div class="period-pills">' +
           '<button class="pp" data-d="7">7d</button>' +
@@ -30,7 +29,6 @@
         '</select>' +
       '</div>' +
 
-      '<!-- FAIXA RUPTURA -->' +
       '<div class="strip rup anim d1" id="stripRup">' +
         '<div class="strip-header">' +
           '<div class="strip-icon rup">R</div>' +
@@ -47,7 +45,6 @@
         '</div>' +
       '</div>' +
 
-      '<!-- FAIXA AT -->' +
       '<div class="strip at anim d2" id="stripAT">' +
         '<div class="strip-header">' +
           '<div class="strip-icon at">AT</div>' +
@@ -63,7 +60,6 @@
         '</div>' +
       '</div>' +
 
-      '<!-- FAIXA AS -->' +
       '<div class="strip as anim d3" id="stripAS">' +
         '<div class="strip-header">' +
           '<div class="strip-icon as">AS</div>' +
@@ -79,7 +75,6 @@
         '</div>' +
       '</div>' +
 
-      '<!-- ANÁLISE COMPLEMENTAR -->' +
       '<div class="section-title anim d4"><span class="st-icon">🎯</span> Análise complementar</div>' +
       '<div class="bottom-grid anim d4">' +
         '<div class="card"><div class="ch"><div><div class="ct">Motivos de ruptura</div><div class="cs">Supply — por que falta estoque?</div></div></div><div class="cb"><div class="chart-box" style="height:160px"><canvas id="chartMotRup"></canvas></div></div></div>' +
@@ -87,7 +82,6 @@
         '<div class="card"><div class="ch"><div><div class="ct">Motivos indisponibilidade</div><div class="cs">Execução — por que não chega ao balcão?</div></div></div><div class="cb"><div class="chart-box" style="height:160px"><canvas id="chartMotInd"></canvas></div></div></div>' +
       '</div>' +
 
-      '<!-- HEATMAP -->' +
       '<div class="card anim d5" style="margin-bottom:24px">' +
         '<div class="ch"><div><div class="ct">Heatmap — Produto × Dia da semana</div><div class="cs">Intensidade de ruptura (%) por combinação</div></div></div>' +
         '<div class="cb" style="overflow-x:auto"><div id="heatmapBox"></div></div>' +
@@ -115,28 +109,24 @@
     async function loadData() {
       destroyCharts();
 
-      // FETCH ALL DATA (for evolutivo mensal — needs full history)
+      // Fetch ALL data (no date filter) for evolutivo mensal
       var allFilters = {};
       if (currentLoja !== 'all') allFilters.lojaId = currentLoja;
       var allDisponibilidade = await API.getDisponibilidade(allFilters);
 
-      console.log('[Ruptura] Total registros carregados:', allDisponibilidade.length);
-
-      // Process with current period (for rankings, big numbers, motivos)
+      // Process with current period for rankings/big numbers
       var result = Engine.processRuptura(allDisponibilidade, currentPeriod);
 
-      // === Update Big Numbers ===
+      // Big Numbers
       document.getElementById('bnRupTaxa').textContent = result.ruptura.taxa + '%';
       updateDelta('bnRupVar', result.ruptura.variacao, true);
       document.getElementById('bnRupTotal').textContent = result.ruptura.total;
-
       document.getElementById('bnATTaxa').textContent = result.dispAT.taxa + '%';
       updateDelta('bnATVar', result.dispAT.variacao, false);
-
       document.getElementById('bnASTaxa').textContent = result.dispAS.taxa + '%';
       updateDelta('bnASVar', result.dispAS.variacao, false);
 
-      // === Rankings ===
+      // Rankings
       UI.renderRanking('rankLojaRup', result.ruptura.rankLojas, { inverted: false, maxBar: 30 });
       UI.renderRanking('rankProdRup', result.ruptura.rankProdutos, { inverted: false, maxBar: 30 });
       UI.renderRanking('rankLojaAT', result.dispAT.rankLojas, { inverted: true, maxBar: 100 });
@@ -144,14 +134,13 @@
       UI.renderRanking('rankLojaAS', result.dispAS.rankLojas, { inverted: true, maxBar: 100 });
       UI.renderRanking('rankProdAS', result.dispAS.rankProdutos, { inverted: true, maxBar: 100 });
 
-      // === Evolutivo Mensal (uses ALL data, not period-filtered) ===
+      // Evolutivo Mensal (uses ALL data)
       var evo = result.evolutivoMensal;
-      console.log('[Ruptura] Evolutivo meses:', evo.ruptura.length, evo.ruptura.map(function(e){return e.label}));
       if (evo.ruptura.length > 0) chartInstances.push(Charts.evolutivoMensal('evoRup', evo.ruptura, Charts.COLORS.red));
       if (evo.dispAT.length > 0) chartInstances.push(Charts.evolutivoMensal('evoAT', evo.dispAT, Charts.COLORS.orange));
       if (evo.dispAS.length > 0) chartInstances.push(Charts.evolutivoMensal('evoAS', evo.dispAS, Charts.COLORS.blue));
 
-      // === Motivos ===
+      // Motivos
       if (Object.keys(result.motivos.ruptura).length > 0) {
         chartInstances.push(Charts.motivosDonut('chartMotRup', result.motivos.ruptura));
       }
@@ -159,12 +148,12 @@
         chartInstances.push(Charts.motivosBar('chartMotInd', result.motivos.indisponibilidade));
       }
 
-      // === Dia da semana ===
+      // Dia da semana
       if (result.porDiaSemana.length > 0) {
         chartInstances.push(Charts.diaSemana('chartDia', result.porDiaSemana));
       }
 
-      // === Heatmap ===
+      // Heatmap
       UI.renderHeatmap('heatmapBox', result.heatmap);
     }
 
