@@ -1,38 +1,67 @@
 // ============================================================
 // NEXO Intelligence Web v2 — API Layer
-// Supabase REST — com normalizers
-// FIX: Range header para buscar mais de 1000 rows
+// Supabase REST — com normalizers e paginação automática
 // ============================================================
 var API = {
   _cache: {},
 
-  _headers: function(rangeMax) {
-    var h = {
+  _headers: function() {
+    return {
       'apikey': NEXO_CONFIG.SUPABASE_ANON_KEY,
       'Authorization': 'Bearer ' + NEXO_CONFIG.SUPABASE_ANON_KEY,
       'Content-Type': 'application/json'
     };
-    if (rangeMax) {
-      h['Range'] = '0-' + (rangeMax - 1);
-    }
-    return h;
   },
 
   _url: function(table, query) {
     return NEXO_CONFIG.SUPABASE_URL + '/rest/v1/' + table + (query ? '?' + query : '');
   },
 
-  _get: async function(table, query, rangeMax) {
+  // Simple fetch (single page, max 1000 rows)
+  _get: async function(table, query) {
     var key = table + '|' + (query || '');
     if (this._cache[key]) return this._cache[key];
     try {
-      var res = await fetch(this._url(table, query), { headers: this._headers(rangeMax) });
+      var res = await fetch(this._url(table, query), { headers: this._headers() });
       if (!res.ok) throw new Error('API ' + res.status);
       var data = await res.json();
       this._cache[key] = data;
       return data;
     } catch (e) {
       console.error('[API] Erro em', table, e);
+      return [];
+    }
+  },
+
+  // Paginated fetch (fetches ALL rows, 1000 per page)
+  _getAll: async function(table, query) {
+    var key = 'ALL|' + table + '|' + (query || '');
+    if (this._cache[key]) return this._cache[key];
+    try {
+      var allData = [];
+      var pageSize = 1000;
+      var page = 0;
+      var hasMore = true;
+      var baseUrl = this._url(table, query);
+      var headers = this._headers();
+
+      while (hasMore && page < 20) {
+        var from = page * pageSize;
+        var to = from + pageSize - 1;
+        headers['Range'] = from + '-' + to;
+
+        var res = await fetch(baseUrl, { headers: headers });
+        if (!res.ok) throw new Error('API ' + res.status);
+        var data = await res.json();
+        allData = allData.concat(data);
+        hasMore = data.length === pageSize;
+        page++;
+      }
+
+      this._cache[key] = allData;
+      return allData;
+    } catch (e) {
+      console.error('[API] Erro paginado em', table, e);
       return [];
     }
   },
@@ -90,6 +119,7 @@ var API = {
     return this._get('motivos', 'select=*&order=contexto,motivo');
   },
 
+  // PAGINATED — fetches ALL rows
   getDisponibilidade: async function(filters) {
     var q = 'select=*&order=data.desc';
     if (filters) {
@@ -97,7 +127,7 @@ var API = {
       if (filters.desde) q += '&data=gte.' + filters.desde;
       if (filters.ate) q += '&data=lte.' + filters.ate;
     }
-    var data = await this._get('disponibilidade', q, 10000);
+    var data = await this._getAll('disponibilidade', q);
     var self = this;
     return data.map(function(d) { return self._normDisp(d); }).filter(function(d) { return d.data; });
   },
@@ -108,7 +138,7 @@ var API = {
       if (filters.lojaId) q += '&loja_id=eq.' + filters.lojaId;
       if (filters.desde) q += '&data=gte.' + filters.desde;
     }
-    var data = await this._get('temperatura', q, 5000);
+    var data = await this._getAll('temperatura', q);
     var self = this;
     return data.map(function(t) { return self._normTemp(t); });
   },
@@ -119,7 +149,7 @@ var API = {
       if (filters.lojaId) q += '&loja_id=eq.' + filters.lojaId;
       if (filters.desde) q += '&data=gte.' + filters.desde;
     }
-    var data = await this._get('presenca', q, 5000);
+    var data = await this._getAll('presenca', q);
     var self = this;
     return data.map(function(p) { return self._normPres(p); });
   },
@@ -130,7 +160,7 @@ var API = {
       if (filters.lojaId) q += '&loja_id=eq.' + filters.lojaId;
       if (filters.desde) q += '&data=gte.' + filters.desde;
     }
-    return this._get('quebra', q, 5000);
+    return this._getAll('quebra', q);
   },
 
   getOcorrencias: async function(filters) {
