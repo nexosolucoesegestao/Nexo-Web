@@ -1,7 +1,6 @@
 // ============================================================
 // NEXO Intelligence Web v2 — API Layer
 // Supabase REST — com normalizers
-// FIX: handles empty filters, maps column names
 // ============================================================
 var API = {
   _cache: {},
@@ -41,10 +40,8 @@ var API = {
     d.tem_estoque = (d.tem_estoque === true || d.tem_estoque === 'SIM') ? 'SIM' : 'NÃO';
     d.disponivel_at = (d.disponivel_at === true || d.disponivel_at === 'SIM') ? 'SIM' : 'NÃO';
     d.disponivel_as = (d.disponivel_as === true || d.disponivel_as === 'SIM') ? 'SIM' : 'NÃO';
-    // Map actual Supabase column names to engine-expected names
     if (!d.motivo_at && d.motivo_indisponivel_at) d.motivo_at = d.motivo_indisponivel_at;
     if (!d.motivo_as && d.motivo_indisponivel_as) d.motivo_as = d.motivo_indisponivel_as;
-    // Use created_at as fallback for data if null
     if (!d.data && d.created_at) d.data = d.created_at.slice(0, 10);
     return d;
   },
@@ -95,7 +92,6 @@ var API = {
       if (filters.desde) q += '&data=gte.' + filters.desde;
       if (filters.ate) q += '&data=lte.' + filters.ate;
     }
-    // Limit to avoid massive payloads
     q += '&limit=10000';
     var data = await this._get('disponibilidade', q);
     var self = this;
