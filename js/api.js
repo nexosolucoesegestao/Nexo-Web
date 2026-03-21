@@ -1,27 +1,32 @@
 // ============================================================
 // NEXO Intelligence Web v2 — API Layer
 // Supabase REST — com normalizers
+// FIX: Range header para buscar mais de 1000 rows
 // ============================================================
 var API = {
   _cache: {},
 
-  _headers: function() {
-    return {
+  _headers: function(rangeMax) {
+    var h = {
       'apikey': NEXO_CONFIG.SUPABASE_ANON_KEY,
       'Authorization': 'Bearer ' + NEXO_CONFIG.SUPABASE_ANON_KEY,
       'Content-Type': 'application/json'
     };
+    if (rangeMax) {
+      h['Range'] = '0-' + (rangeMax - 1);
+    }
+    return h;
   },
 
   _url: function(table, query) {
     return NEXO_CONFIG.SUPABASE_URL + '/rest/v1/' + table + (query ? '?' + query : '');
   },
 
-  _get: async function(table, query) {
+  _get: async function(table, query, rangeMax) {
     var key = table + '|' + (query || '');
     if (this._cache[key]) return this._cache[key];
     try {
-      var res = await fetch(this._url(table, query), { headers: this._headers() });
+      var res = await fetch(this._url(table, query), { headers: this._headers(rangeMax) });
       if (!res.ok) throw new Error('API ' + res.status);
       var data = await res.json();
       this._cache[key] = data;
@@ -92,8 +97,7 @@ var API = {
       if (filters.desde) q += '&data=gte.' + filters.desde;
       if (filters.ate) q += '&data=lte.' + filters.ate;
     }
-    q += '&limit=10000';
-    var data = await this._get('disponibilidade', q);
+    var data = await this._get('disponibilidade', q, 10000);
     var self = this;
     return data.map(function(d) { return self._normDisp(d); }).filter(function(d) { return d.data; });
   },
@@ -104,8 +108,7 @@ var API = {
       if (filters.lojaId) q += '&loja_id=eq.' + filters.lojaId;
       if (filters.desde) q += '&data=gte.' + filters.desde;
     }
-    q += '&limit=5000';
-    var data = await this._get('temperatura', q);
+    var data = await this._get('temperatura', q, 5000);
     var self = this;
     return data.map(function(t) { return self._normTemp(t); });
   },
@@ -116,8 +119,7 @@ var API = {
       if (filters.lojaId) q += '&loja_id=eq.' + filters.lojaId;
       if (filters.desde) q += '&data=gte.' + filters.desde;
     }
-    q += '&limit=5000';
-    var data = await this._get('presenca', q);
+    var data = await this._get('presenca', q, 5000);
     var self = this;
     return data.map(function(p) { return self._normPres(p); });
   },
@@ -128,8 +130,7 @@ var API = {
       if (filters.lojaId) q += '&loja_id=eq.' + filters.lojaId;
       if (filters.desde) q += '&data=gte.' + filters.desde;
     }
-    q += '&limit=5000';
-    return this._get('quebra', q);
+    return this._get('quebra', q, 5000);
   },
 
   getOcorrencias: async function(filters) {
