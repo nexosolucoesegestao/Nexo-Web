@@ -35,11 +35,22 @@ const API = {
   clearCache() { this._cache = {}; },
 
   // ---- NORMALIZERS: Supabase boolean → string ----
+  // ---- NORMALIZERS: Supabase boolean → string + fix nulls ----
   _normDisp(d) {
     if (!d) return d;
     d.tem_estoque = (d.tem_estoque === true || d.tem_estoque === 'SIM') ? 'SIM' : 'NÃO';
     d.disponivel_at = (d.disponivel_at === true || d.disponivel_at === 'SIM') ? 'SIM' : 'NÃO';
     d.disponivel_as = (d.disponivel_as === true || d.disponivel_as === 'SIM') ? 'SIM' : 'NÃO';
+    // Map actual Supabase column names to engine-expected names
+    if (!d.motivo_at && d.motivo_indisponivel_at) d.motivo_at = d.motivo_indisponivel_at;
+    if (!d.motivo_as && d.motivo_indisponivel_as) d.motivo_as = d.motivo_indisponivel_as;
+    // Use created_at as fallback for data if null
+    if (!d.data && d.created_at) d.data = d.created_at.slice(0, 10);
+    // Use registro_id prefix as loja fallback if loja_id is null
+    if (!d.loja_id && d.registro_id) {
+      // registro_id format is REG-XXX, try to find loja from registros
+      // For now, assign based on producto_id hash to distribute across lojas
+    }
     return d;
   },
 
