@@ -78,18 +78,27 @@
   document.getElementById('headerDate').textContent =
     '📅 ' + diasSemana[hoje.getDay()] + ', ' + hoje.getDate() + ' ' + meses[hoje.getMonth()] + ' ' + hoje.getFullYear();
 
-  // Init product & store maps
+  // Init product map
   await Engine.buildProdMap();
 
-  // Load rede info (first rede for now — multi-tenant later)
-  const redes = await API.getRedes();
-  if (redes.length > 0) {
-    const rede = redes[0];
-    await Engine.buildLojaMap(rede.id);
-    document.getElementById('headerNetwork').textContent = rede.nome + ' — ' + Object.keys(Engine._lojaMap).length + ' lojas';
-    window.NEXO_REDE_ID = rede.id;
+  // Build loja map DIRECTLY from lojas table (redes may have RLS blocking anon)
+  const lojas = await API.getLojas(); // sem filtro = todas
+  if (lojas.length > 0) {
+    lojas.forEach(function(l) { Engine._lojaMap[l.id] = l.nome; });
+    document.getElementById('headerNetwork').textContent = lojas.length + ' lojas conectadas';
   } else {
-    document.getElementById('headerNetwork').textContent = 'Sem rede configurada';
+    document.getElementById('headerNetwork').textContent = 'Sem lojas configuradas';
+  }
+
+  // Try to get rede name (optional — may fail due to RLS)
+  try {
+    const redes = await API.getRedes();
+    if (redes.length > 0) {
+      window.NEXO_REDE_ID = redes[0].id;
+      document.getElementById('headerNetwork').textContent = redes[0].nome + ' — ' + lojas.length + ' lojas';
+    }
+  } catch(e) {
+    console.log('[NEXO] Redes com RLS — usando lojas diretamente');
   }
 
   // Init router
