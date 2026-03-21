@@ -1,16 +1,10 @@
 // ============================================================
-// NEXO Intelligence Web — Config
+// NEXO Intelligence Web v2 — Config
+// Preencha com suas credenciais Supabase reais
 // ============================================================
-window.NEXO = window.NEXO || {};
-
-window.NEXO.config = {
+const NEXO_CONFIG = {
     SUPABASE_URL: 'https://kkjfqltpykkuwshtfhow.supabase.co',
   SUPABASE_ANON_KEY: 'sb_publishable_x-ADwvaQzwBqIRSZuLKsuw_NWPS_qwC',
-    APP_VERSION: '1.0.0',
-    CACHE_TTL: 300000,
+VERSION: '2.0.0',
+  ENV: 'production'
 };
-
-window.NEXO.supabase = window.supabase.createClient(
-    NEXO.config.SUPABASE_URL,
-    NEXO.config.SUPABASE_ANON_KEY
-);
