@@ -42,7 +42,7 @@ window.NEXO.engine = (() => {
     function analyzeTemporalPatterns(disponibilidade, produtos) {
         const insights = [];
         const prodMap = {};
-        produtos.forEach(p => prodMap[p.id] = p.corte || p.id);
+        produtos.forEach(p => prodMap[p.id] = p.corte_pai || p.id);
 
         const rupturas = disponibilidade.filter(d => d.tem_estoque === 'NÃO');
         const byProduto = groupBy(rupturas, 'produto_id');
@@ -109,7 +109,7 @@ window.NEXO.engine = (() => {
     function analyzeCorrelations(disponibilidade, quebra, presenca, produtos) {
         const insights = [];
         const prodMap = {};
-        produtos.forEach(p => prodMap[p.id] = p.corte || p.id);
+        produtos.forEach(p => prodMap[p.id] = p.corte_pai || p.id);
 
         // Correlação: disponibilidade → quebra (produto exposto D, quebra D+2/D+3)
         const quebraByProd = groupBy(quebra, 'produto_id');
@@ -191,7 +191,7 @@ window.NEXO.engine = (() => {
     function analyzeFinancialImpact(quebra, disponibilidade, produtos) {
         const insights = [];
         const prodMap = {};
-        produtos.forEach(p => prodMap[p.id] = p.corte || p.id);
+        produtos.forEach(p => prodMap[p.id] = p.corte_pai || p.id);
 
         // Total de quebra por produto em R$
         const quebraByProd = groupBy(quebra, 'produto_id');
@@ -251,7 +251,7 @@ window.NEXO.engine = (() => {
     function analyzePredictiveScore(disponibilidade, produtos) {
         const insights = [];
         const prodMap = {};
-        produtos.forEach(p => prodMap[p.id] = p.corte || p.id);
+        produtos.forEach(p => prodMap[p.id] = p.corte_pai || p.id);
 
         const tomorrow = new Date();
         tomorrow.setDate(tomorrow.getDate() + 1);
