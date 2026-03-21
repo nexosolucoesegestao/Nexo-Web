@@ -176,19 +176,19 @@ const Engine = {
     });
 
     // Motivos de indisponibilidade AT
-    const naoDispAT = atual.filter(d => d.tem_estoque === 'SIM' && d.disponivel_at === 'NÃO' && d.motivo_at);
+    const naoDispAT = atual.filter(d => d.tem_estoque === 'SIM' && d.disponivel_at === 'NÃO' && (d.motivo_at || d.motivo_indisponivel_at));
     const motAT = {};
     naoDispAT.forEach(d => {
-      const m = d.motivo_at;
-      motAT[m] = (motAT[m] || 0) + 1;
+      const m = d.motivo_at || d.motivo_indisponivel_at;
+      if (m && m.trim()) motAT[m] = (motAT[m] || 0) + 1;
     });
 
     // Motivos de indisponibilidade AS
-    const naoDispAS = atual.filter(d => d.tem_estoque === 'SIM' && d.disponivel_as === 'NÃO' && d.motivo_as);
+    const naoDispAS = atual.filter(d => d.tem_estoque === 'SIM' && d.disponivel_as === 'NÃO' && (d.motivo_as || d.motivo_indisponivel_as));
     const motAS = {};
     naoDispAS.forEach(d => {
-      const m = d.motivo_as;
-      motAS[m] = (motAS[m] || 0) + 1;
+      const m = d.motivo_as || d.motivo_indisponivel_as;
+      if (m && m.trim()) motAS[m] = (motAS[m] || 0) + 1;
     });
 
     // Merge AT + AS motivos (ambos são de execução)
