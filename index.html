@@ -81,7 +81,7 @@
 
   // Init product map
   await Engine.buildProdMap();
-
+  await Engine.buildPessoaMap();
   // Build loja map DIRECTLY from lojas table (redes may have RLS blocking anon)
   const lojas = await API.getLojas(); // sem filtro = todas
   if (lojas.length > 0) {
