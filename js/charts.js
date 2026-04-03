@@ -166,7 +166,31 @@ var Charts = {
       options: { responsive: false, scales: { x: { display: false }, y: { display: false } }, plugins: { tooltip: { enabled: false } } }
     });
   },
-
+// ---- HORARIO DE CHEGADA (barras verticais) ----
+  horarioChegada: function(canvasId, data) {
+    this._defaults();
+    var labels = data.map(function(d) { return d.hora; });
+    var values = data.map(function(d) { return d.count; });
+    var maxVal = Math.max.apply(null, values) || 1;
+    var self = this;
+    var colors = values.map(function(v) {
+      return v >= maxVal * 0.8 ? self.COLORS.green : v >= maxVal * 0.4 ? self.COLORS.blue : self.COLORS.muted;
+    });
+ 
+    return new Chart(document.getElementById(canvasId).getContext('2d'), {
+      type: 'bar',
+      data: { labels: labels, datasets: [{ data: values, backgroundColor: colors, borderRadius: 5, barPercentage: 0.65 }] },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        scales: {
+          y: { min: 0, ticks: { stepSize: 1, font: { size: 9 } } },
+          x: { grid: { display: false }, ticks: { font: { size: 9 } } }
+        },
+        plugins: { tooltip: { backgroundColor: Charts.COLORS.navy, callbacks: { label: function(ctx) { return ctx.parsed.y + ' registros'; } } } }
+      },
+      plugins: [this._barLabelsPlugin()]
+    });
+  },
   // ---- Bar labels plugin ----
   _barLabelsPlugin: function(suffix) {
     return {
