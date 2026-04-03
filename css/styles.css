@@ -68,6 +68,10 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
 .strip-icon.quebra{background:var(--purple)}
 .strip-icon.equipe{background:var(--green)}
 .strip-icon.temp{background:var(--blue)}
+.strip-icon.eq { background: #27AE60; }
+.strip.eq { border-left: 4px solid #27AE60; }
+.strip-icon.abs { background: #E67E22; }
+.strip.abs { border-left: 4px solid #E67E22; }
 .strip-title{font-size:14px;font-weight:700;color:var(--navy)}
 .strip-subtitle{font-size:11px;color:var(--muted)}
 .strip-bn{margin-left:auto;display:flex;gap:24px}
