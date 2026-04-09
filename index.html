@@ -3,11 +3,29 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<!-- Content Security Policy -->
+<meta http-equiv="Content-Security-Policy" content="
+    default-src 'self';
+    script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com;
+    style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+    font-src 'self' https://fonts.gstatic.com;
+    img-src 'self' data: blob: https://kkjfqltpykkuwshtfhow.supabase.co;
+    connect-src 'self' https://kkjfqltpykkuwshtfhow.supabase.co;
+    worker-src 'self';
+">
+
 <title>NEXO Intelligence Web</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/styles.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+
+<!-- Chart.js — versão fixada + SRI -->
+<script
+    src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"
+    integrity="sha384-bs/nf9FbdNouRbMiFcrcZfLXYPKiPaGVGplVbv7dLGECccEXDW+S3zjqSKR5ZEaD"
+    crossorigin="anonymous">
+</script>
 </head>
 <body>
 
@@ -56,7 +74,17 @@
   <div class="page-loading">Carregando dados...</div>
 </main>
 
-<!-- JS Modules -->
+<!-- 1. Supabase SDK — versão fixada + SRI -->
+<script
+    src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"
+    integrity="sha384-2zrRDgDHSYB/GN3nFW3fsZXoxEhKIr3N2h63Tc6DEOB9JJdFIu8xMJT2Cph/gBil"
+    crossorigin="anonymous">
+</script>
+
+<!-- 2. Env vars — gerado no build Vercel, nunca no repo -->
+<script src="env.js"></script>
+
+<!-- 3. JS Modules -->
 <script src="js/config.js"></script>
 <script src="js/api.js"></script>
 <script src="js/utils.js"></script>
@@ -69,43 +97,6 @@
 <script src="pages/onepage.js"></script>
 <script src="pages/quebra.js"></script>
 <script src="pages/equipe.js"></script>
-
-<script>
-// ===== APP INIT =====
-(async function() {
-  // Header date
-  const hoje = new Date();
-  const diasSemana = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
-  const meses = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
-  document.getElementById('headerDate').textContent =
-    '📅 ' + diasSemana[hoje.getDay()] + ', ' + hoje.getDate() + ' ' + meses[hoje.getMonth()] + ' ' + hoje.getFullYear();
-
-  // Init product map
-  await Engine.buildProdMap();
-  await Engine.buildPessoaMap();
-  // Build loja map DIRECTLY from lojas table (redes may have RLS blocking anon)
-  const lojas = await API.getLojas(); // sem filtro = todas
-  if (lojas.length > 0) {
-    lojas.forEach(function(l) { Engine._lojaMap[l.id] = l.nome; });
-    document.getElementById('headerNetwork').textContent = lojas.length + ' lojas conectadas';
-  } else {
-    document.getElementById('headerNetwork').textContent = 'Sem lojas configuradas';
-  }
-
-  // Try to get rede name (optional — may fail due to RLS)
-  try {
-    const redes = await API.getRedes();
-    if (redes.length > 0) {
-      window.NEXO_REDE_ID = redes[0].id;
-      document.getElementById('headerNetwork').textContent = redes[0].nome + ' — ' + lojas.length + ' lojas';
-    }
-  } catch(e) {
-    console.log('[NEXO] Redes com RLS — usando lojas diretamente');
-  }
-
-  // Init router
-  Router.init();
-})();
-</script>
+<script src="js/app.js"></script>
 </body>
 </html>
