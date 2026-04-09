@@ -8,10 +8,11 @@
     var env = window.__NEXO_ENV__;
 
     if (!env || !env.SUPABASE_URL || !env.SUPABASE_KEY) {
-        console.error('[NEXO Config] Credenciais não encontradas. Verifique o deploy no Vercel.');
+        console.error('[NEXO Config] Credenciais nao encontradas. Verifique o deploy no Vercel.');
         return;
     }
 
+    // Objeto principal usado pelo api.js
     window.NEXO_CONFIG = {
         SUPABASE_URL:      env.SUPABASE_URL,
         SUPABASE_ANON_KEY: env.SUPABASE_KEY,
@@ -19,15 +20,22 @@
         ENV:               'production'
     };
 
-    // Criar cliente Supabase global
+    // Alias legado usado pelo app.js (NEXO.auth, NEXO.api, etc.)
+    window.NEXO = window.NEXO || {};
+    window.NEXO.SUPABASE_URL = env.SUPABASE_URL;
+    window.NEXO.SUPABASE_KEY = env.SUPABASE_KEY;
+
+    // Cliente Supabase global
     if (window.supabase && !window.NEXO_SUPABASE) {
         window.NEXO_SUPABASE = window.supabase.createClient(
             env.SUPABASE_URL,
             env.SUPABASE_KEY,
             { auth: { persistSession: false, autoRefreshToken: false } }
         );
+        // Alias para o app.js que pode usar NEXO.supabase
+        window.NEXO.supabase = window.NEXO_SUPABASE;
     }
 
-    // Limpar credenciais do window após uso
+    // Limpar credenciais do window apos uso
     delete window.__NEXO_ENV__;
 })();
