@@ -1,10 +1,33 @@
 // ============================================================
 // NEXO Intelligence Web v2 — Config
-// Preencha com suas credenciais Supabase reais
+// Lê credenciais do window.__NEXO_ENV__ gerado pelo build.
+// NUNCA hardcode credenciais aqui.
 // ============================================================
-const NEXO_CONFIG = {
-    SUPABASE_URL: 'https://kkjfqltpykkuwshtfhow.supabase.co',
-  SUPABASE_ANON_KEY: 'sb_publishable_MvdXO8-wxp4VbAfB2kHmQw_mM_K2nYn',
-VERSION: '2.0.0',
-  ENV: 'production'
-};
+
+(function() {
+    var env = window.__NEXO_ENV__;
+
+    if (!env || !env.SUPABASE_URL || !env.SUPABASE_KEY) {
+        console.error('[NEXO Config] Credenciais não encontradas. Verifique o deploy no Vercel.');
+        return;
+    }
+
+    window.NEXO_CONFIG = {
+        SUPABASE_URL:      env.SUPABASE_URL,
+        SUPABASE_ANON_KEY: env.SUPABASE_KEY,
+        VERSION:           '2.0.0',
+        ENV:               'production'
+    };
+
+    // Criar cliente Supabase global
+    if (window.supabase && !window.NEXO_SUPABASE) {
+        window.NEXO_SUPABASE = window.supabase.createClient(
+            env.SUPABASE_URL,
+            env.SUPABASE_KEY,
+            { auth: { persistSession: false, autoRefreshToken: false } }
+        );
+    }
+
+    // Limpar credenciais do window após uso
+    delete window.__NEXO_ENV__;
+})();
