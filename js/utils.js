@@ -36,7 +36,7 @@ const Utils = {
   },
 
   monthKey(dateStr) {
-    return dateStr.slice(0, 7); // "2026-03"
+    return dateStr.slice(0, 7);
   },
 
   formatDate(dateStr) {
@@ -82,21 +82,17 @@ const Utils = {
     return [...arr].sort((a, b) => a[key] - b[key]);
   },
 
-  // Period filter helper — returns { desde, ate, desdeAnterior, ateAnterior }
- periodRange(days, refDate) {
-    // refDate: ancora o periodo na data mais recente dos dados
-    // se nao fornecida, usa today()
+  // Period filter — ancora na data mais recente dos dados, nao em hoje
+  periodRange(days, refDate) {
     var ateDate = refDate ? new Date(refDate + 'T12:00:00') : new Date();
     var ate = ateDate.toISOString().slice(0, 10);
-
     var d1 = new Date(ateDate); d1.setDate(d1.getDate() - days);
     var desde = d1.toISOString().slice(0, 10);
-
     var d2 = new Date(ateDate); d2.setDate(d2.getDate() - days - 1);
     var ateAnterior = d2.toISOString().slice(0, 10);
-
     var d3 = new Date(ateDate); d3.setDate(d3.getDate() - days * 2 - 1);
     var desdeAnterior = d3.toISOString().slice(0, 10);
-
     return { desde, ate, desdeAnterior, ateAnterior };
-},
+  }
+
+};
