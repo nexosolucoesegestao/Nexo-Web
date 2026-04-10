@@ -39,8 +39,9 @@ var Engine = {
   // ============================================================
   // RUPTURA KPI
   // ============================================================
-  processRuptura: function(disponibilidade, periodDias) {
-    var range = Utils.periodRange(periodDias);
+  processRuptura: function(disp, periodDias) {
+    var maxDate = disp.reduce(function(mx, d) { return d.data > mx ? d.data : mx; }, '2000-01-01');
+    var range = Utils.periodRange(periodDias, maxDate);
     var atual = disponibilidade.filter(function(d) { return d.data >= range.desde && d.data <= range.ate; });
     var anterior = disponibilidade.filter(function(d) { return d.data >= range.desdeAnterior && d.data <= range.ateAnterior; });
 
