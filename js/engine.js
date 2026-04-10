@@ -1,10 +1,8 @@
 // ============================================================
 // NEXO Intelligence Web v2 — Engine (Motor de Inteligencia)
 // Processa dados e gera: aggregations, rankings, insights cruzados
-// ATUALIZADO: inclui processQuebra + processEquipe
 // ============================================================
 var Engine = {
-
   _prodMap: {},
   _lojaMap: {},
   _pessoaMap: {},
@@ -42,9 +40,8 @@ var Engine = {
   processRuptura: function(disp, periodDias) {
     var maxDate = disp.reduce(function(mx, d) { return d.data > mx ? d.data : mx; }, '2000-01-01');
     var range = Utils.periodRange(periodDias, maxDate);
-    var atual = disponibilidade.filter(function(d) { return d.data >= range.desde && d.data <= range.ate; });
-    var anterior = disponibilidade.filter(function(d) { return d.data >= range.desdeAnterior && d.data <= range.ateAnterior; });
-
+    var atual = disp.filter(function(d) { return d.data >= range.desde && d.data <= range.ate; });
+    var anterior = disp.filter(function(d) { return d.data >= range.desdeAnterior && d.data <= range.ateAnterior; });
     return {
       ruptura: this._calcRuptura(atual, anterior),
       dispAT: this._calcDispAT(atual, anterior),
@@ -52,7 +49,7 @@ var Engine = {
       motivos: this._calcMotivos(atual),
       porDiaSemana: this._calcPorDiaSemana(atual),
       heatmap: this._calcHeatmap(atual),
-      evolutivoMensal: this._calcEvoMensal(disponibilidade)
+      evolutivoMensal: this._calcEvoMensal(disp)
     };
   },
 
@@ -223,8 +220,8 @@ var Engine = {
     });
   },
 
-  _calcEvoMensal: function(disponibilidade) {
-    var byMonth = Utils.groupBy(disponibilidade, function(d) { return Utils.monthKey(d.data); });
+  _calcEvoMensal: function(disp) {
+    var byMonth = Utils.groupBy(disp, function(d) { return Utils.monthKey(d.data); });
     var months = Object.keys(byMonth).sort();
     return {
       ruptura: months.map(function(m) {
@@ -317,12 +314,12 @@ var Engine = {
   // EQUIPE KPI
   // ============================================================
   processEquipe: function(presenca, periodDias) {
-    var range = Utils.periodRange(periodDias);
+    var maxDate = presenca.reduce(function(mx, d) { return d.data > mx ? d.data : mx; }, '2000-01-01');
+    var range = Utils.periodRange(periodDias, maxDate);
     var atual = presenca.filter(function(d) { return d.data >= range.desde && d.data <= range.ate; });
     var anterior = presenca.filter(function(d) { return d.data >= range.desdeAnterior && d.data <= range.ateAnterior; });
     var self = this;
 
-    // === PRESENCA ===
     var totalAtual = atual.length;
     var presAtual = atual.filter(function(d) { return d.presente_str === 'SIM'; }).length;
     var taxaPres = Utils.pct(presAtual, totalAtual);
@@ -332,7 +329,6 @@ var Engine = {
     var varPres = Utils.round1(taxaPres - taxaPresAnt);
     var totalFaltas = totalAtual - presAtual;
 
-    // Ranking por loja (presenca)
     var byLoja = Utils.groupBy(atual, 'loja_id');
     var byLojaAnt = Utils.groupBy(anterior, 'loja_id');
     var rankLojaPres = Object.entries(byLoja).map(function(e) {
@@ -346,7 +342,6 @@ var Engine = {
     });
     rankLojaPres.sort(function(a, b) { return a.taxa - b.taxa; });
 
-    // Ranking por pessoa (presenca)
     var byPessoa = Utils.groupBy(atual, 'pessoa_id');
     var byPessoaAnt = Utils.groupBy(anterior, 'pessoa_id');
     var rankPessoaPres = Object.entries(byPessoa).map(function(e) {
@@ -360,7 +355,6 @@ var Engine = {
     });
     rankPessoaPres.sort(function(a, b) { return a.taxa - b.taxa; });
 
-    // === ABSENTEISMO (inverso) ===
     var taxaAbs = Utils.round1(100 - taxaPres);
     var taxaAbsAnt = Utils.round1(100 - taxaPresAnt);
     var varAbs = Utils.round1(taxaAbs - taxaAbsAnt);
@@ -386,14 +380,10 @@ var Engine = {
     });
     rankPessoaAbs.sort(function(a, b) { return b.faltas - a.faltas; });
 
-    // === MOTIVOS ===
     var motivos = {};
-    atual.filter(function(d) { return d.presente_str === 'NAO' && d.motivo_ausencia && d.motivo_ausencia.trim(); }).forEach(function(d) {
-      var m = d.motivo_ausencia.trim();
-      motivos[m] = (motivos[m] || 0) + 1;
-    });
+    atual.filter(function(d) { return d.presente_str === 'NAO' && d.motivo_ausencia && d.motivo_ausencia.trim(); })
+      .forEach(function(d) { var m = d.motivo_ausencia.trim(); motivos[m] = (motivos[m] || 0) + 1; });
 
-    // === POR DIA DA SEMANA (taxa de falta) ===
     var dias = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab'];
     var byDow = {};
     dias.forEach(function(d, i) { byDow[i] = { total: 0, faltas: 0 }; });
@@ -402,25 +392,17 @@ var Engine = {
       byDow[dow].total++;
       if (d.presente_str === 'NAO') byDow[dow].faltas++;
     });
-    var porDiaSemana = dias.map(function(nome, i) {
-      return { dia: nome, taxa: Utils.pct(byDow[i].faltas, byDow[i].total) };
-    });
+    var porDiaSemana = dias.map(function(nome, i) { return { dia: nome, taxa: Utils.pct(byDow[i].faltas, byDow[i].total) }; });
 
-    // === HORARIO DE CHEGADA ===
-    var horarios = [];
     var horaCount = {};
-    atual.filter(function(d) { return d.presente_str === 'SIM' && d.hora_chegada && d.hora_chegada.trim(); }).forEach(function(d) {
-      var h = d.hora_chegada.trim().slice(0, 2);
-      var hora = parseInt(h);
-      if (!isNaN(hora)) {
-        var label = (hora < 10 ? '0' : '') + hora + ':00';
-        horaCount[label] = (horaCount[label] || 0) + 1;
-      }
-    });
-    var horaKeys = Object.keys(horaCount).sort();
-    horarios = horaKeys.map(function(k) { return { hora: k, count: horaCount[k] }; });
+    atual.filter(function(d) { return d.presente_str === 'SIM' && d.hora_chegada && d.hora_chegada.trim(); })
+      .forEach(function(d) {
+        var h = d.hora_chegada.trim().slice(0, 2);
+        var hora = parseInt(h);
+        if (!isNaN(hora)) { var label = (hora < 10 ? '0' : '') + hora + ':00'; horaCount[label] = (horaCount[label] || 0) + 1; }
+      });
+    var horarios = Object.keys(horaCount).sort().map(function(k) { return { hora: k, count: horaCount[k] }; });
 
-    // === EVOLUTIVO MENSAL ===
     var byMonth = Utils.groupBy(presenca, function(d) { return Utils.monthKey(d.data); });
     var months = Object.keys(byMonth).sort();
     var evoPresenca = months.map(function(m) {
@@ -483,7 +465,6 @@ var Engine = {
   _insightsPresenca: function(data, insights) {
     var eq = data.presencaData;
     if (!eq || !eq.presenca) return;
-
     eq.presenca.rankLojas.filter(function(l) { return l.taxa < 70; }).forEach(function(l) {
       insights.criticos.push({
         titulo: l.nome + ': ' + l.taxa + '% de presenca',
@@ -491,7 +472,6 @@ var Engine = {
         acao: 'Verificar escala e cobertura de ' + l.nome + '.'
       });
     });
-
     var pioresDias = eq.porDiaSemana.filter(function(d) { return d.taxa >= 20; }).sort(function(a, b) { return b.taxa - a.taxa; });
     if (pioresDias.length > 0) {
       insights.previsao.push({
@@ -500,7 +480,6 @@ var Engine = {
         acao: 'Reforcar escala para ' + pioresDias[0].dia + '.'
       });
     }
-
     if (eq.presenca.variacao !== 0) {
       var melhorou = eq.presenca.variacao > 0;
       insights.evolucao.push({
@@ -511,11 +490,6 @@ var Engine = {
     }
   },
 
-  _insightsTemperatura: function(data, insights) {
-    // Placeholder — sera ativado quando a tela de Temperatura estiver pronta
-  },
-
-  _insightsQuebra: function(data, insights) {
-    // Placeholder — sera ativado quando insights de quebra forem implementados
-  }
+  _insightsTemperatura: function(data, insights) {},
+  _insightsQuebra: function(data, insights) {}
 };
