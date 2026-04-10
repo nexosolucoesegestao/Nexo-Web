@@ -249,7 +249,8 @@ var Engine = {
   // QUEBRA KPI
   // ============================================================
   processQuebra: function(quebra, periodDias) {
-    var range = Utils.periodRange(periodDias);
+    var maxDate = quebra.reduce(function(mx, d) { return d.data > mx ? d.data : mx; }, '2000-01-01');
+    var range = Utils.periodRange(periodDias, maxDate);
     var atual = quebra.filter(function(d) { return d.data >= range.desde && d.data <= range.ate; });
     var anterior = quebra.filter(function(d) { return d.data >= range.desdeAnterior && d.data <= range.ateAnterior; });
     var self = this;
