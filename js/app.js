@@ -1,131 +1,87 @@
 // ============================================================
-// NEXO Intelligence Web — App Init
+// NEXO Intelligence Web v2 — App Init
+// Usa vars nativas: API, Router. Sem dependencia de NEXO.*
 // ============================================================
-(async () => {
+(function() {
+    document.addEventListener('DOMContentLoaded', function() {
 
-    // ── Login handler ──
-    document.getElementById('btn-login').addEventListener('click', async () => {
-        const email = document.getElementById('login-email').value;
-        const senha = document.getElementById('login-senha').value;
-        const errEl = document.getElementById('login-error');
-        const btn = document.getElementById('btn-login');
-
-        if (!email || !senha) { errEl.textContent = 'Preencha email e senha.'; return; }
-        btn.disabled = true; btn.textContent = 'Entrando...'; errEl.textContent = '';
-
-        try {
-            await NEXO.auth.login(email, senha);
-            window.location.reload();
-        } catch (err) {
-            errEl.textContent = err.message;
-            btn.disabled = false; btn.textContent = 'Entrar';
-        }
-    });
-
-    document.getElementById('login-senha').addEventListener('keydown', e => {
-        if (e.key === 'Enter') document.getElementById('btn-login').click();
-    });
-
-    // ── Auth check ──
-    const user = await NEXO.auth.requireAuth();
-    if (!user) return;
-
-    const isSuperAdmin = NEXO.auth.isSuperAdmin(user);
-    const nome = NEXO.auth.getNome(user);
-
-    document.getElementById('user-name').textContent = nome;
-    document.getElementById('user-role').textContent = isSuperAdmin ? 'Super Admin' : 'Gestor de Rede';
-    document.getElementById('user-avatar').textContent = nome.charAt(0).toUpperCase();
-
-    // ── Date ──
-    const now = new Date();
-    document.getElementById('header-date').textContent = now.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-
-    // ── Sidebar toggle ──
-    const sidebar = document.getElementById('sidebar');
-    const backdrop = document.getElementById('sidebar-backdrop');
-    document.getElementById('menu-toggle').addEventListener('click', () => {
-        sidebar.classList.toggle('sidebar-open');
-        backdrop.classList.toggle('visible');
-    });
-    backdrop.addEventListener('click', () => {
-        sidebar.classList.remove('sidebar-open');
-        backdrop.classList.remove('visible');
-    });
-    document.querySelectorAll('.sidebar-link').forEach(link => {
-        link.addEventListener('click', () => {
-            if (window.innerWidth <= 900) {
-                sidebar.classList.remove('sidebar-open');
-                backdrop.classList.remove('visible');
-            }
-        });
-    });
-
-    // ── Logout ──
-    document.getElementById('btn-logout').addEventListener('click', () => {
-        if (confirm('Sair do painel?')) NEXO.auth.logout();
-    });
-
-    // ── Filters ──
-    document.getElementById('nav-filtro-rede').style.display = '';
-
-    try {
-        const redes = await NEXO.api.getRedes();
-        const redeSelect = document.getElementById('filtro-rede');
-        redes.forEach(r => {
-            const opt = document.createElement('option');
-            opt.value = r.id; opt.textContent = r.nome;
-            redeSelect.appendChild(opt);
-        });
-
-        const lojas = await NEXO.api.getLojas();
-        const lojaSelect = document.getElementById('filtro-loja');
-        lojas.forEach(l => {
-            const opt = document.createElement('option');
-            opt.value = l.id; opt.textContent = l.nome;
-            lojaSelect.appendChild(opt);
-        });
-
-        redeSelect.addEventListener('change', async () => {
-            NEXO.api.clearCache();
-            const redeId = redeSelect.value;
-            const filteredLojas = redeId ? lojas.filter(l => l.id_rede === redeId) : lojas;
-            lojaSelect.innerHTML = '<option value="">Todas as lojas</option>';
-            filteredLojas.forEach(l => {
-                const opt = document.createElement('option');
-                opt.value = l.id; opt.textContent = l.nome;
-                lojaSelect.appendChild(opt);
+        // Data no header
+        var dateEl = document.getElementById('headerDate');
+        if (dateEl) {
+            dateEl.textContent = new Date().toLocaleDateString('pt-BR', {
+                weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
             });
-            // Reload current page
-            const route = window.location.hash.replace('#/', '') || 'copiloto';
-            NEXO.router.loadRoute(route);
-        });
+        }
 
-        lojaSelect.addEventListener('change', () => {
-            NEXO.api.clearCache();
-            const route = window.location.hash.replace('#/', '') || 'copiloto';
-            NEXO.router.loadRoute(route);
-        });
-    } catch (err) {
-        console.error('Erro ao carregar filtros:', err);
-    }
+        // Sidebar toggle
+        var sidebar = document.getElementById('sidebar');
+        var menuBtn = document.getElementById('menu-toggle');
+        if (menuBtn && sidebar) {
+            menuBtn.addEventListener('click', function() {
+                sidebar.classList.toggle('sidebar-open');
+            });
+            document.addEventListener('click', function(e) {
+                if (sidebar.classList.contains('sidebar-open') &&
+                    !sidebar.contains(e.target) && e.target !== menuBtn) {
+                    sidebar.classList.remove('sidebar-open');
+                }
+            });
+        }
 
-    // Helper global para pegar filtros
-    window.NEXO.getFilters = () => ({
-        redeId: document.getElementById('filtro-rede')?.value || null,
-        lojaId: document.getElementById('filtro-loja')?.value || null
+        // Filtros de rede/loja
+        var filtroRedeEl = document.getElementById('filtro-rede');
+        var filtroLojaEl = document.getElementById('filtro-loja');
+        var todasLojas = [];
+
+        if (filtroRedeEl && filtroLojaEl) {
+            API.getRedes().then(function(redes) {
+                redes.forEach(function(r) {
+                    var opt = document.createElement('option');
+                    opt.value = r.id; opt.textContent = r.nome;
+                    filtroRedeEl.appendChild(opt);
+                });
+            }).catch(function(e) { console.warn('[App] getRedes:', e); });
+
+            API.getLojas().then(function(lojas) {
+                todasLojas = lojas;
+                lojas.forEach(function(l) {
+                    var opt = document.createElement('option');
+                    opt.value = l.id; opt.textContent = l.nome;
+                    filtroLojaEl.appendChild(opt);
+                });
+            }).catch(function(e) { console.warn('[App] getLojas:', e); });
+
+            filtroRedeEl.addEventListener('change', function() {
+                API.clearCache();
+                var redeId = filtroRedeEl.value;
+                filtroLojaEl.innerHTML = '<option value="">Todas as lojas</option>';
+                (redeId
+                    ? todasLojas.filter(function(l) { return l.id_rede === redeId; })
+                    : todasLojas
+                ).forEach(function(l) {
+                    var opt = document.createElement('option');
+                    opt.value = l.id; opt.textContent = l.nome;
+                    filtroLojaEl.appendChild(opt);
+                });
+                window.location.hash = '#/' + (window.location.hash.replace('#/', '') || 'ruptura');
+            });
+
+            filtroLojaEl.addEventListener('change', function() {
+                API.clearCache();
+                window.location.hash = '#/' + (window.location.hash.replace('#/', '') || 'ruptura');
+            });
+        }
+
+        // Helper global de filtros — usado pelas pages
+        window.NEXO = window.NEXO || {};
+        window.NEXO.getFilters = function() {
+            return {
+                redeId: filtroRedeEl ? (filtroRedeEl.value || null) : null,
+                lojaId: filtroLojaEl ? (filtroLojaEl.value || null) : null
+            };
+        };
+
+        // Inicializar router — pages ja se registram em seus proprios arquivos
+        Router.init();
     });
-
-    // ── Router setup ──
-    NEXO.router.setContainer('#page-container');
-    NEXO.router.register({
-        copiloto:     { file: 'pages/copiloto.html',     init: () => window.initCopiloto?.() },
-        dashboard:    { file: 'pages/dashboard.html',     init: () => window.initDashboard?.() },
-        operacional:  { file: 'pages/operacional.html',   init: () => window.initOperacional?.() },
-        mercado:      { file: 'pages/mercado.html',       init: () => window.initMercado?.() },
-        financeiro:   { file: 'pages/financeiro.html',    init: () => window.initFinanceiro?.() },
-        comparativo:  { file: 'pages/comparativo.html',   init: () => window.initComparativo?.() },
-    });
-    NEXO.router.init();
-
 })();
