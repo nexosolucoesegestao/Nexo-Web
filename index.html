@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<!-- Content Security Policy -->
 <meta http-equiv="Content-Security-Policy" content="
     default-src 'self';
     script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com;
@@ -20,7 +19,6 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/styles.css">
 
-<!-- Chart.js — versao fixada + SRI -->
 <script
     src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"
     integrity="sha384-bs/nf9FbdNouRbMiFcrcZfLXYPKiPaGVGplVbv7dLGECccEXDW+S3zjqSKR5ZEaD"
@@ -29,76 +27,127 @@
 </head>
 <body>
 
-<!-- SIDEBAR -->
-<aside class="sidebar" id="sidebar">
-  <div class="sidebar-logo">
-    <div class="logo-mark">N</div>
-    <div>
-      <div class="logo-text">NEXO</div>
-      <div class="logo-sub">GESTAO INTELIGENTE</div>
+<!-- ── TELA DE LOGIN ──────────────────────────────────────── -->
+<div id="login-screen" style="display:none; position:fixed; inset:0; z-index:1000;
+    background:#0c1425; align-items:center; justify-content:center;">
+  <div style="background:#111d35; border:1px solid #1e2d4a; border-radius:12px;
+      padding:2.5rem 2rem; width:100%; max-width:380px; box-shadow:0 24px 64px rgba(0,0,0,.6);">
+    <div style="text-align:center; margin-bottom:2rem;">
+      <div style="font-size:2.2rem; font-weight:700; color:#c9a84c; letter-spacing:2px;">NEXO</div>
+      <div style="font-size:0.8rem; color:#64748b; margin-top:4px;">INTELLIGENCE WEB</div>
+    </div>
+    <div style="margin-bottom:1rem;">
+      <label style="display:block; font-size:0.8rem; color:#94a3b8; margin-bottom:6px;">Email</label>
+      <input id="login-email" type="email" placeholder="seu@email.com"
+        style="width:100%; padding:10px 12px; background:#0c1425; border:1px solid #1e2d4a;
+               border-radius:8px; color:#e2e8f0; font-size:0.9rem; box-sizing:border-box;
+               outline:none; font-family:inherit;">
+    </div>
+    <div style="margin-bottom:1.5rem;">
+      <label style="display:block; font-size:0.8rem; color:#94a3b8; margin-bottom:6px;">Senha</label>
+      <input id="login-senha" type="password" placeholder="••••••••"
+        style="width:100%; padding:10px 12px; background:#0c1425; border:1px solid #1e2d4a;
+               border-radius:8px; color:#e2e8f0; font-size:0.9rem; box-sizing:border-box;
+               outline:none; font-family:inherit;">
+    </div>
+    <div id="login-error" style="color:#ef4444; font-size:0.82rem; margin-bottom:1rem;
+         min-height:1.2rem; text-align:center;"></div>
+    <button id="btn-login"
+        style="width:100%; padding:11px; background:#c9a84c; color:#0c1425; font-weight:700;
+               font-size:0.95rem; border:none; border-radius:8px; cursor:pointer; font-family:inherit;">
+      Entrar
+    </button>
+    <div style="text-align:center; margin-top:1.5rem; font-size:0.75rem; color:#475569;">
+      NEXO Soluções &amp; Gestão para Varejo
     </div>
   </div>
-  <nav class="sidebar-nav">
-    <div class="nav-section">
-      <div class="nav-section-title">Inteligencia</div>
-      <a class="nav-item" data-page="copiloto"><span class="nav-icon">🧭</span> Copiloto</a>
-      <a class="nav-item" data-page="onepage"><span class="nav-icon">🎯</span> OnePage</a>
-    </div>
-    <div class="nav-section">
-      <div class="nav-section-title">KPIs</div>
-      <a class="nav-item" data-page="ruptura"><span class="nav-icon">📦</span> Ruptura</a>
-      <a class="nav-item" data-page="quebra"><span class="nav-icon">💔</span> Quebra</a>
-      <a class="nav-item" data-page="equipe"><span class="nav-icon">👥</span> Equipe</a>
-      <a class="nav-item" data-page="temperatura"><span class="nav-icon">🌡️</span> Temperatura</a>
-    </div>
-    <div class="nav-section">
-      <div class="nav-section-title">Contexto</div>
-      <a class="nav-item" data-page="mercado"><span class="nav-icon">📈</span> Mercado &amp; Clima</a>
-      <a class="nav-item" data-page="financeiro"><span class="nav-icon">💰</span> Financeiro</a>
-      <a class="nav-item" data-page="comparativo"><span class="nav-icon">⚖️</span> Comparativo</a>
-    </div>
-  </nav>
-</aside>
+</div>
 
-<!-- HEADER -->
-<header class="header">
-  <button id="menu-toggle" class="menu-toggle" aria-label="Abrir menu">&#9776;</button>
+<!-- ── APP SHELL ─────────────────────────────────────────── -->
+<div id="app-shell" style="display:none; width:100%; height:100%;">
 
-  <div class="header-center">
-    <div class="header-title" id="headerTitle">NEXO Intelligence</div>
-    <div class="header-sub" id="headerSub">Carregando...</div>
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-mark">N</div>
+      <div>
+        <div class="logo-text">NEXO</div>
+        <div class="logo-sub">GESTAO INTELIGENTE</div>
+      </div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section">
+        <div class="nav-section-title">Inteligencia</div>
+        <a class="nav-item" data-page="copiloto"><span class="nav-icon">🧭</span> Copiloto</a>
+        <a class="nav-item" data-page="onepage"><span class="nav-icon">🎯</span> OnePage</a>
+      </div>
+      <div class="nav-section">
+        <div class="nav-section-title">KPIs</div>
+        <a class="nav-item" data-page="ruptura"><span class="nav-icon">📦</span> Ruptura</a>
+        <a class="nav-item" data-page="quebra"><span class="nav-icon">💔</span> Quebra</a>
+        <a class="nav-item" data-page="equipe"><span class="nav-icon">👥</span> Equipe</a>
+        <a class="nav-item" data-page="temperatura"><span class="nav-icon">🌡️</span> Temperatura</a>
+      </div>
+      <div class="nav-section">
+        <div class="nav-section-title">Contexto</div>
+        <a class="nav-item" data-page="mercado"><span class="nav-icon">📈</span> Mercado &amp; Clima</a>
+        <a class="nav-item" data-page="financeiro"><span class="nav-icon">💰</span> Financeiro</a>
+        <a class="nav-item" data-page="comparativo"><span class="nav-icon">⚖️</span> Comparativo</a>
+      </div>
+    </nav>
+    <div style="padding:1rem; border-top:1px solid #1e2d4a; margin-top:auto;">
+      <div style="display:flex; align-items:center; gap:10px;">
+        <div id="user-avatar" style="width:32px; height:32px; border-radius:50%; background:#c9a84c;
+             color:#0c1425; font-weight:700; font-size:0.9rem; display:flex; align-items:center;
+             justify-content:center; flex-shrink:0;">N</div>
+        <div style="flex:1; min-width:0;">
+          <div id="user-name" style="font-size:0.82rem; font-weight:600; color:#e2e8f0;
+               white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Carregando...</div>
+          <div id="user-role" style="font-size:0.72rem; color:#64748b;">—</div>
+        </div>
+        <button id="btn-logout" title="Sair"
+            style="background:none; border:none; color:#64748b; cursor:pointer; font-size:1rem; padding:4px;">
+          ⏻
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <div style="flex:1; display:flex; flex-direction:column; min-width:0;">
+    <header class="header">
+      <button id="menu-toggle" class="menu-toggle" aria-label="Abrir menu">&#9776;</button>
+      <div class="header-center">
+        <div class="header-title" id="headerTitle">NEXO Intelligence</div>
+        <div class="header-sub" id="headerSub">Carregando...</div>
+      </div>
+      <div class="header-right">
+        <div class="header-filters" id="nav-filtro-rede">
+          <select id="filtro-rede" class="filter-select">
+            <option value="">Todas as redes</option>
+          </select>
+          <select id="filtro-loja" class="filter-select">
+            <option value="">Todas as lojas</option>
+          </select>
+        </div>
+        <div class="header-date" id="headerDate"></div>
+      </div>
+    </header>
+
+    <main class="main" id="mainContent">
+      <div class="page-loading">Carregando dados...</div>
+    </main>
   </div>
 
-  <div class="header-right">
-    <div class="header-filters" id="nav-filtro-rede">
-      <select id="filtro-rede" class="filter-select">
-        <option value="">Todas as redes</option>
-      </select>
-      <select id="filtro-loja" class="filter-select">
-        <option value="">Todas as lojas</option>
-      </select>
-    </div>
-    <div class="header-date" id="headerDate"></div>
-  </div>
-</header>
+</div><!-- fim app-shell -->
 
-<!-- MAIN CONTENT -->
-<main class="main" id="mainContent">
-  <div class="page-loading">Carregando dados...</div>
-</main>
-
-<!-- 1. Supabase SDK — versao fixada + SRI -->
+<!-- Scripts -->
 <script
     src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"
     integrity="sha384-2zrRDgDHSYB/GN3nFW3fsZXoxEhKIr3N2h63Tc6DEOB9JJdFIu8xMJT2Cph/gBil"
     crossorigin="anonymous">
 </script>
-
-<!-- 2. Env vars — gerado no build Vercel, nunca no repo -->
 <script src="env.js"></script>
-
-<!-- 3. JS Modules — ordem importa -->
 <script src="js/config.js"></script>
+<script src="js/auth.js"></script>
 <script src="js/api.js"></script>
 <script src="js/utils.js"></script>
 <script src="js/engine.js"></script>
