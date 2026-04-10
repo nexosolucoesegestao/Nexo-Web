@@ -1,71 +1,77 @@
 // ============================================================
 // NEXO Intelligence Web — Auth Module
+// Mesmo padrao do Admin: Supabase Auth + roles user_metadata
+// Roles: super_admin, gestor_rede
 // ============================================================
 window.NEXO = window.NEXO || {};
 
-window.NEXO.auth = (() => {
-    const sb = () => NEXO.supabase;
+window.NEXO.auth = (function() {
+
+    function _sb() { return window.NEXO_SUPABASE; }
 
     async function getSession() {
-        const { data: { session } } = await sb().auth.getSession();
-        return session;
+        var res = await _sb().auth.getSession();
+        return res.data.session || null;
     }
 
     async function getUser() {
-        const s = await getSession();
+        var s = await getSession();
         return s ? s.user : null;
     }
 
-    function getMeta(u) { return u?.user_metadata || {}; }
+    function getMeta(u) { return (u && u.user_metadata) ? u.user_metadata : {}; }
     function getRole(u) { return getMeta(u).role || null; }
     function getIdRede(u) { return getMeta(u).id_rede || null; }
-    function getIdLoja(u) { return getMeta(u).id_loja || null; }
-    function getNome(u) { return getMeta(u).nome || u?.email || 'Usuário'; }
+    function getNome(u) { return getMeta(u).nome || (u && u.email) || 'Usuário'; }
     function isSuperAdmin(u) { return getRole(u) === 'super_admin'; }
     function isGestorRede(u) { return getRole(u) === 'gestor_rede'; }
 
     async function login(email, senha) {
-        const { data, error } = await sb().auth.signInWithPassword({
+        var res = await _sb().auth.signInWithPassword({
             email: email.trim().toLowerCase(),
             password: senha
         });
-        if (error) {
-            const msgs = {
+        if (res.error) {
+            var msgs = {
                 'Invalid login credentials': 'Email ou senha incorretos.',
                 'Email not confirmed': 'Email não confirmado.',
+                'Too many requests': 'Muitas tentativas. Aguarde alguns minutos.'
             };
-            throw new Error(msgs[error.message] || error.message);
+            throw new Error(msgs[res.error.message] || res.error.message);
         }
-        const role = getRole(data.user);
-        if (!role || !['super_admin', 'gestor_rede'].includes(role)) {
+        var role = getRole(res.data.user);
+        if (!role || ['super_admin','gestor_rede'].indexOf(role) === -1) {
             await logout();
-            throw new Error('Acesso restrito a gestores e administradores.');
+            throw new Error('Acesso restrito a gestores e administradores NEXO.');
         }
-        return data.user;
+        return res.data.user;
     }
 
     async function logout() {
-        await sb().auth.signOut();
+        await _sb().auth.signOut();
         window.location.reload();
     }
 
     async function requireAuth() {
-        const user = await getUser();
+        var user = await getUser();
+        var loginScreen = document.getElementById('login-screen');
+        var appShell    = document.getElementById('app-shell');
         if (!user) {
-            document.getElementById('login-screen').style.display = 'flex';
-            document.getElementById('app-shell').style.display = 'none';
+            if (loginScreen) loginScreen.style.display = 'flex';
+            if (appShell)    appShell.style.display    = 'none';
             return null;
         }
-        const role = getRole(user);
-        if (!role || !['super_admin', 'gestor_rede'].includes(role)) {
-            document.getElementById('login-screen').style.display = 'flex';
-            document.getElementById('app-shell').style.display = 'none';
+        var role = getRole(user);
+        if (!role || ['super_admin','gestor_rede'].indexOf(role) === -1) {
+            if (loginScreen) loginScreen.style.display = 'flex';
+            if (appShell)    appShell.style.display    = 'none';
             return null;
         }
-        document.getElementById('login-screen').style.display = 'none';
-        document.getElementById('app-shell').style.display = 'flex';
+        if (loginScreen) loginScreen.style.display = 'none';
+        if (appShell)    appShell.style.display    = 'flex';
         return user;
     }
 
-    return { getSession, getUser, getMeta, getRole, getIdRede, getIdLoja, getNome, isSuperAdmin, isGestorRede, login, logout, requireAuth };
+    return { getSession, getUser, getMeta, getRole, getIdRede, getNome,
+             isSuperAdmin, isGestorRede, login, logout, requireAuth };
 })();
