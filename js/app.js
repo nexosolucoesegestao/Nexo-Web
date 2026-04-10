@@ -1,9 +1,15 @@
 // ============================================================
 // NEXO Intelligence Web v2 — App Init
-// Usa vars nativas: API, Router. Sem dependencia de NEXO.*
 // ============================================================
 (function() {
     document.addEventListener('DOMContentLoaded', function() {
+
+        // Inicializar mapas de nomes (loja e produto) — uma vez só
+        Promise.all([
+            Engine.buildLojaMap(),
+            Engine.buildProdMap(),
+            Engine.buildPessoaMap()
+        ]).catch(function(e) { console.warn('[App] buildMaps:', e); });
 
         // Data no header
         var dateEl = document.getElementById('headerDate');
@@ -81,7 +87,7 @@
             };
         };
 
-        // Inicializar router — pages ja se registram em seus proprios arquivos
+        // Inicializar router — pages já se registram nos próprios arquivos
         Router.init();
     });
 })();
