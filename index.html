@@ -20,7 +20,7 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/styles.css">
 
-<!-- Chart.js — versão fixada + SRI -->
+<!-- Chart.js — versao fixada + SRI -->
 <script
     src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"
     integrity="sha384-bs/nf9FbdNouRbMiFcrcZfLXYPKiPaGVGplVbv7dLGECccEXDW+S3zjqSKR5ZEaD"
@@ -33,11 +33,14 @@
 <aside class="sidebar" id="sidebar">
   <div class="sidebar-logo">
     <div class="logo-mark">N</div>
-    <div><div class="logo-text">NEXO</div><div class="logo-sub">GESTÃO INTELIGENTE</div></div>
+    <div>
+      <div class="logo-text">NEXO</div>
+      <div class="logo-sub">GESTAO INTELIGENTE</div>
+    </div>
   </div>
   <nav class="sidebar-nav">
     <div class="nav-section">
-      <div class="nav-section-title">Inteligência</div>
+      <div class="nav-section-title">Inteligencia</div>
       <a class="nav-item" data-page="copiloto"><span class="nav-icon">🧭</span> Copiloto</a>
       <a class="nav-item" data-page="onepage"><span class="nav-icon">🎯</span> OnePage</a>
     </div>
@@ -50,7 +53,7 @@
     </div>
     <div class="nav-section">
       <div class="nav-section-title">Contexto</div>
-      <a class="nav-item" data-page="mercado"><span class="nav-icon">📈</span> Mercado & Clima</a>
+      <a class="nav-item" data-page="mercado"><span class="nav-icon">📈</span> Mercado &amp; Clima</a>
       <a class="nav-item" data-page="financeiro"><span class="nav-icon">💰</span> Financeiro</a>
       <a class="nav-item" data-page="comparativo"><span class="nav-icon">⚖️</span> Comparativo</a>
     </div>
@@ -59,13 +62,23 @@
 
 <!-- HEADER -->
 <header class="header">
-  <div>
+  <button id="menu-toggle" class="menu-toggle" aria-label="Abrir menu">&#9776;</button>
+
+  <div class="header-center">
     <div class="header-title" id="headerTitle">NEXO Intelligence</div>
     <div class="header-sub" id="headerSub">Carregando...</div>
   </div>
+
   <div class="header-right">
+    <div class="header-filters" id="nav-filtro-rede">
+      <select id="filtro-rede" class="filter-select">
+        <option value="">Todas as redes</option>
+      </select>
+      <select id="filtro-loja" class="filter-select">
+        <option value="">Todas as lojas</option>
+      </select>
+    </div>
     <div class="header-date" id="headerDate"></div>
-    <div class="header-network" id="headerNetwork">Carregando...</div>
   </div>
 </header>
 
@@ -74,7 +87,7 @@
   <div class="page-loading">Carregando dados...</div>
 </main>
 
-<!-- 1. Supabase SDK — versão fixada + SRI -->
+<!-- 1. Supabase SDK — versao fixada + SRI -->
 <script
     src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"
     integrity="sha384-2zrRDgDHSYB/GN3nFW3fsZXoxEhKIr3N2h63Tc6DEOB9JJdFIu8xMJT2Cph/gBil"
@@ -84,7 +97,7 @@
 <!-- 2. Env vars — gerado no build Vercel, nunca no repo -->
 <script src="env.js"></script>
 
-<!-- 3. JS Modules -->
+<!-- 3. JS Modules — ordem importa -->
 <script src="js/config.js"></script>
 <script src="js/api.js"></script>
 <script src="js/utils.js"></script>
@@ -98,5 +111,6 @@
 <script src="pages/quebra.js"></script>
 <script src="pages/equipe.js"></script>
 <script src="js/app.js"></script>
+
 </body>
 </html>
