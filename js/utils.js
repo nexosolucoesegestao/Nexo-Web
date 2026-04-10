@@ -83,11 +83,20 @@ const Utils = {
   },
 
   // Period filter helper — returns { desde, ate, desdeAnterior, ateAnterior }
-  periodRange(days) {
-    const ate = this.today();
-    const desde = this.daysAgo(days);
-    const ateAnterior = this.daysAgo(days + 1);
-    const desdeAnterior = this.daysAgo(days * 2 + 1);
+ periodRange(days, refDate) {
+    // refDate: ancora o periodo na data mais recente dos dados
+    // se nao fornecida, usa today()
+    var ateDate = refDate ? new Date(refDate + 'T12:00:00') : new Date();
+    var ate = ateDate.toISOString().slice(0, 10);
+
+    var d1 = new Date(ateDate); d1.setDate(d1.getDate() - days);
+    var desde = d1.toISOString().slice(0, 10);
+
+    var d2 = new Date(ateDate); d2.setDate(d2.getDate() - days - 1);
+    var ateAnterior = d2.toISOString().slice(0, 10);
+
+    var d3 = new Date(ateDate); d3.setDate(d3.getDate() - days * 2 - 1);
+    var desdeAnterior = d3.toISOString().slice(0, 10);
+
     return { desde, ate, desdeAnterior, ateAnterior };
-  }
-};
+},
