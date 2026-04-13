@@ -20,7 +20,6 @@
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/styles.css">
 
-<!-- Chart.js — versão fixada + SRI -->
 <script
     src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"
     integrity="sha384-bs/nf9FbdNouRbMiFcrcZfLXYPKiPaGVGplVbv7dLGECccEXDW+S3zjqSKR5ZEaD"
@@ -29,75 +28,67 @@
 </head>
 <body>
 
-<!-- ── CANVAS DE PARTÍCULAS (fundo login) ──────────────────── -->
-<canvas id="nexo-particles" style="display:none; position:fixed; inset:0; width:100%; height:100%; z-index:0;"></canvas>
-<div id="nexo-vignette" style="display:none; position:fixed; inset:0; background:radial-gradient(ellipse at center, transparent 20%, rgba(7,13,26,0.72) 100%); z-index:1; pointer-events:none;"></div>
-
-<!-- ── ORNAMENTOS DE CANTO (login) ─────────────────────────── -->
-<div id="nexo-corners" style="display:none;">
-  <div style="position:fixed;top:20px;left:20px;width:44px;height:44px;z-index:3;pointer-events:none;border-top:1px solid rgba(201,168,76,0.5);border-left:1px solid rgba(201,168,76,0.5);"></div>
-  <div style="position:fixed;top:20px;right:20px;width:44px;height:44px;z-index:3;pointer-events:none;border-top:1px solid rgba(201,168,76,0.5);border-right:1px solid rgba(201,168,76,0.5);"></div>
-  <div style="position:fixed;bottom:20px;left:20px;width:44px;height:44px;z-index:3;pointer-events:none;border-bottom:1px solid rgba(201,168,76,0.5);border-left:1px solid rgba(201,168,76,0.5);"></div>
-  <div style="position:fixed;bottom:20px;right:20px;width:44px;height:44px;z-index:3;pointer-events:none;border-bottom:1px solid rgba(201,168,76,0.5);border-right:1px solid rgba(201,168,76,0.5);"></div>
+<!-- canvas z-index:999 — abaixo do login-screen (1002) -->
+<canvas id="nexo-particles" style="display:none;position:fixed;inset:0;width:100%;height:100%;z-index:999;pointer-events:none;"></canvas>
+<div id="nexo-vignette" style="display:none;position:fixed;inset:0;background:radial-gradient(ellipse at center,transparent 20%,rgba(7,13,26,0.72) 100%);z-index:1000;pointer-events:none;"></div>
+<div id="nexo-corners" style="display:none;position:fixed;inset:0;z-index:1001;pointer-events:none;">
+  <div style="position:fixed;top:20px;left:20px;width:44px;height:44px;border-top:1px solid rgba(201,168,76,0.5);border-left:1px solid rgba(201,168,76,0.5);"></div>
+  <div style="position:fixed;top:20px;right:20px;width:44px;height:44px;border-top:1px solid rgba(201,168,76,0.5);border-right:1px solid rgba(201,168,76,0.5);"></div>
+  <div style="position:fixed;bottom:20px;left:20px;width:44px;height:44px;border-bottom:1px solid rgba(201,168,76,0.5);border-left:1px solid rgba(201,168,76,0.5);"></div>
+  <div style="position:fixed;bottom:20px;right:20px;width:44px;height:44px;border-bottom:1px solid rgba(201,168,76,0.5);border-right:1px solid rgba(201,168,76,0.5);"></div>
 </div>
 
-<!-- ── TELA DE LOGIN ──────────────────────────────────────────── -->
-<div id="login-screen" style="display:none; position:fixed; inset:0; z-index:1000;
-    align-items:center; justify-content:center; flex-direction:column;">
+<!-- login-screen z-index:1002, background transparent — canvas aparece por baixo -->
+<div id="login-screen" style="display:none;position:fixed;inset:0;z-index:1002;
+    background:transparent;align-items:center;justify-content:center;flex-direction:column;">
 
-  <div class="login-card-premium">
+  <!-- card: gradiente topo transparente (logo visível) → base opaco (form legível) -->
+  <div class="login-card-premium" style="
+      background:linear-gradient(180deg,rgba(6,12,24,0.05) 0%,rgba(6,12,24,0.15) 25%,rgba(6,12,24,0.55) 45%,rgba(6,12,24,0.72) 100%);
+      border:1px solid rgba(201,168,76,0.28);
+      box-shadow:0 0 0 1px rgba(201,168,76,0.06),0 40px 80px rgba(0,0,0,0.5),inset 0 1px 0 rgba(255,255,255,0.06);
+      backdrop-filter:none;position:relative;z-index:2;">
 
-    <!-- Logo -->
-    <div style="text-align:center; margin-bottom:28px;">
+    <div style="text-align:center;margin-bottom:28px;">
       <img src="Icons/Nexo%20Logo%20Full%20sem%20fundo.png" alt="NEXO"
-        style="width:180px; height:auto; display:block; margin:0 auto 10px;
-               mix-blend-mode:screen;
-               filter:drop-shadow(0 0 20px rgba(201,168,76,0.5));">
-      <div style="font-size:10px; font-weight:500; letter-spacing:0.26em;
-                  text-transform:uppercase;
+        style="width:180px;height:auto;display:block;margin:0 auto 10px;
+               mix-blend-mode:screen;filter:drop-shadow(0 0 20px rgba(201,168,76,0.5));">
+      <div style="font-size:10px;font-weight:500;letter-spacing:0.26em;text-transform:uppercase;
                   background:linear-gradient(135deg,#e8c96a 0%,#C9A84C 30%,#f5e070 52%,#a07830 72%,#C9A84C 100%);
-                  -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;">
+                  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">
         Gestão Inteligente
       </div>
     </div>
 
-    <!-- Divider -->
-    <div style="display:flex; align-items:center; gap:10px; margin-bottom:24px; width:100%; overflow:hidden;">
-      <div style="flex:1; height:1px; min-width:0; background:linear-gradient(90deg,transparent,rgba(201,168,76,0.28),transparent);"></div>
-      <div style="font-size:9px; letter-spacing:0.2em; color:rgba(255,255,255,0.32); white-space:nowrap; text-transform:uppercase; flex-shrink:0;">Intelligence Web</div>
-      <div style="flex:1; height:1px; min-width:0; background:linear-gradient(90deg,transparent,rgba(201,168,76,0.28),transparent);"></div>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:24px;width:100%;overflow:hidden;">
+      <div style="flex:1;height:1px;min-width:0;background:linear-gradient(90deg,transparent,rgba(201,168,76,0.28),transparent);"></div>
+      <div style="font-size:9px;letter-spacing:0.2em;color:rgba(255,255,255,0.32);white-space:nowrap;text-transform:uppercase;flex-shrink:0;">Intelligence Web</div>
+      <div style="flex:1;height:1px;min-width:0;background:linear-gradient(90deg,transparent,rgba(201,168,76,0.28),transparent);"></div>
     </div>
 
-    <!-- Campo Email -->
     <div style="margin-bottom:14px;">
-      <label style="display:block; font-size:10px; font-weight:600; letter-spacing:0.16em;
-                    color:rgba(255,255,255,0.38); text-transform:uppercase; margin-bottom:7px;">Email</label>
+      <label style="display:block;font-size:10px;font-weight:600;letter-spacing:0.16em;color:rgba(255,255,255,0.38);text-transform:uppercase;margin-bottom:7px;">Email</label>
       <input id="login-email" type="email" placeholder="seu@email.com" autocomplete="email"
-        style="width:100%; padding:13px 16px; background:rgba(255,255,255,0.05);
-               border:1px solid rgba(255,255,255,0.1); border-radius:12px;
-               color:#fff; font-size:14px; font-family:inherit; outline:none; box-sizing:border-box;
-               transition:border-color 0.25s, box-shadow 0.25s;"
+        style="width:100%;padding:13px 16px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);
+               border-radius:12px;color:#fff;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box;
+               backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);transition:border-color 0.25s,box-shadow 0.25s;"
         onfocus="this.style.borderColor='rgba(201,168,76,0.55)';this.style.boxShadow='0 0 0 3px rgba(201,168,76,0.10)';"
         onblur="this.style.borderColor='rgba(255,255,255,0.1)';this.style.boxShadow='none';">
     </div>
 
-    <!-- Campo Senha com botão olho -->
     <div style="margin-bottom:6px;">
-      <label style="display:block; font-size:10px; font-weight:600; letter-spacing:0.16em;
-                    color:rgba(255,255,255,0.38); text-transform:uppercase; margin-bottom:7px;">Senha</label>
+      <label style="display:block;font-size:10px;font-weight:600;letter-spacing:0.16em;color:rgba(255,255,255,0.38);text-transform:uppercase;margin-bottom:7px;">Senha</label>
       <div style="position:relative;">
         <input id="login-senha" type="password" placeholder="••••••••••" autocomplete="current-password"
-          style="width:100%; padding:13px 44px 13px 16px; background:rgba(255,255,255,0.05);
-                 border:1px solid rgba(255,255,255,0.1); border-radius:12px;
-                 color:#fff; font-size:14px; font-family:inherit; outline:none; box-sizing:border-box;
-                 transition:border-color 0.25s, box-shadow 0.25s;"
+          style="width:100%;padding:13px 44px 13px 16px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);
+                 border-radius:12px;color:#fff;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box;
+                 backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);transition:border-color 0.25s,box-shadow 0.25s;"
           onfocus="this.style.borderColor='rgba(201,168,76,0.55)';this.style.boxShadow='0 0 0 3px rgba(201,168,76,0.10)';"
           onblur="this.style.borderColor='rgba(255,255,255,0.1)';this.style.boxShadow='none';">
         <button type="button" id="eye-toggle"
-          style="position:absolute; right:14px; top:50%; transform:translateY(-50%);
-                 background:none; border:none; cursor:pointer; padding:0;
-                 display:flex; align-items:center; outline:none;"
-          onclick="var i=document.getElementById('login-senha');var show=i.type==='password';i.type=show?'text':'password';this.querySelector('svg path').setAttribute('stroke',show?'rgba(255,255,255,0.65)':'rgba(255,255,255,0.4)');this.querySelector('svg circle').setAttribute('stroke',show?'rgba(255,255,255,0.65)':'rgba(255,255,255,0.4)');">
+          style="position:absolute;right:14px;top:50%;transform:translateY(-50%);
+                 background:none;border:none;cursor:pointer;padding:0;display:flex;align-items:center;outline:none;"
+          onclick="var i=document.getElementById('login-senha');var s=i.type==='password';i.type=s?'text':'password';this.querySelector('svg path').setAttribute('stroke',s?'rgba(255,255,255,0.65)':'rgba(255,255,255,0.4)');this.querySelector('svg circle').setAttribute('stroke',s?'rgba(255,255,255,0.65)':'rgba(255,255,255,0.4)');">
           <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
             <path d="M2 10C2 10 5 4 10 4s8 6 8 6-3 6-8 6-8-6-8-6z" stroke="rgba(255,255,255,0.4)" stroke-width="1.4"/>
             <circle cx="10" cy="10" r="2.5" stroke="rgba(255,255,255,0.4)" stroke-width="1.4"/>
@@ -106,133 +97,91 @@
       </div>
     </div>
 
-    <!-- Erro -->
-    <div id="login-error" style="color:#f87171; font-size:12px; min-height:20px;
-         text-align:center; margin-bottom:4px; margin-top:6px;"></div>
+    <div id="login-error" style="color:#f87171;font-size:12px;min-height:20px;text-align:center;margin-bottom:4px;margin-top:6px;"></div>
 
-    <!-- Botão Entrar -->
     <button id="btn-login" style="
-        width:100%; padding:14px; margin-top:8px;
+        width:100%;padding:14px;margin-top:8px;position:relative;z-index:2;
         background:linear-gradient(135deg,#e8c96a 0%,#C9A84C 35%,#f0d878 52%,#b08838 72%,#C9A84C 100%);
-        border:none; border-radius:12px; font-family:inherit;
-        font-size:12px; font-weight:700; letter-spacing:0.18em; text-transform:uppercase;
-        color:#0C1425; cursor:pointer;
-        box-shadow:0 4px 20px rgba(201,168,76,0.3), inset 0 1px 0 rgba(255,255,255,0.2);
-        transition:transform 0.15s, box-shadow 0.2s;"
+        border:none;border-radius:12px;font-family:inherit;font-size:12px;font-weight:700;
+        letter-spacing:0.18em;text-transform:uppercase;color:#0C1425;cursor:pointer;
+        box-shadow:0 4px 20px rgba(201,168,76,0.3),inset 0 1px 0 rgba(255,255,255,0.2);
+        transition:transform 0.15s,box-shadow 0.2s;"
       onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 8px 32px rgba(201,168,76,0.45)';"
       onmouseout="this.style.transform='';this.style.boxShadow='0 4px 20px rgba(201,168,76,0.3)';"
       onmousedown="this.style.transform='translateY(0)';">
       Entrar
     </button>
 
-    <!-- Esqueci senha -->
-    <div style="text-align:center; margin-top:16px;">
-      <a href="#" style="font-size:12px; color:rgba(255,255,255,0.35); text-decoration:none; transition:color 0.2s;"
+    <div style="text-align:center;margin-top:16px;">
+      <a href="#" style="font-size:12px;color:rgba(255,255,255,0.35);text-decoration:none;transition:color 0.2s;"
          onmouseover="this.style.color='#C9A84C';" onmouseout="this.style.color='rgba(255,255,255,0.35)';">
         Esqueci minha senha
       </a>
     </div>
 
-    <!-- Version tag dentro do card -->
-    <div style="text-align:center; margin-top:20px; padding-top:16px;
-                border-top:1px solid rgba(255,255,255,0.06);
-                font-size:9px; letter-spacing:0.18em; color:rgba(255,255,255,0.18);">
+    <div style="text-align:center;margin-top:20px;padding-top:16px;border-top:1px solid rgba(255,255,255,0.06);
+                font-size:9px;letter-spacing:0.18em;color:rgba(255,255,255,0.18);">
       NEXO INTELLIGENCE WEB &nbsp;·&nbsp; v2.0
     </div>
 
   </div><!-- fim .login-card-premium -->
-
 </div><!-- fim #login-screen -->
 
 
-<!-- ── APP SHELL ─────────────────────────────────────────── -->
-<div id="app-shell" style="display:none; width:100%; height:100%;">
+<!-- APP SHELL -->
+<div id="app-shell" style="display:none;width:100%;height:100%;">
 
   <aside class="sidebar" id="sidebar">
-    <!-- Logo -->
     <div class="sidebar-logo">
       <img src="Icons/Nexo%20Logo%20Full%20sem%20fundo.png" alt="NEXO" class="sidebar-logo-img">
       <div class="sidebar-logo-tag">Gestão Inteligente</div>
     </div>
-
     <nav class="sidebar-nav">
       <div class="nav-section">
         <div class="nav-section-title">Inteligência</div>
         <a class="nav-item" data-page="copiloto" href="#/copiloto">
-          <span class="nav-icon-wrap" style="background:rgba(201,168,76,0.13)">
-            <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="4" stroke="#C9A84C" stroke-width="1.5"/><path d="M6 4v2.5l1.5 1" stroke="#C9A84C" stroke-width="1.2" stroke-linecap="round"/></svg>
-          </span>
-          Copiloto
+          <span class="nav-icon-wrap" style="background:rgba(201,168,76,0.13)"><svg width="11" height="11" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="4" stroke="#C9A84C" stroke-width="1.5"/><path d="M6 4v2.5l1.5 1" stroke="#C9A84C" stroke-width="1.2" stroke-linecap="round"/></svg></span>Copiloto
         </a>
         <a class="nav-item" data-page="onepage" href="#/onepage">
-          <span class="nav-icon-wrap" style="background:rgba(255,255,255,0.06)">
-            <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><rect x="1.5" y="1.5" width="9" height="9" rx="2" stroke="rgba(255,255,255,0.4)" stroke-width="1.2"/><path d="M4 6h4M4 8h2" stroke="rgba(255,255,255,0.4)" stroke-width="1.1" stroke-linecap="round"/></svg>
-          </span>
-          OnePage
+          <span class="nav-icon-wrap" style="background:rgba(255,255,255,0.06)"><svg width="11" height="11" viewBox="0 0 12 12" fill="none"><rect x="1.5" y="1.5" width="9" height="9" rx="2" stroke="rgba(255,255,255,0.4)" stroke-width="1.2"/><path d="M4 6h4M4 8h2" stroke="rgba(255,255,255,0.4)" stroke-width="1.1" stroke-linecap="round"/></svg></span>OnePage
         </a>
       </div>
-
       <div class="nav-section">
         <div class="nav-section-title">KPIs</div>
         <a class="nav-item" data-page="ruptura" href="#/ruptura">
-          <span class="nav-icon-wrap" style="background:rgba(226,75,74,0.12)">
-            <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M5 1.5L9 8.5H1L5 1.5Z" stroke="#e24b4a" stroke-width="1.3" stroke-linejoin="round"/></svg>
-          </span>
-          Ruptura
+          <span class="nav-icon-wrap" style="background:rgba(226,75,74,0.12)"><svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M5 1.5L9 8.5H1L5 1.5Z" stroke="#e24b4a" stroke-width="1.3" stroke-linejoin="round"/></svg></span>Ruptura
         </a>
         <a class="nav-item" data-page="quebra" href="#/quebra">
-          <span class="nav-icon-wrap" style="background:rgba(201,168,76,0.12)">
-            <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><circle cx="5" cy="5" r="3.5" stroke="#C9A84C" stroke-width="1.2"/><path d="M5 3v2.5l1.2 1" stroke="#C9A84C" stroke-width="1.1" stroke-linecap="round"/></svg>
-          </span>
-          Quebra
+          <span class="nav-icon-wrap" style="background:rgba(201,168,76,0.12)"><svg width="10" height="10" viewBox="0 0 10 10" fill="none"><circle cx="5" cy="5" r="3.5" stroke="#C9A84C" stroke-width="1.2"/><path d="M5 3v2.5l1.2 1" stroke="#C9A84C" stroke-width="1.1" stroke-linecap="round"/></svg></span>Quebra
         </a>
         <a class="nav-item" data-page="equipe" href="#/equipe">
-          <span class="nav-icon-wrap" style="background:rgba(39,174,96,0.12)">
-            <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><circle cx="3.5" cy="3.5" r="2" stroke="#27AE60" stroke-width="1.2"/><circle cx="6.5" cy="3.5" r="2" stroke="#27AE60" stroke-width="1.2"/></svg>
-          </span>
-          Equipe
+          <span class="nav-icon-wrap" style="background:rgba(39,174,96,0.12)"><svg width="10" height="10" viewBox="0 0 10 10" fill="none"><circle cx="3.5" cy="3.5" r="2" stroke="#27AE60" stroke-width="1.2"/><circle cx="6.5" cy="3.5" r="2" stroke="#27AE60" stroke-width="1.2"/></svg></span>Equipe
         </a>
         <a class="nav-item" data-page="temperatura" href="#/temperatura">
-          <span class="nav-icon-wrap" style="background:rgba(52,152,219,0.12)">
-            <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M1 6C2.5 2.5 4 2 5 4.5S8 8.5 9 5" stroke="#3498DB" stroke-width="1.2" stroke-linecap="round"/></svg>
-          </span>
-          Temperatura
+          <span class="nav-icon-wrap" style="background:rgba(52,152,219,0.12)"><svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M1 6C2.5 2.5 4 2 5 4.5S8 8.5 9 5" stroke="#3498DB" stroke-width="1.2" stroke-linecap="round"/></svg></span>Temperatura
         </a>
       </div>
-
       <div class="nav-section">
         <div class="nav-section-title">Contexto</div>
         <a class="nav-item" data-page="mercado" href="#/mercado">
-          <span class="nav-icon-wrap" style="background:rgba(255,255,255,0.05)">
-            <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><circle cx="5" cy="5" r="4" stroke="rgba(255,255,255,0.3)" stroke-width="1.2"/><path d="M1 5h8M5 1c-1.5 1.5-1.5 6.5 0 8M5 1c1.5 1.5 1.5 6.5 0 8" stroke="rgba(255,255,255,0.3)" stroke-width="0.9"/></svg>
-          </span>
-          Mercado &amp; Clima
+          <span class="nav-icon-wrap" style="background:rgba(255,255,255,0.05)"><svg width="10" height="10" viewBox="0 0 10 10" fill="none"><circle cx="5" cy="5" r="4" stroke="rgba(255,255,255,0.3)" stroke-width="1.2"/><path d="M1 5h8M5 1c-1.5 1.5-1.5 6.5 0 8M5 1c1.5 1.5 1.5 6.5 0 8" stroke="rgba(255,255,255,0.3)" stroke-width="0.9"/></svg></span>Mercado &amp; Clima
         </a>
         <a class="nav-item" data-page="financeiro" href="#/financeiro">
-          <span class="nav-icon-wrap" style="background:rgba(255,255,255,0.05)">
-            <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><rect x="1" y="5" width="2" height="4" rx="1" fill="rgba(255,255,255,0.3)"/><rect x="4" y="3" width="2" height="6" rx="1" fill="rgba(255,255,255,0.3)"/><rect x="7" y="1" width="2" height="8" rx="1" fill="rgba(255,255,255,0.3)"/></svg>
-          </span>
-          Financeiro
+          <span class="nav-icon-wrap" style="background:rgba(255,255,255,0.05)"><svg width="10" height="10" viewBox="0 0 10 10" fill="none"><rect x="1" y="5" width="2" height="4" rx="1" fill="rgba(255,255,255,0.3)"/><rect x="4" y="3" width="2" height="6" rx="1" fill="rgba(255,255,255,0.3)"/><rect x="7" y="1" width="2" height="8" rx="1" fill="rgba(255,255,255,0.3)"/></svg></span>Financeiro
         </a>
         <a class="nav-item" data-page="comparativo" href="#/comparativo">
-          <span class="nav-icon-wrap" style="background:rgba(255,255,255,0.05)">
-            <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M1 8L3.5 5l2 2.5L7 3.5l2 3" stroke="rgba(255,255,255,0.3)" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          </span>
-          Comparativo
+          <span class="nav-icon-wrap" style="background:rgba(255,255,255,0.05)"><svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M1 8L3.5 5l2 2.5L7 3.5l2 3" stroke="rgba(255,255,255,0.3)" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Comparativo
         </a>
       </div>
     </nav>
-
-    <!-- Usuário + logout -->
     <div class="sidebar-user">
       <div class="sidebar-user-av" id="sidebar-user-av">A</div>
-      <div style="flex:1; min-width:0;">
+      <div style="flex:1;min-width:0;">
         <div class="sidebar-user-name" id="sidebar-user-name">Admin NEXO</div>
         <div class="sidebar-user-role" id="sidebar-user-role">Super Admin</div>
       </div>
       <button id="btn-logout" title="Sair"
-        style="background:none; border:none; cursor:pointer; padding:4px;
-               color:rgba(255,255,255,0.35); transition:color 0.2s;"
+        style="background:none;border:none;cursor:pointer;padding:4px;color:rgba(255,255,255,0.35);transition:color 0.2s;"
         onmouseover="this.style.color='#C9A84C';" onmouseout="this.style.color='rgba(255,255,255,0.35)';">
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
           <path d="M6 14H3a1 1 0 01-1-1V3a1 1 0 011-1h3M11 11l3-3-3-3M14 8H6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
@@ -241,7 +190,7 @@
     </div>
   </aside>
 
-  <div style="flex:1; display:flex; flex-direction:column; min-width:0;">
+  <div style="flex:1;display:flex;flex-direction:column;min-width:0;">
     <header class="header">
       <button id="menu-toggle" class="menu-toggle" aria-label="Abrir menu">&#9776;</button>
       <div class="header-center">
@@ -250,31 +199,22 @@
       </div>
       <div class="header-right">
         <div class="header-filters" id="nav-filtro-rede">
-          <select id="filtro-rede" class="filter-select">
-            <option value="">Todas as redes</option>
-          </select>
-          <select id="filtro-loja" class="filter-select">
-            <option value="">Todas as lojas</option>
-          </select>
+          <select id="filtro-rede" class="filter-select"><option value="">Todas as redes</option></select>
+          <select id="filtro-loja" class="filter-select"><option value="">Todas as lojas</option></select>
         </div>
         <div class="header-date" id="headerDate"></div>
       </div>
     </header>
-
     <main class="main" id="mainContent">
       <div class="page-loading">Carregando dados...</div>
     </main>
   </div>
-
 </div><!-- fim #app-shell -->
 
 
-<!-- ── SCRIPTS (ordem preservada) ─────────────────────────── -->
-<script
-    src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"
-    integrity="sha384-2zrRDgDHSYB/GN3nFW3fsZXoxEhKIr3N2h63Tc6DEOB9JJdFIu8xMJT2Cph/gBil"
-    crossorigin="anonymous">
-</script>
+<!-- SCRIPTS -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"
+    integrity="sha384-2zrRDgDHSYB/GN3nFW3fsZXoxEhKIr3N2h63Tc6DEOB9JJdFIu8xMJT2Cph/gBil" crossorigin="anonymous"></script>
 <script src="env.js"></script>
 <script src="js/config.js"></script>
 <script src="js/auth.js"></script>
@@ -291,184 +231,236 @@
 <script src="pages/equipe.js"></script>
 <script src="js/app.js"></script>
 
-<!-- ── CANVAS DE PARTÍCULAS ───────────────────────────────── -->
+<!-- PARTÍCULAS — esfera pentagonal + explosão supernova + antigravidade -->
 <script>
-(function() {
-  var canvas, ctx, particles, mouse = {x:-9999,y:-9999}, animId, running = false;
+(function(){
+  var canvas=document.getElementById('nexo-particles');
+  var ctx=canvas.getContext('2d');
+  var animId=null, mouse={x:-9999,y:-9999};
+  var W=canvas.width=window.innerWidth, H=canvas.height=window.innerHeight;
 
-  function initParticles() {
-    canvas = document.getElementById('nexo-particles');
-    if (!canvas) return;
-    ctx = canvas.getContext('2d');
-    canvas.width  = window.innerWidth;
-    canvas.height = window.innerHeight;
-    buildParticles();
-    if (animId) cancelAnimationFrame(animId);
-    loop();
-    running = true;
-  }
+  // Spotlight — z-index 1003
+  var sc=document.createElement('canvas');
+  sc.id='nexo-spotlight'; sc.width=W; sc.height=H;
+  sc.style.cssText='position:fixed;inset:0;z-index:1003;pointer-events:none;';
+  document.body.appendChild(sc);
+  var sctx=sc.getContext('2d');
 
-  function buildParticles() {
-    particles = [];
-    for (var i = 0; i < 72; i++) {
-      particles.push({
-        x:  Math.random() * canvas.width,
-        y:  Math.random() * canvas.height,
-        vx: (Math.random() - 0.5) * 0.55,
-        vy: (Math.random() - 0.5) * 0.55,
-        r:  1.2 + Math.random() * 2.2,
-        op: 0.35 + Math.random() * 0.55,
-        ph: Math.random() * Math.PI * 2
-      });
+  // Estados
+  var STATE='free', hoverInt=0, gatherT=0, explodeT=0, ringAngle=0;
+
+  // Pentágonos concêntricos: 1+5+10+15+20+25 = 76 partículas
+  var layers=[{n:1,r:0},{n:5,r:22},{n:10,r:44},{n:15,r:68},{n:20,r:95},{n:25,r:128}];
+  var targets=[];
+  layers.forEach(function(layer,li){
+    for(var i=0;i<layer.n;i++){
+      var ba=(li%2===0)?0:(Math.PI/layer.n);
+      targets.push({angle:ba+(i/layer.n)*Math.PI*2, radius:layer.r, layer:li});
     }
+  });
+  var TOTAL=targets.length;
+
+  function makePt(i){
+    var bvx=(Math.random()-0.5)*0.6, bvy=(Math.random()-0.5)*0.6;
+    return {x:Math.random()*W,y:Math.random()*H,vx:bvx,vy:bvy,bvx:bvx,bvy:bvy,
+            r:1.0+Math.random()*1.8,op:0.4+Math.random()*0.5,ph:Math.random()*Math.PI*2,
+            ti:i,gf:0.5+Math.random()*0.5};
+  }
+  var pts=[];
+  for(var i=0;i<TOTAL;i++) pts.push(makePt(i));
+
+  function getLogo(){
+    var el=document.querySelector('.login-card-premium img');
+    if(!el) return {cx:W/2,cy:100,w:180,h:83,l:W/2-90,r:W/2+90,t:30,b:112};
+    var r=el.getBoundingClientRect();
+    return {cx:r.left+r.width/2,cy:r.top+r.height/2,w:r.width,h:r.height,l:r.left,r:r.right,t:r.top,b:r.bottom};
   }
 
-  function loop() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    var bg = ctx.createRadialGradient(
-      canvas.width/2, canvas.height/2, 0,
-      canvas.width/2, canvas.height/2, Math.max(canvas.width, canvas.height) * 0.75
-    );
-    bg.addColorStop(0,    '#0d1928');
-    bg.addColorStop(0.55, '#090f1d');
-    bg.addColorStop(1,    '#07101e');
-    ctx.fillStyle = bg;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    for (var i = 0; i < particles.length; i++) {
-      var a = particles[i];
-      for (var j = i + 1; j < particles.length; j++) {
-        var b = particles[j];
-        var dx = a.x-b.x, dy = a.y-b.y, d = Math.sqrt(dx*dx+dy*dy);
-        if (d < 150) {
-          ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y);
-          ctx.strokeStyle = 'rgba(201,168,76,'+((1-d/150)*0.3)+')';
-          ctx.lineWidth = 0.5; ctx.stroke();
+  // Detecção hover via bounding box — não falha com overlays
+  var wasOver=false;
+  document.addEventListener('mousemove',function(e){
+    mouse.x=e.clientX; mouse.y=e.clientY;
+    var lc=getLogo();
+    var over=(e.clientX>=lc.l&&e.clientX<=lc.r&&e.clientY>=lc.t&&e.clientY<=lc.b);
+    if(over&&!wasOver){
+      if(STATE==='free'||STATE==='exploding'){STATE='gathering';gatherT=0;}
+    } else if(!over&&wasOver){
+      if(STATE==='gathering'||STATE==='pentagon'){
+        STATE='exploding'; explodeT=0;
+        var lc2=getLogo();
+        for(var i=0;i<pts.length;i++){
+          var p=pts[i];
+          var dx=p.x-lc2.cx,dy=p.y-lc2.cy,d=Math.sqrt(dx*dx+dy*dy)||1;
+          var nearMult=1+Math.max(0,(1-d/60))*3;
+          var power=(5+Math.random()*6)*nearMult;
+          var ra=Math.atan2(dy,dx)+(Math.random()-0.5)*0.8;
+          p.vx=Math.cos(ra)*power; p.vy=Math.sin(ra)*power;
         }
       }
-      var mdx = a.x-mouse.x, mdy = a.y-mouse.y, md = Math.sqrt(mdx*mdx+mdy*mdy);
-      if (md < 185) {
-        ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(mouse.x,mouse.y);
-        ctx.strokeStyle = 'rgba(201,168,76,'+((1-md/185)*0.58)+')';
-        ctx.lineWidth = 0.85; ctx.stroke();
-      }
-      a.ph += 0.013;
-      var g = 0.5 + 0.5*Math.sin(a.ph);
-      ctx.beginPath(); ctx.arc(a.x,a.y,a.r,0,Math.PI*2);
-      ctx.fillStyle = 'rgba(201,168,76,'+(a.op*g)+')'; ctx.fill();
-      a.x+=a.vx; a.y+=a.vy;
-      if(a.x<-8)a.x=canvas.width+8;  if(a.x>canvas.width+8)a.x=-8;
-      if(a.y<-8)a.y=canvas.height+8; if(a.y>canvas.height+8)a.y=-8;
     }
-    animId = requestAnimationFrame(loop);
-  }
-
-  function showEffects() {
-    var pc   = document.getElementById('nexo-particles');
-    var vig  = document.getElementById('nexo-vignette');
-    var corn = document.getElementById('nexo-corners');
-    if (pc)   pc.style.display   = 'block';
-    if (vig)  vig.style.display  = 'block';
-    if (corn) corn.style.display = 'block';
-    if (!running) initParticles();
-  }
-
-  function hideEffects() {
-    if (animId) { cancelAnimationFrame(animId); animId = null; }
-    running = false;
-    ['nexo-particles','nexo-vignette','nexo-corners'].forEach(function(id){
-      var el = document.getElementById(id); if (el) el.style.display='none';
-    });
-  }
-
-  function isLoginOpen() {
-    var el = document.getElementById('login-screen');
-    if (!el) return false;
-    return el.style.display === 'flex' || window.getComputedStyle(el).display === 'flex';
-  }
-
-  window.addEventListener('mousemove', function(e){ mouse.x=e.clientX; mouse.y=e.clientY; });
-  window.addEventListener('resize', function(){
-    if (running && canvas) { canvas.width=window.innerWidth; canvas.height=window.innerHeight; buildParticles(); }
+    wasOver=over;
+    if(STATE==='free'){
+      for(var i=0;i<pts.length;i++){
+        var p=pts[i],dx=p.x-e.clientX,dy=p.y-e.clientY,d=Math.sqrt(dx*dx+dy*dy);
+        if(d<110&&d>1){var rf=(1-d/110)*0.35;p.vx+=(dx/d)*rf;p.vy+=(dy/d)*rf;}
+      }
+    }
   });
-  window.NEXO_PARTICLES = { show: showEffects, stop: hideEffects };
 
-  // Polling: verifica a cada 150ms se o login ficou visível
-  var pollTimer = setInterval(function() {
-    if (isLoginOpen()) {
-      clearInterval(pollTimer);
-      showEffects();
-      // Depois de mostrar, observa quando fechar
-      var loginEl = document.getElementById('login-screen');
-      if (loginEl) {
-        var obs = new MutationObserver(function() {
-          if (!isLoginOpen()) { hideEffects(); obs.disconnect(); }
-        });
-        obs.observe(loginEl, { attributes: true, attributeFilter: ['style'] });
+  function drawSpot(lc){
+    sctx.clearRect(0,0,W,H);
+    if(hoverInt<0.01) return;
+    var I=hoverInt, sR=132*I;
+    var g1=sctx.createRadialGradient(lc.cx,lc.cy,0,lc.cx,lc.cy,sR*1.5);
+    g1.addColorStop(0,'rgba(255,225,100,'+(0.42*I)+')');
+    g1.addColorStop(0.30,'rgba(201,168,76,'+(0.28*I)+')');
+    g1.addColorStop(0.65,'rgba(180,140,50,'+(0.12*I)+')');
+    g1.addColorStop(1,'rgba(201,168,76,0)');
+    sctx.fillStyle=g1; sctx.fillRect(0,0,W,H);
+    layers.forEach(function(layer,li){
+      if(layer.r===0) return;
+      var op=(0.25-li*0.03)*I; if(op<=0) return;
+      sctx.beginPath(); sctx.arc(lc.cx,lc.cy,layer.r+2,0,Math.PI*2);
+      sctx.strokeStyle='rgba(201,168,76,'+Math.max(0,op)+')';
+      sctx.lineWidth=li===1?1.2:0.6; sctx.stroke();
+    });
+    var pulse=0.5+0.5*Math.sin(Date.now()*0.004);
+    sctx.beginPath(); sctx.arc(lc.cx,lc.cy,sR+pulse*14,0,Math.PI*2);
+    sctx.strokeStyle='rgba(232,201,106,'+(0.18*I*pulse)+')';
+    sctx.lineWidth=0.8; sctx.stroke();
+    var g2=sctx.createRadialGradient(lc.cx,lc.cy,sR*0.6,lc.cx,lc.cy,sR*2.8);
+    g2.addColorStop(0,'rgba(201,168,76,'+(0.06*I)+')'); g2.addColorStop(1,'rgba(201,168,76,0)');
+    sctx.fillStyle=g2; sctx.fillRect(0,0,W,H);
+  }
+
+  function loop(){
+    W=canvas.width; H=canvas.height;
+    ctx.clearRect(0,0,W,H);
+    var bg=ctx.createRadialGradient(W/2,H/2,0,W/2,H/2,Math.max(W,H)*0.75);
+    bg.addColorStop(0,'#0d1928'); bg.addColorStop(0.55,'#090f1d'); bg.addColorStop(1,'#07101e');
+    ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
+    var lc=getLogo();
+    ringAngle+=0.006;
+    hoverInt+=((STATE==='gathering'||STATE==='pentagon'?1:0)-hoverInt)*0.07;
+    if(STATE==='gathering'){gatherT++; if(gatherT>30)STATE='pentagon';}
+    if(STATE==='exploding'){explodeT++; if(explodeT>70)STATE='free';}
+    var I=hoverInt, connRange=145+I*40, connBoost=1+I*1.8;
+
+    for(var i=0;i<pts.length;i++){
+      var p=pts[i];
+      for(var j=i+1;j<pts.length;j++){
+        var q=pts[j],ddx=p.x-q.x,ddy=p.y-q.y,dd=Math.sqrt(ddx*ddx+ddy*ddy);
+        if(dd<connRange){
+          ctx.beginPath(); ctx.moveTo(p.x,p.y); ctx.lineTo(q.x,q.y);
+          ctx.strokeStyle='rgba(201,168,76,'+Math.min((1-dd/connRange)*0.27*connBoost,0.7)+')';
+          ctx.lineWidth=0.5+I*0.25; ctx.stroke();
+        }
       }
-    }
-  }, 150);
-  // Para o polling após 15s para não rodar para sempre
-  setTimeout(function(){ clearInterval(pollTimer); }, 15000);
+      if(STATE==='free'||STATE==='exploding'){
+        var mmdx=p.x-mouse.x,mmdy=p.y-mouse.y,mmd=Math.sqrt(mmdx*mmdx+mmdy*mmdy);
+        if(mmd<165){
+          ctx.beginPath(); ctx.moveTo(p.x,p.y); ctx.lineTo(mouse.x,mouse.y);
+          ctx.strokeStyle='rgba(201,168,76,'+((1-mmd/165)*0.45)+')';
+          ctx.lineWidth=0.7; ctx.stroke();
+        }
+      }
+      p.ph+=0.013;
+      var g=0.5+0.5*Math.sin(p.ph);
+      ctx.beginPath(); ctx.arc(p.x,p.y,p.r*(1+I*0.7),0,Math.PI*2);
+      ctx.fillStyle='rgba(201,168,76,'+(p.op*g*(1+I*0.6))+')'; ctx.fill();
 
+      if(STATE==='free'){
+        p.vx+=(p.bvx-p.vx)*0.009+(Math.random()-0.5)*0.008;
+        p.vy+=(p.bvy-p.vy)*0.009+(Math.random()-0.5)*0.008;
+        p.vx*=0.985; p.vy*=0.985;
+        var spd=Math.sqrt(p.vx*p.vx+p.vy*p.vy);
+        if(spd>1.3){p.vx=(p.vx/spd)*1.3;p.vy=(p.vy/spd)*1.3;}
+      } else if(STATE==='gathering'||STATE==='pentagon'){
+        var t=targets[p.ti], tA=t.angle+ringAngle;
+        var tR=t.radius*(STATE==='gathering'?Math.min(gatherT/30,1):1);
+        var tx=lc.cx+Math.cos(tA)*tR, ty=lc.cy+Math.sin(tA)*tR;
+        var toX=tx-p.x,toY=ty-p.y,td=Math.sqrt(toX*toX+toY*toY)||1;
+        p.vx+=(toX/td)*Math.min(td*0.08,2.8); p.vy+=(toY/td)*Math.min(td*0.08,2.8);
+        p.vx*=0.85; p.vy*=0.85;
+        var spd=Math.sqrt(p.vx*p.vx+p.vy*p.vy);
+        if(spd>3.0){p.vx=(p.vx/spd)*3.0;p.vy=(p.vy/spd)*3.0;}
+      } else if(STATE==='exploding'){
+        p.vx*=0.975; p.vy*=0.975;
+        var spd=Math.sqrt(p.vx*p.vx+p.vy*p.vy);
+        if(spd>18){p.vx=(p.vx/spd)*18;p.vy=(p.vy/spd)*18;}
+      }
+      p.x+=p.vx; p.y+=p.vy;
+      if(p.x<-15)p.x=W+15; if(p.x>W+15)p.x=-15;
+      if(p.y<-15)p.y=H+15; if(p.y>H+15)p.y=-15;
+    }
+    drawSpot(lc);
+    animId=requestAnimationFrame(loop);
+  }
+
+  window.addEventListener('resize',function(){W=canvas.width=sc.width=window.innerWidth;H=canvas.height=sc.height=window.innerHeight;});
+
+  // Polling: inicia quando login-screen ficar visível
+  var pollTimer=setInterval(function(){
+    var ls=document.getElementById('login-screen');
+    if(ls&&(ls.style.display==='flex'||window.getComputedStyle(ls).display==='flex')){
+      clearInterval(pollTimer);
+      canvas.style.display='block'; sc.style.display='block';
+      document.getElementById('nexo-vignette').style.display='block';
+      var corn=document.getElementById('nexo-corners'); if(corn)corn.style.display='block';
+      if(!animId) loop();
+      var obs=new MutationObserver(function(){
+        if(ls.style.display!=='flex'){
+          if(animId){cancelAnimationFrame(animId);animId=null;}
+          canvas.style.display='none'; sc.style.display='none';
+          document.getElementById('nexo-vignette').style.display='none';
+          var c=document.getElementById('nexo-corners'); if(c)c.style.display='none';
+          obs.disconnect();
+        }
+      });
+      obs.observe(ls,{attributes:true,attributeFilter:['style']});
+    }
+  },150);
+  setTimeout(function(){clearInterval(pollTimer);},15000);
+
+  window.NEXO_PARTICLES={
+    show:function(){canvas.style.display='block';sc.style.display='block';document.getElementById('nexo-vignette').style.display='block';var c=document.getElementById('nexo-corners');if(c)c.style.display='block';if(!animId)loop();},
+    stop:function(){if(animId){cancelAnimationFrame(animId);animId=null;}canvas.style.display='none';sc.style.display='none';document.getElementById('nexo-vignette').style.display='none';var c=document.getElementById('nexo-corners');if(c)c.style.display='none';}
+  };
 })();
 </script>
 
-<!-- ── LOGIN FORM HANDLER ──────────────────────────────────── -->
+<!-- LOGIN FORM HANDLER -->
 <script>
-(function() {
-  document.addEventListener('DOMContentLoaded', function() {
-    var btnLogin = document.getElementById('btn-login');
-    var errDiv   = document.getElementById('login-error');
-
-    // Enter key nos inputs
-    ['login-email','login-senha'].forEach(function(id) {
-      var el = document.getElementById(id);
-      if (el) el.addEventListener('keydown', function(e) {
-        if (e.key === 'Enter') btnLogin.click();
-      });
+(function(){
+  document.addEventListener('DOMContentLoaded',function(){
+    var btn=document.getElementById('btn-login');
+    var err=document.getElementById('login-error');
+    ['login-email','login-senha'].forEach(function(id){
+      var el=document.getElementById(id);
+      if(el) el.addEventListener('keydown',function(e){if(e.key==='Enter')btn.click();});
     });
-
-    if (btnLogin) {
-      btnLogin.addEventListener('click', async function() {
-        var email = (document.getElementById('login-email').value || '').trim();
-        var senha = document.getElementById('login-senha').value || '';
-        if (!email || !senha) {
-          errDiv.textContent = 'Preencha email e senha.';
-          return;
-        }
-        errDiv.textContent = '';
-        btnLogin.disabled = true;
-        btnLogin.textContent = 'Entrando...';
-        try {
-          await window.NEXO.auth.login(email, senha);
-        } catch (err) {
-          errDiv.textContent = err.message || 'Erro ao entrar.';
-          btnLogin.disabled = false;
-          btnLogin.textContent = 'Entrar';
-        }
+    if(btn){
+      btn.addEventListener('click',async function(){
+        var email=(document.getElementById('login-email').value||'').trim();
+        var senha=document.getElementById('login-senha').value||'';
+        if(!email||!senha){err.textContent='Preencha email e senha.';return;}
+        err.textContent=''; btn.disabled=true; btn.textContent='Entrando...';
+        try{await window.NEXO.auth.login(email,senha);}
+        catch(e){err.textContent=e.message||'Erro ao entrar.';btn.disabled=false;btn.textContent='Entrar';}
       });
     }
-
-    // Logout
-    var btnLogout = document.getElementById('btn-logout');
-    if (btnLogout) {
-      btnLogout.addEventListener('click', function() {
-        window.NEXO.auth.logout();
-      });
-    }
-
-    // Preenche nome/role na sidebar após auth
-    window.NEXO_UPDATE_USER = function(user) {
-      if (!user) return;
-      var meta = user.user_metadata || {};
-      var av   = document.getElementById('sidebar-user-av');
-      var nm   = document.getElementById('sidebar-user-name');
-      var rl   = document.getElementById('sidebar-user-role');
-      var nome = meta.nome || user.email || 'Usuário';
-      if (av) av.textContent = nome.charAt(0).toUpperCase();
-      if (nm) nm.textContent = nome;
-      if (rl) rl.textContent = meta.role === 'super_admin' ? 'Super Admin' : 'Gestor de Rede';
+    var lo=document.getElementById('btn-logout');
+    if(lo) lo.addEventListener('click',function(){window.NEXO.auth.logout();});
+    window.NEXO_UPDATE_USER=function(user){
+      if(!user) return;
+      var meta=user.user_metadata||{};
+      var av=document.getElementById('sidebar-user-av');
+      var nm=document.getElementById('sidebar-user-name');
+      var rl=document.getElementById('sidebar-user-role');
+      var nome=meta.nome||user.email||'Usuário';
+      if(av)av.textContent=nome.charAt(0).toUpperCase();
+      if(nm)nm.textContent=nome;
+      if(rl)rl.textContent=meta.role==='super_admin'?'Super Admin':'Gestor de Rede';
     };
   });
 })();
