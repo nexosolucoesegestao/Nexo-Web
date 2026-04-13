@@ -6,7 +6,7 @@
 
 <meta http-equiv="Content-Security-Policy" content="
     default-src 'self';
-    script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com;
+    script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com;
     style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
     font-src 'self' https://fonts.gstatic.com;
     img-src 'self' data: blob: https://kkjfqltpykkuwshtfhow.supabase.co;
@@ -16,9 +16,11 @@
 
 <title>NEXO Intelligence Web</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/styles.css">
 
+<!-- Chart.js — versão fixada + SRI -->
 <script
     src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"
     integrity="sha384-bs/nf9FbdNouRbMiFcrcZfLXYPKiPaGVGplVbv7dLGECccEXDW+S3zjqSKR5ZEaD"
@@ -27,39 +29,100 @@
 </head>
 <body>
 
-<!-- ── TELA DE LOGIN ──────────────────────────────────────── -->
-<div id="login-screen" style="display:none; position:fixed; inset:0; z-index:1000;
-    background:#0c1425; align-items:center; justify-content:center;">
-  <div style="background:#111d35; border:1px solid #1e2d4a; border-radius:12px;
-      padding:2.5rem 2rem; width:100%; max-width:380px; box-shadow:0 24px 64px rgba(0,0,0,.6);">
-    <div style="text-align:center; margin-bottom:2rem;">
-      <div style="font-size:2.2rem; font-weight:700; color:#c9a84c; letter-spacing:2px;">NEXO</div>
-      <div style="font-size:0.8rem; color:#64748b; margin-top:4px;">INTELLIGENCE WEB</div>
+<!-- ── CANVAS DE PARTÍCULAS (fundo login) ──────────────────── -->
+<canvas id="nexo-particles" style="display:none; position:fixed; inset:0; width:100%; height:100%; z-index:0;"></canvas>
+<div id="nexo-vignette" style="display:none; position:fixed; inset:0; background:radial-gradient(ellipse at center, transparent 20%, rgba(7,13,26,0.72) 100%); z-index:1; pointer-events:none;"></div>
+
+<!-- ── ORNAMENTOS DE CANTO (login) ─────────────────────────── -->
+<div id="nexo-corners" style="display:none;">
+  <div style="position:fixed;top:20px;left:20px;width:44px;height:44px;z-index:3;pointer-events:none;border-top:1px solid rgba(201,168,76,0.5);border-left:1px solid rgba(201,168,76,0.5);"></div>
+  <div style="position:fixed;top:20px;right:20px;width:44px;height:44px;z-index:3;pointer-events:none;border-top:1px solid rgba(201,168,76,0.5);border-right:1px solid rgba(201,168,76,0.5);"></div>
+  <div style="position:fixed;bottom:20px;left:20px;width:44px;height:44px;z-index:3;pointer-events:none;border-bottom:1px solid rgba(201,168,76,0.5);border-left:1px solid rgba(201,168,76,0.5);"></div>
+  <div style="position:fixed;bottom:20px;right:20px;width:44px;height:44px;z-index:3;pointer-events:none;border-bottom:1px solid rgba(201,168,76,0.5);border-right:1px solid rgba(201,168,76,0.5);"></div>
+</div>
+
+<!-- ── TELA DE LOGIN ──────────────────────────────────────────── -->
+<div id="login-screen" style="display:none; position:fixed; inset:0; z-index:2;
+    background:#07101e; align-items:center; justify-content:center;">
+
+  <div class="login-card-premium">
+
+    <!-- Logo -->
+    <div style="text-align:center; margin-bottom:28px;">
+      <img src="icons/icon-192.png" alt="NEXO"
+        style="width:180px; height:auto; display:block; margin:0 auto 10px;
+               mix-blend-mode:screen;
+               filter:drop-shadow(0 0 20px rgba(201,168,76,0.5));">
+      <div style="font-size:10px; font-weight:500; letter-spacing:0.26em;
+                  text-transform:uppercase;
+                  background:linear-gradient(135deg,#e8c96a 0%,#C9A84C 30%,#f5e070 52%,#a07830 72%,#C9A84C 100%);
+                  -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;">
+        Gestão Inteligente
+      </div>
     </div>
-    <div style="margin-bottom:1rem;">
-      <label style="display:block; font-size:0.8rem; color:#94a3b8; margin-bottom:6px;">Email</label>
-      <input id="login-email" type="email" placeholder="seu@email.com"
-        style="width:100%; padding:10px 12px; background:#0c1425; border:1px solid #1e2d4a;
-               border-radius:8px; color:#e2e8f0; font-size:0.9rem; box-sizing:border-box;
-               outline:none; font-family:inherit;">
+
+    <!-- Divider -->
+    <div style="display:flex; align-items:center; gap:10px; margin-bottom:24px;">
+      <div style="flex:1; height:1px; background:linear-gradient(90deg,transparent,rgba(201,168,76,0.28),transparent);"></div>
+      <div style="font-size:9px; letter-spacing:0.2em; color:rgba(255,255,255,0.32); white-space:nowrap; text-transform:uppercase;">Intelligence Web</div>
+      <div style="flex:1; height:1px; background:linear-gradient(90deg,transparent,rgba(201,168,76,0.28),transparent);"></div>
     </div>
-    <div style="margin-bottom:1.5rem;">
-      <label style="display:block; font-size:0.8rem; color:#94a3b8; margin-bottom:6px;">Senha</label>
-      <input id="login-senha" type="password" placeholder="••••••••"
-        style="width:100%; padding:10px 12px; background:#0c1425; border:1px solid #1e2d4a;
-               border-radius:8px; color:#e2e8f0; font-size:0.9rem; box-sizing:border-box;
-               outline:none; font-family:inherit;">
+
+    <!-- Form -->
+    <div style="margin-bottom:14px;">
+      <label style="display:block; font-size:10px; font-weight:600; letter-spacing:0.16em;
+                    color:rgba(255,255,255,0.38); text-transform:uppercase; margin-bottom:7px;">Email</label>
+      <input id="login-email" type="email" placeholder="seu@email.com" autocomplete="email"
+        style="width:100%; padding:13px 16px; background:rgba(255,255,255,0.05);
+               border:1px solid rgba(255,255,255,0.1); border-radius:12px;
+               color:#fff; font-size:14px; font-family:inherit; outline:none; box-sizing:border-box;
+               transition:border-color 0.25s, box-shadow 0.25s;"
+        onfocus="this.style.borderColor='rgba(201,168,76,0.55)';this.style.boxShadow='0 0 0 3px rgba(201,168,76,0.10)';"
+        onblur="this.style.borderColor='rgba(255,255,255,0.1)';this.style.boxShadow='none';">
     </div>
-    <div id="login-error" style="color:#ef4444; font-size:0.82rem; margin-bottom:1rem;
-         min-height:1.2rem; text-align:center;"></div>
-    <button id="btn-login"
-        style="width:100%; padding:11px; background:#c9a84c; color:#0c1425; font-weight:700;
-               font-size:0.95rem; border:none; border-radius:8px; cursor:pointer; font-family:inherit;">
+    <div style="margin-bottom:6px;">
+      <label style="display:block; font-size:10px; font-weight:600; letter-spacing:0.16em;
+                    color:rgba(255,255,255,0.38); text-transform:uppercase; margin-bottom:7px;">Senha</label>
+      <input id="login-senha" type="password" placeholder="••••••••••" autocomplete="current-password"
+        style="width:100%; padding:13px 16px; background:rgba(255,255,255,0.05);
+               border:1px solid rgba(255,255,255,0.1); border-radius:12px;
+               color:#fff; font-size:14px; font-family:inherit; outline:none; box-sizing:border-box;
+               transition:border-color 0.25s, box-shadow 0.25s;"
+        onfocus="this.style.borderColor='rgba(201,168,76,0.55)';this.style.boxShadow='0 0 0 3px rgba(201,168,76,0.10)';"
+        onblur="this.style.borderColor='rgba(255,255,255,0.1)';this.style.boxShadow='none';">
+    </div>
+
+    <div id="login-error" style="color:#f87171; font-size:12px; min-height:20px;
+         text-align:center; margin-bottom:4px; margin-top:6px;"></div>
+
+    <button id="btn-login" style="
+        width:100%; padding:14px; margin-top:8px;
+        background:linear-gradient(135deg,#e8c96a 0%,#C9A84C 35%,#f0d878 52%,#b08838 72%,#C9A84C 100%);
+        border:none; border-radius:12px; font-family:inherit;
+        font-size:12px; font-weight:700; letter-spacing:0.18em; text-transform:uppercase;
+        color:#0C1425; cursor:pointer;
+        box-shadow:0 4px 20px rgba(201,168,76,0.3), inset 0 1px 0 rgba(255,255,255,0.2);
+        transition:transform 0.15s, box-shadow 0.2s;"
+      onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 8px 32px rgba(201,168,76,0.45)';"
+      onmouseout="this.style.transform='';this.style.boxShadow='0 4px 20px rgba(201,168,76,0.3)';"
+      onmousedown="this.style.transform='translateY(0)';">
       Entrar
     </button>
-    <div style="text-align:center; margin-top:1.5rem; font-size:0.75rem; color:#475569;">
-      NEXO Soluções &amp; Gestão para Varejo
+
+    <div style="text-align:center; margin-top:16px;">
+      <a href="#" style="font-size:12px; color:rgba(255,255,255,0.35); text-decoration:none;
+                         transition:color 0.2s;"
+         onmouseover="this.style.color='#C9A84C';" onmouseout="this.style.color='rgba(255,255,255,0.35)';">
+        Esqueci minha senha
+      </a>
     </div>
+
+  </div>
+
+  <!-- Version tag -->
+  <div style="position:fixed; bottom:24px; left:50%; transform:translateX(-50%);
+              font-size:10px; letter-spacing:0.16em; color:rgba(255,255,255,0.16); z-index:4; white-space:nowrap;">
+    NEXO INTELLIGENCE WEB &nbsp;·&nbsp; v2.0
   </div>
 </div>
 
@@ -67,48 +130,95 @@
 <div id="app-shell" style="display:none; width:100%; height:100%;">
 
   <aside class="sidebar" id="sidebar">
+    <!-- Logo -->
     <div class="sidebar-logo">
-      <div class="logo-mark">N</div>
-      <div>
-        <div class="logo-text">NEXO</div>
-        <div class="logo-sub">GESTAO INTELIGENTE</div>
-      </div>
+      <img src="icons/icon-192.png" alt="NEXO" class="sidebar-logo-img">
+      <div class="sidebar-logo-tag">Gestão Inteligente</div>
     </div>
+
     <nav class="sidebar-nav">
       <div class="nav-section">
-        <div class="nav-section-title">Inteligencia</div>
-        <a class="nav-item" data-page="copiloto"><span class="nav-icon">🧭</span> Copiloto</a>
-        <a class="nav-item" data-page="onepage"><span class="nav-icon">🎯</span> OnePage</a>
+        <div class="nav-section-title">Inteligência</div>
+        <a class="nav-item" data-page="copiloto" href="#/copiloto">
+          <span class="nav-icon-wrap" style="background:rgba(201,168,76,0.13)">
+            <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="4" stroke="#C9A84C" stroke-width="1.5"/><path d="M6 4v2.5l1.5 1" stroke="#C9A84C" stroke-width="1.2" stroke-linecap="round"/></svg>
+          </span>
+          Copiloto
+        </a>
+        <a class="nav-item" data-page="onepage" href="#/onepage">
+          <span class="nav-icon-wrap" style="background:rgba(255,255,255,0.06)">
+            <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><rect x="1.5" y="1.5" width="9" height="9" rx="2" stroke="rgba(255,255,255,0.4)" stroke-width="1.2"/><path d="M4 6h4M4 8h2" stroke="rgba(255,255,255,0.4)" stroke-width="1.1" stroke-linecap="round"/></svg>
+          </span>
+          OnePage
+        </a>
       </div>
+
       <div class="nav-section">
         <div class="nav-section-title">KPIs</div>
-        <a class="nav-item" data-page="ruptura"><span class="nav-icon">📦</span> Ruptura</a>
-        <a class="nav-item" data-page="quebra"><span class="nav-icon">💔</span> Quebra</a>
-        <a class="nav-item" data-page="equipe"><span class="nav-icon">👥</span> Equipe</a>
-        <a class="nav-item" data-page="temperatura"><span class="nav-icon">🌡️</span> Temperatura</a>
+        <a class="nav-item" data-page="ruptura" href="#/ruptura">
+          <span class="nav-icon-wrap" style="background:rgba(226,75,74,0.12)">
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M5 1.5L9 8.5H1L5 1.5Z" stroke="#e24b4a" stroke-width="1.3" stroke-linejoin="round"/></svg>
+          </span>
+          Ruptura
+        </a>
+        <a class="nav-item" data-page="quebra" href="#/quebra">
+          <span class="nav-icon-wrap" style="background:rgba(201,168,76,0.12)">
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><circle cx="5" cy="5" r="3.5" stroke="#C9A84C" stroke-width="1.2"/><path d="M5 3v2.5l1.2 1" stroke="#C9A84C" stroke-width="1.1" stroke-linecap="round"/></svg>
+          </span>
+          Quebra
+        </a>
+        <a class="nav-item" data-page="equipe" href="#/equipe">
+          <span class="nav-icon-wrap" style="background:rgba(39,174,96,0.12)">
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><circle cx="3.5" cy="3.5" r="2" stroke="#27AE60" stroke-width="1.2"/><circle cx="6.5" cy="3.5" r="2" stroke="#27AE60" stroke-width="1.2"/></svg>
+          </span>
+          Equipe
+        </a>
+        <a class="nav-item" data-page="temperatura" href="#/temperatura">
+          <span class="nav-icon-wrap" style="background:rgba(52,152,219,0.12)">
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M1 6C2.5 2.5 4 2 5 4.5S8 8.5 9 5" stroke="#3498DB" stroke-width="1.2" stroke-linecap="round"/></svg>
+          </span>
+          Temperatura
+        </a>
       </div>
+
       <div class="nav-section">
         <div class="nav-section-title">Contexto</div>
-        <a class="nav-item" data-page="mercado"><span class="nav-icon">📈</span> Mercado &amp; Clima</a>
-        <a class="nav-item" data-page="financeiro"><span class="nav-icon">💰</span> Financeiro</a>
-        <a class="nav-item" data-page="comparativo"><span class="nav-icon">⚖️</span> Comparativo</a>
+        <a class="nav-item" data-page="mercado" href="#/mercado">
+          <span class="nav-icon-wrap" style="background:rgba(255,255,255,0.05)">
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><circle cx="5" cy="5" r="4" stroke="rgba(255,255,255,0.3)" stroke-width="1.2"/><path d="M1 5h8M5 1c-1.5 1.5-1.5 6.5 0 8M5 1c1.5 1.5 1.5 6.5 0 8" stroke="rgba(255,255,255,0.3)" stroke-width="0.9"/></svg>
+          </span>
+          Mercado &amp; Clima
+        </a>
+        <a class="nav-item" data-page="financeiro" href="#/financeiro">
+          <span class="nav-icon-wrap" style="background:rgba(255,255,255,0.05)">
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><rect x="1" y="5" width="2" height="4" rx="1" fill="rgba(255,255,255,0.3)"/><rect x="4" y="3" width="2" height="6" rx="1" fill="rgba(255,255,255,0.3)"/><rect x="7" y="1" width="2" height="8" rx="1" fill="rgba(255,255,255,0.3)"/></svg>
+          </span>
+          Financeiro
+        </a>
+        <a class="nav-item" data-page="comparativo" href="#/comparativo">
+          <span class="nav-icon-wrap" style="background:rgba(255,255,255,0.05)">
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M1 8L3.5 5l2 2.5L7 3.5l2 3" stroke="rgba(255,255,255,0.3)" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </span>
+          Comparativo
+        </a>
       </div>
     </nav>
-    <div style="padding:1rem; border-top:1px solid #1e2d4a; margin-top:auto;">
-      <div style="display:flex; align-items:center; gap:10px;">
-        <div id="user-avatar" style="width:32px; height:32px; border-radius:50%; background:#c9a84c;
-             color:#0c1425; font-weight:700; font-size:0.9rem; display:flex; align-items:center;
-             justify-content:center; flex-shrink:0;">N</div>
-        <div style="flex:1; min-width:0;">
-          <div id="user-name" style="font-size:0.82rem; font-weight:600; color:#e2e8f0;
-               white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Carregando...</div>
-          <div id="user-role" style="font-size:0.72rem; color:#64748b;">—</div>
-        </div>
-        <button id="btn-logout" title="Sair"
-            style="background:none; border:none; color:#64748b; cursor:pointer; font-size:1rem; padding:4px;">
-          ⏻
-        </button>
+
+    <!-- Usuário + logout -->
+    <div class="sidebar-user">
+      <div class="sidebar-user-av" id="sidebar-user-av">A</div>
+      <div style="flex:1; min-width:0;">
+        <div class="sidebar-user-name" id="sidebar-user-name">Admin NEXO</div>
+        <div class="sidebar-user-role" id="sidebar-user-role">Super Admin</div>
       </div>
+      <button id="btn-logout" title="Sair"
+        style="background:none; border:none; cursor:pointer; padding:4px;
+               color:rgba(255,255,255,0.35); transition:color 0.2s;"
+        onmouseover="this.style.color='#C9A84C';" onmouseout="this.style.color='rgba(255,255,255,0.35)';">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <path d="M6 14H3a1 1 0 01-1-1V3a1 1 0 011-1h3M11 11l3-3-3-3M14 8H6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
     </div>
   </aside>
 
@@ -139,7 +249,7 @@
 
 </div><!-- fim app-shell -->
 
-<!-- Scripts -->
+<!-- Scripts (ordem preservada) -->
 <script
     src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"
     integrity="sha384-2zrRDgDHSYB/GN3nFW3fsZXoxEhKIr3N2h63Tc6DEOB9JJdFIu8xMJT2Cph/gBil"
@@ -160,6 +270,201 @@
 <script src="pages/quebra.js"></script>
 <script src="pages/equipe.js"></script>
 <script src="js/app.js"></script>
+
+<!-- Canvas de partículas — ativo apenas na tela de login -->
+<script>
+(function() {
+  var canvas, ctx, particles, mouse = {x:-9999,y:-9999}, animId, running = false;
+
+  function initParticles() {
+    canvas = document.getElementById('nexo-particles');
+    ctx = canvas.getContext('2d');
+    resize();
+    buildParticles();
+    animate();
+    running = true;
+  }
+
+  function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+
+  function buildParticles() {
+    particles = [];
+    for (var i = 0; i < 72; i++) {
+      particles.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        vx: (Math.random() - 0.5) * 0.55,
+        vy: (Math.random() - 0.5) * 0.55,
+        r: 1.2 + Math.random() * 2.2,
+        op: 0.35 + Math.random() * 0.55,
+        ph: Math.random() * Math.PI * 2
+      });
+    }
+  }
+
+  function animate() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Background
+    var bg = ctx.createRadialGradient(canvas.width/2, canvas.height/2, 0, canvas.width/2, canvas.height/2, Math.max(canvas.width, canvas.height)*0.75);
+    bg.addColorStop(0, '#0d1928');
+    bg.addColorStop(0.55, '#090f1d');
+    bg.addColorStop(1, '#07101e');
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Connections
+    for (var i = 0; i < particles.length; i++) {
+      var a = particles[i];
+      // particle-particle
+      for (var j = i + 1; j < particles.length; j++) {
+        var b = particles[j];
+        var dx = a.x - b.x, dy = a.y - b.y;
+        var d = Math.sqrt(dx*dx + dy*dy);
+        if (d < 150) {
+          ctx.beginPath();
+          ctx.moveTo(a.x, a.y);
+          ctx.lineTo(b.x, b.y);
+          ctx.strokeStyle = 'rgba(201,168,76,' + ((1 - d/150) * 0.3) + ')';
+          ctx.lineWidth = 0.5;
+          ctx.stroke();
+        }
+      }
+      // mouse
+      var mdx = a.x - mouse.x, mdy = a.y - mouse.y;
+      var md = Math.sqrt(mdx*mdx + mdy*mdy);
+      if (md < 185) {
+        ctx.beginPath();
+        ctx.moveTo(a.x, a.y);
+        ctx.lineTo(mouse.x, mouse.y);
+        ctx.strokeStyle = 'rgba(201,168,76,' + ((1 - md/185) * 0.58) + ')';
+        ctx.lineWidth = 0.85;
+        ctx.stroke();
+      }
+    }
+
+    // Dots
+    for (var i = 0; i < particles.length; i++) {
+      var p = particles[i];
+      p.ph += 0.013;
+      var glow = 0.5 + 0.5 * Math.sin(p.ph);
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
+      ctx.fillStyle = 'rgba(201,168,76,' + (p.op * glow) + ')';
+      ctx.fill();
+      // Move
+      p.x += p.vx; p.y += p.vy;
+      if (p.x < -8) p.x = canvas.width + 8;
+      if (p.x > canvas.width + 8) p.x = -8;
+      if (p.y < -8) p.y = canvas.height + 8;
+      if (p.y > canvas.height + 8) p.y = -8;
+    }
+
+    animId = requestAnimationFrame(animate);
+  }
+
+  function stopParticles() {
+    if (animId) cancelAnimationFrame(animId);
+    running = false;
+    var el = document.getElementById('nexo-particles');
+    if (el) el.style.display = 'none';
+    var vig = document.getElementById('nexo-vignette');
+    if (vig) vig.style.display = 'none';
+    var corn = document.getElementById('nexo-corners');
+    if (corn) corn.style.display = 'none';
+  }
+
+  function showLoginEffects() {
+    document.getElementById('nexo-particles').style.display = 'block';
+    document.getElementById('nexo-vignette').style.display = 'block';
+    document.getElementById('nexo-corners').style.display = 'block';
+    if (!running) initParticles();
+  }
+
+  window.addEventListener('mousemove', function(e) { mouse.x = e.clientX; mouse.y = e.clientY; });
+  window.addEventListener('resize', function() { if (running) { resize(); buildParticles(); } });
+
+  // Expõe para o app.js controlar
+  window.NEXO_PARTICLES = { show: showLoginEffects, stop: stopParticles };
+
+  // Observa a tela de login
+  var loginEl = document.getElementById('login-screen');
+  if (loginEl) {
+    var obs = new MutationObserver(function() {
+      if (loginEl.style.display === 'flex') {
+        showLoginEffects();
+      } else {
+        stopParticles();
+      }
+    });
+    obs.observe(loginEl, { attributes: true, attributeFilter: ['style'] });
+  }
+})();
+</script>
+
+<!-- Login form handler -->
+<script>
+(function() {
+  document.addEventListener('DOMContentLoaded', function() {
+    var btnLogin = document.getElementById('btn-login');
+    var errDiv   = document.getElementById('login-error');
+
+    // Enter key em inputs
+    ['login-email','login-senha'].forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el) el.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') btnLogin.click();
+      });
+    });
+
+    if (btnLogin) {
+      btnLogin.addEventListener('click', async function() {
+        var email = (document.getElementById('login-email').value || '').trim();
+        var senha = document.getElementById('login-senha').value || '';
+        if (!email || !senha) {
+          errDiv.textContent = 'Preencha email e senha.';
+          return;
+        }
+        errDiv.textContent = '';
+        btnLogin.disabled = true;
+        btnLogin.textContent = 'Entrando...';
+        try {
+          await window.NEXO.auth.login(email, senha);
+          // auth.js chama requireAuth() e mostra o app-shell
+        } catch (err) {
+          errDiv.textContent = err.message || 'Erro ao entrar.';
+          btnLogin.disabled = false;
+          btnLogin.textContent = 'Entrar';
+        }
+      });
+    }
+
+    // Logout
+    var btnLogout = document.getElementById('btn-logout');
+    if (btnLogout) {
+      btnLogout.addEventListener('click', function() {
+        window.NEXO.auth.logout();
+      });
+    }
+
+    // Preenche nome/role na sidebar após auth
+    window.NEXO_UPDATE_USER = function(user) {
+      if (!user) return;
+      var meta = user.user_metadata || {};
+      var av   = document.getElementById('sidebar-user-av');
+      var nm   = document.getElementById('sidebar-user-name');
+      var rl   = document.getElementById('sidebar-user-role');
+      var nome = meta.nome || user.email || 'Usuário';
+      if (av) av.textContent = nome.charAt(0).toUpperCase();
+      if (nm) nm.textContent = nome;
+      if (rl) rl.textContent = meta.role === 'super_admin' ? 'Super Admin' : 'Gestor de Rede';
+    };
+  });
+})();
+</script>
 
 </body>
 </html>
