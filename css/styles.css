@@ -671,7 +671,6 @@ body::before{
 .eq-chart-area{position:relative;height:130px;margin:4px 0 0}
 .eq-data-table{width:100%;border-collapse:collapse;font-size:9px}
 .eq-data-table td{padding:4px 2px;text-align:center;font-variant-numeric:tabular-nums;border-top:0.5px solid #f0f2f5}
-.eq-data-table td:first-child{text-align:left;font-weight:600;color:var(--t3);font-size:8px;text-transform:uppercase;letter-spacing:0.06em;padding-left:2px;width:42px;white-space:nowrap}
 .eq-dt-val td{font-weight:600;color:var(--t1);font-size:10px}
 .eq-dt-efet td{color:var(--t2);font-size:10px}
 .eq-dt-var td{font-size:9px;padding-bottom:10px}
@@ -826,14 +825,6 @@ body::before{
   margin-left: 4px;
 }
 
-/* FIX 3: Data table primeira coluna alinhada com chart */
-.eq-data-table td:first-child {
-  width: 30px !important;
-  padding-left: 0 !important;
-  text-align: right !important;
-  padding-right: 4px !important;
-}
-
 /* FIX 4: HC Table (Bloco 5) — headers visiveis no fundo claro */
 .section-block.d5 .eq-table thead th {
   color: var(--t2);
@@ -908,9 +899,21 @@ body::before{
   table-layout: fixed;
   width: 100%;
 }
+
+/* FIX DEFINITIVO: Tabela de dados dos graficos de tendencia */
+.eq-data-table {
+  table-layout: fixed;
+  width: 100%;
+}
 .eq-data-table td:first-child {
   width: 44px;
   text-align: left;
+  font-weight: 600;
+  color: var(--t3);
+  font-size: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
   padding-left: 4px;
   padding-right: 2px;
+  white-space: nowrap;
 }
