@@ -497,6 +497,13 @@ Router.register('equipe', async function(container) {
       var dataColW = (canvas.width - labelColW) / nTicks;
       var padL = Math.round(labelColW + dataColW / 2);
       var padR = Math.round(dataColW / 2);
+      var tblRef = document.getElementById('tbl_'+cs.id);
+      var td0W = 44;
+      if (tblRef) { var td0El = tblRef.closest('.eq-chart-card').querySelector('.eq-data-table td:first-child'); if (td0El) td0W = td0El.offsetWidth; }
+      var nTk = cs.labels.length;
+      var dColW = (canvas.width - td0W) / nTk;
+      var padL = Math.round(td0W + dColW / 2);
+      var padR = Math.round(dColW / 2);
       var ch = new Chart(canvas, {
         type:'line',
         data:{labels:cs.labels, datasets:[Object.assign({data:cs.data},lineCfg)]},
