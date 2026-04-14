@@ -926,3 +926,32 @@ body::before{
   letter-spacing: 0.06em;
   padding: 6px 6px;
 }
+
+.section-block.d5 .eq-tbl-card {
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border: none;
+  box-shadow: none;
+}
+.section-block.d5 .eq-table {
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--sh);
+}
+.section-block.d5 .eq-table thead th {
+  background: #0C1425;
+  color: #fff;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 10px 6px;
+  border-bottom: none;
+}
+.section-block.d5 .eq-table tbody td {
+  background: rgba(255, 255, 255, 0.92);
+}
+.section-block.d5 .eq-tot-hc td {
+  background: rgba(12, 20, 37, 0.04) !important;
+}
