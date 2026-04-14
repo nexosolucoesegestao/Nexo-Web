@@ -312,3 +312,199 @@ body::before{
   .strip-bn-val{font-size:20px}
   .login-card-premium{padding:32px 24px 28px}
 }
+
+/* ============================================================
+   COPILOTO v2 — Layout compacto e organizado
+   Adicionar ao FINAL do css/styles.css
+   ============================================================ */
+
+/* ── HEADER BAR (Score + Breakdown) ──────────────────────── */
+.cop-header {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  background: var(--card);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: var(--radius);
+  border: 1px solid var(--card-border);
+  box-shadow: var(--sh);
+  padding: 18px 24px;
+  margin-bottom: 16px;
+}
+
+/* Score compacto */
+.cop-score-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.cop-score-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 3px 10px;
+  border-radius: 20px;
+}
+.cop-score-label.up      { background: rgba(45,134,83,0.12);  color: #2D8653; }
+.cop-score-label.neutral { background: rgba(201,123,44,0.12); color: #C97B2C; }
+.cop-score-label.down    { background: rgba(192,80,77,0.12);  color: #C0504D; }
+
+/* Divisor */
+.cop-divider {
+  width: 1px;
+  height: 72px;
+  background: rgba(26,39,68,0.08);
+  flex-shrink: 0;
+}
+
+/* Breakdown */
+.cop-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+  max-width: 280px;
+}
+.cop-bd-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.cop-bd-icon { font-size: 13px; flex-shrink: 0; }
+.cop-bd-info { width: 80px; flex-shrink: 0; }
+.cop-bd-val  { font-size: 13px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+.cop-bd-label{ font-size: 9px; color: #9CA3AF; font-weight: 500; letter-spacing: 0.04em; margin-top: 1px; }
+.cop-bd-bar-wrap { flex: 1; height: 4px; background: rgba(12,20,37,0.06); border-radius: 4px; overflow: hidden; }
+.cop-bd-bar { height: 100%; border-radius: 4px; transition: width 1s cubic-bezier(0.16,1,0.3,1); }
+
+/* Dica */
+.cop-tip {
+  flex: 1;
+  min-width: 0;
+  padding: 12px 16px;
+  background: rgba(12,20,37,0.03);
+  border-radius: 12px;
+  border: 1px solid rgba(26,39,68,0.06);
+}
+
+/* ── GRID DE INSIGHTS 2×2 ─────────────────────────────────── */
+.cop-insights-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+/* Bloco */
+.cop-block {
+  background: var(--card);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: var(--radius);
+  border: 1px solid var(--card-border);
+  box-shadow: var(--sh);
+  overflow: hidden;
+  transition: transform 0.25s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.22s;
+}
+.cop-block:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--sh-h);
+}
+
+/* Cabeçalho do bloco */
+.cop-block-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+}
+.cop-block-icon {
+  width: 28px; height: 28px;
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; flex-shrink: 0;
+}
+.cop-block-title {
+  font-size: 13px; font-weight: 700; color: var(--t1); line-height: 1;
+}
+.cop-block-sub {
+  font-size: 10px; color: var(--t3); margin-top: 2px;
+}
+.cop-block-count {
+  margin-left: auto;
+  font-size: 11px; font-weight: 700;
+  padding: 2px 9px; border-radius: 20px;
+  flex-shrink: 0;
+}
+
+/* Corpo do bloco */
+.cop-block-body {
+  padding: 10px 14px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.cop-empty {
+  font-size: 11px; color: var(--t3);
+  text-align: center;
+  padding: 16px 0;
+  font-style: italic;
+}
+
+/* Card de insight individual */
+.cop-insight-card {
+  border-radius: 10px;
+  border-left: 3px solid;
+  padding: 10px 12px;
+  transition: transform 0.18s, box-shadow 0.18s;
+  cursor: default;
+}
+.cop-insight-card:hover {
+  transform: translateX(2px);
+  box-shadow: 0 3px 12px rgba(0,0,0,0.07);
+}
+
+/* Linha de topo: badge + título */
+.cop-insight-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 5px;
+}
+.cop-insight-badge {
+  width: 18px; height: 18px;
+  border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 9px; font-weight: 800;
+  flex-shrink: 0; margin-top: 1px;
+}
+.cop-insight-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--t1);
+  line-height: 1.35;
+}
+.cop-insight-body {
+  font-size: 11px;
+  color: var(--t2);
+  line-height: 1.45;
+  padding-left: 26px; /* alinha com o título */
+}
+.cop-insight-action {
+  font-size: 10px;
+  font-weight: 600;
+  margin-top: 5px;
+  padding-left: 26px;
+}
+
+/* ── RESPONSIVE ───────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .cop-header        { flex-wrap: wrap; }
+  .cop-divider       { display: none; }
+  .cop-insights-grid { grid-template-columns: 1fr; }
+  .cop-tip           { display: none; }
+}
