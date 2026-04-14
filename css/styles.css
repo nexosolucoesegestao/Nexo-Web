@@ -508,3 +508,52 @@ body::before{
   .cop-insights-grid { grid-template-columns: 1fr; }
   .cop-tip           { display: none; }
 }
+
+/* ============================================================
+   PATCH — Sidebar: logo centralizado + Particulas.png
+   ============================================================ */
+
+/* Centraliza o logo na sidebar */
+.sidebar-logo {
+  padding: 18px 14px 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  display: flex;
+  flex-direction: column;
+  align-items: center;  /* centraliza tudo no eixo horizontal */
+  text-align: center;
+}
+.sidebar-logo-img {
+  width: 122px; height: auto;
+  display: block;
+  margin: 0 auto;  /* garante centralização mesmo se display:block */
+  mix-blend-mode: screen;
+  filter: drop-shadow(0 0 10px rgba(201,168,76,0.4));
+}
+.sidebar-logo-tag {
+  font-size: 8px; font-weight: 500;
+  letter-spacing: 0.16em; text-transform: uppercase;
+  margin-top: 4px;
+  text-align: center;
+  background: linear-gradient(135deg,#e8c96a 0%,#C9A84C 30%,#f5e070 52%,#a07830 72%,#C9A84C 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Particulas.png na sidebar via ::after */
+/* ::before já está em uso pela barra dourada do topo */
+.sidebar::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: url('/Icons/Particulas.png') center/cover no-repeat;
+  opacity: 0.055;
+  pointer-events: none;
+  z-index: 0;
+}
+/* Garante que o conteúdo da sidebar fica acima das partículas */
+.sidebar-logo,
+.sidebar-nav,
+.sidebar-user {
+  position: relative;
+  z-index: 1;
+}
