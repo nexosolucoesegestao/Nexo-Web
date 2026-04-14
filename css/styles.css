@@ -917,3 +917,12 @@ body::before{
   padding-right: 2px;
   white-space: nowrap;
 }
+
+.section-block.d3 .eq-table thead tr.eq-sub-hdr th {
+  background: rgba(240, 243, 247, 1);
+  color: var(--t2);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  padding: 6px 6px;
+}
