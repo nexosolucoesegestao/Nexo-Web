@@ -1,7 +1,10 @@
 // ============================================================
-// NEXO Intelligence Web v2.2 — Chart Factory Premium
-// Gradientes em todas as barras/linhas | Outfit font
-// Tooltip navy+gold | Eixo y2 explícito e funcional
+// NEXO Intelligence Web v2.4 — Chart Factory Premium
+// - Sem eixos / sem grid em todos os gráficos
+// - Legendas: topo central, quadrados arredondados (rectRounded)
+// - Rótulos: font.size 11 padronizado
+// - motivosHBar: barra horizontal com % visível (substitui donut)
+// - Cross-filter: publica/assina NEXO_FILTER global
 // ============================================================
 var Charts = {
 
@@ -38,6 +41,58 @@ var Charts = {
     }, extra || {});
   },
 
+  // ── Legenda padrão: topo central, quadrados arredondados ─
+  _legend: function (extra) {
+    return Object.assign({
+      display:   true,
+      position:  'top',
+      align:     'center',
+      labels: {
+        font:          { family: 'Outfit', size: 10 },
+        color:         '#5A6A85',
+        boxWidth:      10,
+        boxHeight:     10,
+        padding:       14,
+        usePointStyle: true,
+        pointStyle:    'rectRounded'
+      }
+    }, extra || {});
+  },
+
+  // ── SEM eixos, SEM grid ───────────────────────────────────
+  _noAxes: function () {
+    return {
+      x: { display: false },
+      y: { display: false }
+    };
+  },
+
+  // ── Eixo Y mínimo (só ticks, sem borda/grid) ─────────────
+  _yTicks: function (suffix) {
+    return {
+      display: true,
+      border:  { display: false },
+      grid:    { display: false },
+      ticks: {
+        font: { family: 'Outfit', size: 10 }, color: '#8A98B0', padding: 6,
+        callback: suffix ? function (v) { return v + suffix; } : undefined
+      }
+    };
+  },
+
+  // ── Eixo X mínimo (só ticks, sem borda/grid) ─────────────
+  _xTicks: function (suffix) {
+    return {
+      display: true,
+      border:  { display: false },
+      grid:    { display: false },
+      ticks: {
+        font: { family: 'Outfit', size: 10 }, color: '#8A98B0', padding: 4,
+        callback: suffix ? function (v) { return v + suffix; } : undefined
+      }
+    };
+  },
+
   // ── Gradiente vertical para barras ───────────────────────
   _gradV: function (ctx, colorHex, alphaTop, alphaBot) {
     var h = (ctx.canvas && ctx.canvas.height) || 170;
@@ -51,7 +106,7 @@ var Charts = {
   _gradArea: function (ctx, colorHex) {
     var h = (ctx.canvas && ctx.canvas.height) || 170;
     var g = ctx.createLinearGradient(0, 0, 0, h);
-    g.addColorStop(0, colorHex + '40');
+    g.addColorStop(0, colorHex + '3A');
     g.addColorStop(1, colorHex + '05');
     return g;
   },
@@ -68,55 +123,40 @@ var Charts = {
     return this.COLORS.green;
   },
 
-  // ── Eixo Y base ───────────────────────────────────────────
-  _yAxis: function (suffix, opts) {
-    return Object.assign({
-      display: true,
-      border: { display: false },
-      grid: { color: 'rgba(12,20,37,0.04)', drawTicks: false },
-      ticks: {
-        font: { family: 'Outfit', size: 10 },
-        color: '#8A98B0', padding: 6,
-        callback: suffix ? function (v) { return v + suffix; } : undefined
-      }
-    }, opts || {});
-  },
-
-  // ── Eixo X base ───────────────────────────────────────────
-  _xAxis: function () {
-    return {
-      display: true,
-      border: { display: false },
-      grid: { display: false },
-      ticks: { font: { family: 'Outfit', size: 10 }, color: '#8A98B0', padding: 4 }
-    };
-  },
-
-  // ── Bar labels plugin ─────────────────────────────────────
+  // ── Bar labels plugin: rótulos padronizados (size 11) ────
   _barLabelsPlugin: function (suffix) {
     var s = suffix || '';
     return {
-      id: 'barLabels',
+      id: 'barLabels_' + (suffix || 'none'),
       afterDraw: function (chart) {
-        var ctx = chart.ctx;
+        var ctx  = chart.ctx;
         var meta = chart.getDatasetMeta(0);
         if (!meta || meta.type !== 'bar') return;
         meta.data.forEach(function (bar, i) {
           var v = chart.data.datasets[0].data[i];
-          if (v === undefined || v === null) return;
+          if (v === undefined || v === null || v === 0) return;
           ctx.save();
-          ctx.font = "600 9px 'Outfit', sans-serif";
+          ctx.font      = "600 11px 'Outfit', sans-serif";
           ctx.fillStyle = '#0C1425';
           ctx.textAlign = 'center';
-          ctx.fillText(v + s, bar.x, bar.y - 4);
+          ctx.fillText(v + s, bar.x, bar.y - 5);
           ctx.restore();
         });
       }
     };
   },
 
+  // ── Cross-filter: dispara evento global ──────────────────
+  _emitFilter: function (key, value) {
+    if (typeof window.NEXO_FILTER === 'undefined') window.NEXO_FILTER = {};
+    window.NEXO_FILTER[key] = value;
+    var ev = new CustomEvent('nexo:filter', { detail: { key: key, value: value } });
+    document.dispatchEvent(ev);
+  },
+
   // ============================================================
-  // EVOLUTIVO MENSAL — bar gradiente + linha acumulado gold
+  // EVOLUTIVO MENSAL — bar gradiente + linha gold acumulado
+  // Clique na barra filtra o mês globalmente
   // ============================================================
   evolutivoMensal: function (canvasId, data, color) {
     this._defaults();
@@ -133,15 +173,15 @@ var Charts = {
     var barGrad  = this._gradV(ctx, barColor, 'EE', '33');
     var lineArea = this._gradArea(ctx, '#C9A84C');
 
-    return new Chart(ctx, {
+    var self = this;
+    var chart = new Chart(ctx, {
       type: 'bar',
       data: {
         labels: labels,
         datasets: [
           {
             type: 'bar', label: 'Mês', data: values,
-            backgroundColor: barGrad,
-            borderColor: barColor, borderWidth: 1,
+            backgroundColor: barGrad, borderColor: barColor, borderWidth: 1,
             borderRadius: 6, borderSkipped: false,
             barPercentage: 0.55, yAxisID: 'y', order: 2
           },
@@ -161,33 +201,54 @@ var Charts = {
         animation: { duration: 800, easing: 'easeInOutQuart' },
         interaction: { mode: 'index', intersect: false },
         scales: {
-          y: this._yAxis(null, { position: 'left', beginAtZero: true }),
-          y2: this._yAxis(null, {
-            position: 'right',
-            beginAtZero: true,
-            grid: { drawOnChartArea: false, drawTicks: false },
-            ticks: { font: { family: 'Outfit', size: 10 }, color: '#C9A84C', padding: 6 }
-          }),
-          x: this._xAxis()
+          y: {
+            display: true, position: 'left', beginAtZero: true,
+            border: { display: false },
+            grid:   { display: false },
+            ticks:  { font: { family: 'Outfit', size: 10 }, color: '#8A98B0', padding: 6 }
+          },
+          y2: {
+            display: true, position: 'right', beginAtZero: true,
+            border: { display: false },
+            grid:   { display: false },
+            ticks:  { font: { family: 'Outfit', size: 10 }, color: '#C9A84C', padding: 6 }
+          },
+          x: this._xTicks()
         },
         plugins: {
-          legend: {
-            display: true, position: 'top', align: 'end',
-            labels: {
-              font: { family: 'Outfit', size: 10 }, color: '#8A98B0',
-              boxWidth: 10, padding: 12,
-              usePointStyle: true, pointStyle: 'circle'
-            }
-          },
+          legend: this._legend(),
           tooltip: this._tooltip()
+        },
+        // Cross-filter: clique no mês
+        onClick: function (evt, elements) {
+          if (!elements || !elements.length) return;
+          var idx = elements[0].index;
+          var mes = labels[idx];
+          self._emitFilter('mes', mes);
+          // Destaca barra clicada, opaca as outras
+          var newBg = values.map(function (_, i) {
+            var g = ctx.createLinearGradient(0, 0, 0, ctx.canvas.height);
+            if (i === idx) {
+              g.addColorStop(0, barColor + 'FF');
+              g.addColorStop(1, barColor + '55');
+            } else {
+              g.addColorStop(0, barColor + '44');
+              g.addColorStop(1, barColor + '18');
+            }
+            return g;
+          });
+          chart.data.datasets[0].backgroundColor = newBg;
+          chart.update('none');
         }
       },
       plugins: [this._barLabelsPlugin()]
     });
+    return chart;
   },
 
   // ============================================================
   // DIA DA SEMANA % — barras gradiente semântico
+  // Clique no dia emite filtro
   // ============================================================
   diaSemana: function (canvasId, data, thresholds) {
     this._defaults();
@@ -204,28 +265,31 @@ var Charts = {
       return self._gradV(ctx, self.colorByVal(v, th), 'EE', '33');
     });
 
-    return new Chart(ctx, {
+    var chart = new Chart(ctx, {
       type: 'bar',
       data: {
         labels: labels,
-        datasets: [{
-          data: values, backgroundColor: colors,
-          borderRadius: 6, borderSkipped: false, barPercentage: 0.6
-        }]
+        datasets: [{ data: values, backgroundColor: colors, borderRadius: 6, borderSkipped: false, barPercentage: 0.6 }]
       },
       options: {
         responsive: true, maintainAspectRatio: false,
         animation: { duration: 700 },
         scales: {
-          y: this._yAxis('%', { beginAtZero: true }),
-          x: this._xAxis()
+          x: this._xTicks(),
+          y: { display: false }
         },
         plugins: {
+          legend: { display: false },
           tooltip: this._tooltip({ callbacks: { label: function (c) { return c.parsed.y + '%'; } } })
+        },
+        onClick: function (evt, elements) {
+          if (!elements || !elements.length) return;
+          self._emitFilter('dia', labels[elements[0].index]);
         }
       },
       plugins: [this._barLabelsPlugin('%')]
     });
+    return chart;
   },
 
   // ============================================================
@@ -250,18 +314,12 @@ var Charts = {
 
     return new Chart(ctx, {
       type: 'bar',
-      data: {
-        labels: labels,
-        datasets: [{ data: values, backgroundColor: colors, borderRadius: 6, borderSkipped: false, barPercentage: 0.6 }]
-      },
+      data: { labels: labels, datasets: [{ data: values, backgroundColor: colors, borderRadius: 6, borderSkipped: false, barPercentage: 0.6 }] },
       options: {
-        responsive: true, maintainAspectRatio: false,
-        animation: { duration: 700 },
-        scales: {
-          y: this._yAxis(' kg', { beginAtZero: true }),
-          x: this._xAxis()
-        },
+        responsive: true, maintainAspectRatio: false, animation: { duration: 700 },
+        scales: { x: this._xTicks(), y: { display: false } },
         plugins: {
+          legend: { display: false },
           tooltip: this._tooltip({ callbacks: { label: function (c) { return c.parsed.y + ' kg'; } } })
         }
       },
@@ -270,63 +328,81 @@ var Charts = {
   },
 
   // ============================================================
-  // MOTIVOS BAR — horizontal, gradiente
+  // MOTIVOS HORIZONTAL BAR — substitui o donut
+  // Valores % visíveis ao bater o olho
   // ============================================================
-  motivosBar: function (canvasId, motivos) {
+  motivosDonut: function (canvasId, motivos) {
+    // Redireciona para a versão horizontal bar (mais legível)
+    return this.motivosHBar(canvasId, motivos);
+  },
+
+  motivosHBar: function (canvasId, motivos) {
     this._defaults();
     var el = document.getElementById(canvasId);
     if (!el) return null;
+    // Ajustar altura do container para mais itens
+    if (el.parentElement) el.parentElement.style.height = 'auto';
     var ctx = el.getContext('2d');
 
     var sorted = Object.entries(motivos).sort(function (a, b) { return b[1] - a[1]; });
     var total  = sorted.reduce(function (s, e) { return s + e[1]; }, 0);
     var labels = sorted.map(function (e) { return e[0]; });
-    var values = sorted.map(function (e) { return Utils.pct(e[1], total); });
+    var values = sorted.map(function (e) { return Math.round((e[1] / total) * 100); });
 
-    var baseColors = [
-      this.COLORS.red, this.COLORS.orange, this.COLORS.orange,
-      this.COLORS.gold, this.COLORS.blue, '#A0AEC0', '#CBD5E1'
+    var palette = [
+      '#E24B4A', '#F59E0B', '#F59E0B',
+      '#C9A84C', '#3498DB', '#8E44AD', '#8A98B0'
     ];
+    var self = this;
     var colors = labels.map(function (_, i) {
-      var base = baseColors[i % baseColors.length];
-      var g = ctx.createLinearGradient(200, 0, 0, 0);
-      g.addColorStop(0, base + 'EE');
+      var base = palette[i % palette.length];
+      var g = ctx.createLinearGradient(300, 0, 0, 0);
+      g.addColorStop(0, base + 'F0');
       g.addColorStop(1, base + '44');
       return g;
     });
+
+    // Calcular altura dinâmica (28px por item + margins)
+    var dynamicH = Math.max(160, labels.length * 36 + 20);
+    if (el.parentElement) el.parentElement.style.height = dynamicH + 'px';
+    el.style.height = dynamicH + 'px';
 
     return new Chart(ctx, {
       type: 'bar',
       data: {
         labels: labels,
-        datasets: [{ data: values, backgroundColor: colors, borderRadius: 5, borderSkipped: false, barPercentage: 0.55 }]
+        datasets: [{
+          data: values, backgroundColor: colors,
+          borderRadius: 6, borderSkipped: false, barPercentage: 0.65
+        }]
       },
       options: {
         indexAxis: 'y',
-        responsive: true, maintainAspectRatio: false,
-        animation: { duration: 700 },
+        responsive: true, maintainAspectRatio: false, animation: { duration: 700 },
         scales: {
-          x: this._yAxis('%'),
+          x: { display: false },
           y: {
             display: true, border: { display: false }, grid: { display: false },
-            ticks: { font: { family: 'Outfit', size: 10 }, color: '#4A5A75' }
+            ticks: { font: { family: 'Outfit', size: 11 }, color: '#4A5A75', padding: 8 }
           }
         },
         plugins: {
+          legend: { display: false },
           tooltip: this._tooltip({ callbacks: { label: function (c) { return c.parsed.x + '%'; } } })
         }
       },
       plugins: [{
-        id: 'hbarLabels',
+        id: 'hbarPct',
         afterDraw: function (chart) {
           var ctx2 = chart.ctx;
           chart.data.datasets[0].data.forEach(function (v, i) {
             var bar = chart.getDatasetMeta(0).data[i];
+            if (!bar) return;
             ctx2.save();
-            ctx2.font = "600 10px 'Outfit', sans-serif";
+            ctx2.font      = "700 11px 'Outfit', sans-serif";
             ctx2.fillStyle = '#0C1425';
             ctx2.textBaseline = 'middle';
-            ctx2.fillText(v + '%', bar.x + 5, bar.y);
+            ctx2.fillText(v + '%', bar.x + 8, bar.y);
             ctx2.restore();
           });
         }
@@ -335,48 +411,10 @@ var Charts = {
   },
 
   // ============================================================
-  // MOTIVOS DONUT
+  // MOTIVOS BAR — horizontal para indisponibilidade
   // ============================================================
-  motivosDonut: function (canvasId, motivos) {
-    this._defaults();
-    var el = document.getElementById(canvasId);
-    if (!el) return null;
-    var ctx = el.getContext('2d');
-
-    var sorted = Object.entries(motivos).sort(function (a, b) { return b[1] - a[1]; });
-    var total  = sorted.reduce(function (s, e) { return s + e[1]; }, 0);
-    var labels = sorted.map(function (e) { return e[0]; });
-    var values = sorted.map(function (e) { return Utils.pct(e[1], total); });
-    var palette = [
-      this.COLORS.red, '#E67E22', this.COLORS.orange,
-      this.COLORS.gold, this.COLORS.blue, this.COLORS.purple, '#A0AEC0'
-    ];
-
-    return new Chart(ctx, {
-      type: 'doughnut',
-      data: {
-        labels: labels,
-        datasets: [{
-          data: values,
-          backgroundColor: palette.slice(0, labels.length),
-          borderWidth: 2, borderColor: '#fff', cutout: '52%'
-        }]
-      },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        animation: { duration: 900 },
-        plugins: {
-          legend: {
-            display: true, position: 'bottom',
-            labels: {
-              usePointStyle: true, pointStyle: 'circle',
-              padding: 10, font: { family: 'Outfit', size: 10 }, color: '#4A5A75'
-            }
-          },
-          tooltip: this._tooltip()
-        }
-      }
-    });
+  motivosBar: function (canvasId, motivos) {
+    return this.motivosHBar(canvasId, motivos);
   },
 
   // ============================================================
@@ -401,18 +439,12 @@ var Charts = {
 
     return new Chart(ctx, {
       type: 'bar',
-      data: {
-        labels: labels,
-        datasets: [{ data: values, backgroundColor: colors, borderRadius: 6, borderSkipped: false, barPercentage: 0.65 }]
-      },
+      data: { labels: labels, datasets: [{ data: values, backgroundColor: colors, borderRadius: 6, borderSkipped: false, barPercentage: 0.65 }] },
       options: {
-        responsive: true, maintainAspectRatio: false,
-        animation: { duration: 700 },
-        scales: {
-          y: this._yAxis(null, { beginAtZero: true, ticks: { stepSize: 1, font: { family: 'Outfit', size: 10 }, color: '#8A98B0', padding: 6 } }),
-          x: this._xAxis()
-        },
+        responsive: true, maintainAspectRatio: false, animation: { duration: 700 },
+        scales: { x: this._xTicks(), y: { display: false } },
         plugins: {
+          legend: { display: false },
           tooltip: this._tooltip({ callbacks: { label: function (c) { return c.parsed.y + ' registros'; } } })
         }
       },
@@ -421,7 +453,7 @@ var Charts = {
   },
 
   // ============================================================
-  // SPARKLINE — linha minimalista com área gradiente
+  // SPARKLINE
   // ============================================================
   sparkline: function (canvasId, data, color) {
     var el = document.getElementById(canvasId);
@@ -434,15 +466,10 @@ var Charts = {
       type: 'line',
       data: {
         labels: data.map(function () { return ''; }),
-        datasets: [{
-          data: data,
-          borderColor: c, backgroundColor: areaGrad,
-          borderWidth: 1.8, pointRadius: 0, tension: 0.42, fill: true
-        }]
+        datasets: [{ data: data, borderColor: c, backgroundColor: areaGrad, borderWidth: 1.8, pointRadius: 0, tension: 0.42, fill: true }]
       },
       options: {
-        responsive: false,
-        scales: { x: { display: false }, y: { display: false } },
+        responsive: false, scales: this._noAxes(),
         plugins: { tooltip: { enabled: false } },
         animation: { duration: 600 }
       }
