@@ -757,3 +757,47 @@ body::before{
 .eq-dp-tip::after{content:'';position:absolute;top:100%;left:50%;transform:translateX(-50%);border:6px solid transparent;border-top-color:var(--navy)}
 .eq-dp:hover .eq-dp-tip{display:block}
 .eq-dp-tip strong{font-weight:700;color:var(--gold)}
+
+
+/* ============================================================
+   NEXO EQUIPE PATCH v2.3 — Fixes visuais finais
+   COLAR no FINAL do css/styles.css (apos tudo que existe)
+   Validado ao vivo em 14/Abr/2026
+   ============================================================ */
+
+/* FIX 1: Blocos separados — margin entre section-blocks */
+.section-block {
+  margin-top: 28px;
+}
+.section-block:first-child,
+.section-block.d1 {
+  margin-top: 0;
+}
+.section-header {
+  margin-bottom: 14px;
+}
+
+/* FIX 2: Var badge (p.p.) proporcional ao texto */
+.var-badge {
+  font-size: 10px !important;
+  padding: 2px 6px !important;
+  border-radius: 4px;
+  font-weight: 600;
+  vertical-align: middle;
+  margin-left: 4px;
+}
+
+/* FIX 5: HC Table headers visiveis no fundo claro */
+.eq-table thead th {
+  color: var(--t2);
+  background: rgba(12, 20, 37, 0.03);
+  border-bottom: 1.5px solid rgba(12, 20, 37, 0.10);
+}
+.eq-table .eq-sub-hdr th {
+  background: rgba(12, 20, 37, 0.015);
+  color: var(--t3);
+}
+.eq-hc-tbl {
+  background: var(--card);
+  border-radius: var(--radius);
+}
