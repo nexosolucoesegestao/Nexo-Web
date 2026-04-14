@@ -1,19 +1,20 @@
 // ============================================================
-// NEXO Intelligence Web v2.4 — Chart Factory Premium
-// - Sem eixos / sem grid em todos os gráficos
-// - Legendas: topo central, quadrados arredondados (rectRounded)
-// - Rótulos: font.size 11 padronizado
-// - motivosHBar: barra horizontal com % visível (substitui donut)
-// - Cross-filter: publica/assina NEXO_FILTER global
+// NEXO Intelligence Web v2.5 — Chart Factory
+// Fixes:
+//  - Eixo X: type:'category' para labels corretos (Dez/Jan/Fev/Mar)
+//  - Eixos Y: sem linhas de grade, sem borda, só ticks
+//  - Separador de milhar: toLocaleString('pt-BR') em valores >= 1000
+//  - Legendas: topo central, pointStyle:'rectRounded' (quadrados)
+//  - Rótulos: font.size:11 padronizado em todos
+//  - motivosDonut → motivosHBar (barras horizontais com % visível)
+//  - Cross-filter: clique emite CustomEvent 'nexo:filter'
 // ============================================================
 var Charts = {
 
   COLORS: {
     navy:   '#0C1425', gold:   '#C9A84C', goldLight: '#E8C96A',
     red:    '#E24B4A', green:  '#22C55E', blue:   '#3498DB',
-    orange: '#F59E0B', purple: '#8E44AD', muted:  '#8A98B0',
-    redBg:    'rgba(226,75,74,0.06)',   greenBg: 'rgba(34,197,94,0.06)',
-    orangeBg: 'rgba(245,158,11,0.06)', blueBg:  'rgba(52,152,219,0.07)'
+    orange: '#F59E0B', purple: '#8E44AD', muted:  '#8A98B0'
   },
 
   // ── Defaults globais ─────────────────────────────────────
@@ -41,12 +42,12 @@ var Charts = {
     }, extra || {});
   },
 
-  // ── Legenda padrão: topo central, quadrados arredondados ─
+  // ── Legenda: topo central, quadrados arredondados ────────
   _legend: function (extra) {
     return Object.assign({
-      display:   true,
-      position:  'top',
-      align:     'center',
+      display:  true,
+      position: 'top',
+      align:    'center',
       labels: {
         font:          { family: 'Outfit', size: 10 },
         color:         '#5A6A85',
@@ -59,55 +60,50 @@ var Charts = {
     }, extra || {});
   },
 
-  // ── SEM eixos, SEM grid ───────────────────────────────────
-  _noAxes: function () {
+  // ── Eixo X categoria com labels ──────────────────────────
+  // CRÍTICO: type:'category' para renderizar strings como Dez/Jan
+  _xAxis: function () {
     return {
-      x: { display: false },
-      y: { display: false }
+      type:    'category',
+      display: true,
+      border:  { display: false },
+      grid:    { display: false },
+      ticks:   { font: { family: 'Outfit', size: 10 }, color: '#8A98B0', padding: 4 }
     };
   },
 
-  // ── Eixo Y mínimo (só ticks, sem borda/grid) ─────────────
-  _yTicks: function (suffix) {
-    return {
+  // ── Eixo Y com separador de milhar ───────────────────────
+  _yAxis: function (color, opts) {
+    return Object.assign({
       display: true,
       border:  { display: false },
       grid:    { display: false },
       ticks: {
-        font: { family: 'Outfit', size: 10 }, color: '#8A98B0', padding: 6,
-        callback: suffix ? function (v) { return v + suffix; } : undefined
+        font:  { family: 'Outfit', size: 10 },
+        color: color || '#8A98B0',
+        padding: 6,
+        callback: function (v) {
+          return v >= 1000 ? v.toLocaleString('pt-BR') : v;
+        }
       }
-    };
-  },
-
-  // ── Eixo X mínimo (só ticks, sem borda/grid) ─────────────
-  _xTicks: function (suffix) {
-    return {
-      display: true,
-      border:  { display: false },
-      grid:    { display: false },
-      ticks: {
-        font: { family: 'Outfit', size: 10 }, color: '#8A98B0', padding: 4,
-        callback: suffix ? function (v) { return v + suffix; } : undefined
-      }
-    };
+    }, opts || {});
   },
 
   // ── Gradiente vertical para barras ───────────────────────
-  _gradV: function (ctx, colorHex, alphaTop, alphaBot) {
+  _gradV: function (ctx, hex, aTop, aBot) {
     var h = (ctx.canvas && ctx.canvas.height) || 170;
     var g = ctx.createLinearGradient(0, 0, 0, h);
-    g.addColorStop(0, colorHex + (alphaTop || 'DD'));
-    g.addColorStop(1, colorHex + (alphaBot || '28'));
+    g.addColorStop(0, hex + (aTop || 'EE'));
+    g.addColorStop(1, hex + (aBot || '28'));
     return g;
   },
 
   // ── Gradiente de área para linha ─────────────────────────
-  _gradArea: function (ctx, colorHex) {
+  _gradArea: function (ctx, hex) {
     var h = (ctx.canvas && ctx.canvas.height) || 170;
     var g = ctx.createLinearGradient(0, 0, 0, h);
-    g.addColorStop(0, colorHex + '3A');
-    g.addColorStop(1, colorHex + '05');
+    g.addColorStop(0, hex + '3A');
+    g.addColorStop(1, hex + '05');
     return g;
   },
 
@@ -123,23 +119,24 @@ var Charts = {
     return this.COLORS.green;
   },
 
-  // ── Bar labels plugin: rótulos padronizados (size 11) ────
+  // ── Plugin rótulos nas barras (size:11 padronizado) ───────
   _barLabelsPlugin: function (suffix) {
     var s = suffix || '';
     return {
-      id: 'barLabels_' + (suffix || 'none'),
+      id: 'barLbl_' + (s || 'none'),
       afterDraw: function (chart) {
         var ctx  = chart.ctx;
         var meta = chart.getDatasetMeta(0);
         if (!meta || meta.type !== 'bar') return;
         meta.data.forEach(function (bar, i) {
-          var v = chart.data.datasets[0].data[i];
-          if (v === undefined || v === null || v === 0) return;
+          var raw = chart.data.datasets[0].data[i];
+          if (raw === undefined || raw === null || raw === 0) return;
+          var label = raw >= 1000 ? raw.toLocaleString('pt-BR') : raw;
           ctx.save();
           ctx.font      = "600 11px 'Outfit', sans-serif";
           ctx.fillStyle = '#0C1425';
           ctx.textAlign = 'center';
-          ctx.fillText(v + s, bar.x, bar.y - 5);
+          ctx.fillText(label + s, bar.x, bar.y - 5);
           ctx.restore();
         });
       }
@@ -150,13 +147,13 @@ var Charts = {
   _emitFilter: function (key, value) {
     if (typeof window.NEXO_FILTER === 'undefined') window.NEXO_FILTER = {};
     window.NEXO_FILTER[key] = value;
-    var ev = new CustomEvent('nexo:filter', { detail: { key: key, value: value } });
-    document.dispatchEvent(ev);
+    document.dispatchEvent(new CustomEvent('nexo:filter', { detail: { key: key, value: value } }));
   },
 
   // ============================================================
-  // EVOLUTIVO MENSAL — bar gradiente + linha gold acumulado
-  // Clique na barra filtra o mês globalmente
+  // EVOLUTIVO MENSAL
+  // bar gradiente + linha gold acumulado | eixos mínimos
+  // Clique na barra filtra mês globalmente
   // ============================================================
   evolutivoMensal: function (canvasId, data, color) {
     this._defaults();
@@ -173,7 +170,7 @@ var Charts = {
     var barGrad  = this._gradV(ctx, barColor, 'EE', '33');
     var lineArea = this._gradArea(ctx, '#C9A84C');
 
-    var self = this;
+    var self  = this;
     var chart = new Chart(ctx, {
       type: 'bar',
       data: {
@@ -198,34 +195,23 @@ var Charts = {
       },
       options: {
         responsive: true, maintainAspectRatio: false,
-        animation: { duration: 800, easing: 'easeInOutQuart' },
+        animation:   { duration: 800, easing: 'easeInOutQuart' },
         interaction: { mode: 'index', intersect: false },
         scales: {
-          y: {
-            display: true, position: 'left', beginAtZero: true,
-            border: { display: false },
-            grid:   { display: false },
-            ticks:  { font: { family: 'Outfit', size: 10 }, color: '#8A98B0', padding: 6 }
-          },
-          y2: {
-            display: true, position: 'right', beginAtZero: true,
-            border: { display: false },
-            grid:   { display: false },
-            ticks:  { font: { family: 'Outfit', size: 10 }, color: '#C9A84C', padding: 6 }
-          },
-          x: this._xTicks()
+          y:  this._yAxis('#8A98B0', { position: 'left',  beginAtZero: true }),
+          y2: this._yAxis('#C9A84C', { position: 'right', beginAtZero: true, grid: { drawOnChartArea: false } }),
+          x:  this._xAxis()
         },
         plugins: {
-          legend: this._legend(),
+          legend:  this._legend(),
           tooltip: this._tooltip()
         },
-        // Cross-filter: clique no mês
         onClick: function (evt, elements) {
           if (!elements || !elements.length) return;
-          var idx = elements[0].index;
-          var mes = labels[idx];
+          var idx  = elements[0].index;
+          var mes  = labels[idx];
           self._emitFilter('mes', mes);
-          // Destaca barra clicada, opaca as outras
+          // Destaca barra clicada
           var newBg = values.map(function (_, i) {
             var g = ctx.createLinearGradient(0, 0, 0, ctx.canvas.height);
             if (i === idx) {
@@ -247,8 +233,8 @@ var Charts = {
   },
 
   // ============================================================
-  // DIA DA SEMANA % — barras gradiente semântico
-  // Clique no dia emite filtro
+  // DIA DA SEMANA %
+  // Sem eixos, rótulos topo, clique filtra dia
   // ============================================================
   diaSemana: function (canvasId, data, thresholds) {
     this._defaults();
@@ -265,21 +251,20 @@ var Charts = {
       return self._gradV(ctx, self.colorByVal(v, th), 'EE', '33');
     });
 
-    var chart = new Chart(ctx, {
+    return new Chart(ctx, {
       type: 'bar',
       data: {
         labels: labels,
         datasets: [{ data: values, backgroundColor: colors, borderRadius: 6, borderSkipped: false, barPercentage: 0.6 }]
       },
       options: {
-        responsive: true, maintainAspectRatio: false,
-        animation: { duration: 700 },
+        responsive: true, maintainAspectRatio: false, animation: { duration: 700 },
         scales: {
-          x: this._xTicks(),
+          x: this._xAxis(),
           y: { display: false }
         },
         plugins: {
-          legend: { display: false },
+          legend:  { display: false },
           tooltip: this._tooltip({ callbacks: { label: function (c) { return c.parsed.y + '%'; } } })
         },
         onClick: function (evt, elements) {
@@ -289,11 +274,10 @@ var Charts = {
       },
       plugins: [this._barLabelsPlugin('%')]
     });
-    return chart;
   },
 
   // ============================================================
-  // DIA DA SEMANA KG — barras gradiente
+  // DIA DA SEMANA KG
   // ============================================================
   diaSemanaKg: function (canvasId, data) {
     this._defaults();
@@ -317,9 +301,9 @@ var Charts = {
       data: { labels: labels, datasets: [{ data: values, backgroundColor: colors, borderRadius: 6, borderSkipped: false, barPercentage: 0.6 }] },
       options: {
         responsive: true, maintainAspectRatio: false, animation: { duration: 700 },
-        scales: { x: this._xTicks(), y: { display: false } },
+        scales: { x: this._xAxis(), y: { display: false } },
         plugins: {
-          legend: { display: false },
+          legend:  { display: false },
           tooltip: this._tooltip({ callbacks: { label: function (c) { return c.parsed.y + ' kg'; } } })
         }
       },
@@ -328,11 +312,14 @@ var Charts = {
   },
 
   // ============================================================
-  // MOTIVOS HORIZONTAL BAR — substitui o donut
-  // Valores % visíveis ao bater o olho
+  // MOTIVOS — Barra horizontal com % visível
+  // Substitui o donut confuso por barras legíveis
   // ============================================================
   motivosDonut: function (canvasId, motivos) {
-    // Redireciona para a versão horizontal bar (mais legível)
+    return this.motivosHBar(canvasId, motivos);
+  },
+
+  motivosBar: function (canvasId, motivos) {
     return this.motivosHBar(canvasId, motivos);
   },
 
@@ -340,8 +327,6 @@ var Charts = {
     this._defaults();
     var el = document.getElementById(canvasId);
     if (!el) return null;
-    // Ajustar altura do container para mais itens
-    if (el.parentElement) el.parentElement.style.height = 'auto';
     var ctx = el.getContext('2d');
 
     var sorted = Object.entries(motivos).sort(function (a, b) { return b[1] - a[1]; });
@@ -349,23 +334,19 @@ var Charts = {
     var labels = sorted.map(function (e) { return e[0]; });
     var values = sorted.map(function (e) { return Math.round((e[1] / total) * 100); });
 
-    var palette = [
-      '#E24B4A', '#F59E0B', '#F59E0B',
-      '#C9A84C', '#3498DB', '#8E44AD', '#8A98B0'
-    ];
-    var self = this;
-    var colors = labels.map(function (_, i) {
+    // Paleta semântica para os motivos
+    var palette = ['#E24B4A','#F59E0B','#F59E0B','#C9A84C','#3498DB','#8E44AD','#8A98B0'];
+    var colors  = labels.map(function (_, i) {
       var base = palette[i % palette.length];
-      var g = ctx.createLinearGradient(300, 0, 0, 0);
+      var g = ctx.createLinearGradient(250, 0, 0, 0); // gradiente horizontal esq→dir
       g.addColorStop(0, base + 'F0');
       g.addColorStop(1, base + '44');
       return g;
     });
 
-    // Calcular altura dinâmica (28px por item + margins)
-    var dynamicH = Math.max(160, labels.length * 36 + 20);
-    if (el.parentElement) el.parentElement.style.height = dynamicH + 'px';
-    el.style.height = dynamicH + 'px';
+    // Altura dinâmica proporcional ao número de itens
+    var dynH = Math.max(140, labels.length * 34 + 16);
+    if (el.parentElement) el.parentElement.style.height = dynH + 'px';
 
     return new Chart(ctx, {
       type: 'bar',
@@ -387,7 +368,7 @@ var Charts = {
           }
         },
         plugins: {
-          legend: { display: false },
+          legend:  { display: false },
           tooltip: this._tooltip({ callbacks: { label: function (c) { return c.parsed.x + '%'; } } })
         }
       },
@@ -397,7 +378,7 @@ var Charts = {
           var ctx2 = chart.ctx;
           chart.data.datasets[0].data.forEach(function (v, i) {
             var bar = chart.getDatasetMeta(0).data[i];
-            if (!bar) return;
+            if (!bar || !v) return;
             ctx2.save();
             ctx2.font      = "700 11px 'Outfit', sans-serif";
             ctx2.fillStyle = '#0C1425';
@@ -411,14 +392,7 @@ var Charts = {
   },
 
   // ============================================================
-  // MOTIVOS BAR — horizontal para indisponibilidade
-  // ============================================================
-  motivosBar: function (canvasId, motivos) {
-    return this.motivosHBar(canvasId, motivos);
-  },
-
-  // ============================================================
-  // HORÁRIO DE CHEGADA
+  // HORÁRIO DE CHEGADA (equipe)
   // ============================================================
   horarioChegada: function (canvasId, data) {
     this._defaults();
@@ -442,9 +416,9 @@ var Charts = {
       data: { labels: labels, datasets: [{ data: values, backgroundColor: colors, borderRadius: 6, borderSkipped: false, barPercentage: 0.65 }] },
       options: {
         responsive: true, maintainAspectRatio: false, animation: { duration: 700 },
-        scales: { x: this._xTicks(), y: { display: false } },
+        scales: { x: this._xAxis(), y: { display: false } },
         plugins: {
-          legend: { display: false },
+          legend:  { display: false },
           tooltip: this._tooltip({ callbacks: { label: function (c) { return c.parsed.y + ' registros'; } } })
         }
       },
@@ -460,16 +434,16 @@ var Charts = {
     if (!el) return null;
     var ctx = el.getContext('2d');
     var c   = color || '#C9A84C';
-    var areaGrad = this._gradArea(ctx, c);
 
     return new Chart(ctx, {
       type: 'line',
       data: {
         labels: data.map(function () { return ''; }),
-        datasets: [{ data: data, borderColor: c, backgroundColor: areaGrad, borderWidth: 1.8, pointRadius: 0, tension: 0.42, fill: true }]
+        datasets: [{ data: data, borderColor: c, backgroundColor: this._gradArea(ctx, c), borderWidth: 1.8, pointRadius: 0, tension: 0.42, fill: true }]
       },
       options: {
-        responsive: false, scales: this._noAxes(),
+        responsive: false,
+        scales: { x: { display: false }, y: { display: false } },
         plugins: { tooltip: { enabled: false } },
         animation: { duration: 600 }
       }
