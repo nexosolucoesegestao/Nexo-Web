@@ -494,3 +494,29 @@ body::before{
   .strip-bn-val{font-size:20px}
   .login-card-premium{padding:32px 24px 28px}
 }
+
+/* ============================================================
+   PATCH v2.4 — Bordas laterais em gradiente metálico
+   Substitui border-left sólido por pseudo-elemento gradiente
+   ============================================================ */
+
+.strip { border-left: none !important; }
+.strip::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 4px;
+  border-radius: 4px 0 0 4px;
+  z-index: 1;
+}
+.strip.rup::before   { background: linear-gradient(180deg, #f87171 0%, #E24B4A 45%, #c0392b 100%); }
+.strip.at::before    { background: linear-gradient(180deg, #fbbf24 0%, #F59E0B 45%, #d97706 100%); }
+.strip.as::before    { background: linear-gradient(180deg, #60a5fa 0%, #3498DB 45%, #1d6fa4 100%); }
+.strip.q::before,
+.strip.quebra::before{ background: linear-gradient(180deg, #a78bfa 0%, #8E44AD 45%, #6b2f8a 100%); }
+.strip.eq::before,
+.strip.presenca::before{ background: linear-gradient(180deg, #4ade80 0%, #22C55E 45%, #15803d 100%); }
+.strip.abs::before,
+.strip.absenteismo::before{ background: linear-gradient(180deg, #fb923c 0%, #E67E22 45%, #c2650c 100%); }
+.strip.temp::before  { background: linear-gradient(180deg, #60a5fa 0%, #3498DB 45%, #1d6fa4 100%); }
+.strip.rs::before    { background: linear-gradient(180deg, #f87171 0%, #E24B4A 45%, #c0392b 100%); }
