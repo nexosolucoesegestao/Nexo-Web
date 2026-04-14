@@ -14,14 +14,14 @@ Router.register('equipe', async function(container) {
   }
 
   container.innerHTML =
-    '<div class="page-filters">' +
-      '<div class="period-pills" id="periodPillsEq">' +
-        '<button class="period-pill" data-days="hoje">Hoje</button>' +
-        '<button class="period-pill" data-days="7">7d</button>' +
-        '<button class="period-pill active" data-days="15">15d</button>' +
-        '<button class="period-pill" data-days="30">30d</button>' +
-        '<button class="period-pill" data-days="60">60d</button>' +
-        '<button class="period-pill" data-days="90">90d</button>' +
+   '<div class="toolbar anim">' +
+      '<div class="period-pills">' +
+        '<button class="pp" data-d="hoje">Hoje</button>' +
+        '<button class="pp" data-d="7">7d</button>' +
+        '<button class="pp active" data-d="15">15d</button>' +
+        '<button class="pp" data-d="30">30d</button>' +
+        '<button class="pp" data-d="60">60d</button>' +
+        '<button class="pp" data-d="90">90d</button>' +
       '</div>' +
       '<select class="filter-select" id="filterLojaEq"><option value="all">Todas as lojas</option></select>' +
     '</div>' +
@@ -34,16 +34,19 @@ Router.register('equipe', async function(container) {
   var lojas = await API.getLojas(window.NEXO_REDE_ID);
   UI.populateLojaFilter('filterLojaEq', lojas);
 
-  var pills = document.querySelectorAll('#periodPillsEq .period-pill');
-  pills.forEach(function(pill) {
-    pill.addEventListener('click', function() {
-      pills.forEach(function(p) { p.classList.remove('active'); });
-      pill.classList.add('active');
-      var val = pill.getAttribute('data-days');
-      currentPeriod = val === 'hoje' ? 1 : parseInt(val);
+  UI.initPeriodPills(function(days) {
+    currentPeriod = days;
+    loadData();
+  });
+  var ppHoje = document.querySelector('.pp[data-d="hoje"]');
+  if (ppHoje) {
+    ppHoje.addEventListener('click', function() {
+      document.querySelectorAll('.pp').forEach(function(p) { p.classList.remove('active'); });
+      ppHoje.classList.add('active');
+      currentPeriod = 1;
       loadData();
     });
-  });
+  }
 
   document.getElementById('filterLojaEq').addEventListener('change', function() {
     currentLoja = this.value;
@@ -500,7 +503,7 @@ Router.register('equipe', async function(container) {
             x:{display:true, grid:{display:false}, border:{display:false},
                ticks:{font:{family:'Outfit',size:10},color:'#9CA3AF'}}
           },
-          layout:{padding:{top:18,left:4,right:4}}
+          layout:{padding:{top:20,left:0,right:0,bottom:0}}
         },
         plugins:[dlPlugin]
       });
@@ -701,7 +704,7 @@ Router.register('equipe', async function(container) {
       else if(d.prodPC<40) pills.push({t:'Baixa produtiv.',c:'eq-dp-orange',i:icoTr,tip:'R$ '+d.prodPC+'k/colab. Ociosidade.'});
 
       var ph='<div class="eq-diag-pills">';
-      pills.forEach(function(p){ph+='<span class="eq-dp '+p.c+'" title="'+p.tip+'">'+p.i+p.t+'</span>'});
+      pills.forEach(function(p){ph+='<span class="eq-dp '+p.c+'">'+p.i+p.t+'<span class="eq-dp-tip">'+p.tip+'</span></span>'});
       ph+='</div>';
 
       html+='<tr><td style="text-align:left;padding-left:14px" class="eq-loja-name">'+d.nome+'</td>' +
