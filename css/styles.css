@@ -809,7 +809,7 @@ body::before{
    ============================================================ */
 
 /* FIX 1: Blocos separados — titulo pertence ao bloco de BAIXO */
-.section-block + .section-block {
+#eqBloco3, #eqBloco2, #eqBloco4, #eqBloco5 {
   margin-top: 32px;
 }
 .section-header {
