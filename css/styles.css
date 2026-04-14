@@ -801,3 +801,104 @@ body::before{
   background: var(--card);
   border-radius: var(--radius);
 }
+
+/* ============================================================
+   NEXO EQUIPE — PATCH v2.4 FINAL (DEFINITIVO)
+   COLAR no FINAL do css/styles.css
+   Todos os fixes validados ao vivo no browser em 14/Abr/2026
+   ============================================================ */
+
+/* FIX 1: Blocos separados — titulo pertence ao bloco de BAIXO */
+.section-block + .section-block {
+  margin-top: 32px;
+}
+.section-header {
+  margin-bottom: 14px;
+}
+
+/* FIX 2: Badge p.p. proporcional ao texto */
+.var-badge {
+  font-size: 10px !important;
+  padding: 2px 6px !important;
+  border-radius: 4px;
+  font-weight: 600;
+  vertical-align: middle;
+  margin-left: 4px;
+}
+
+/* FIX 3: Data table primeira coluna alinhada com chart */
+.eq-data-table td:first-child {
+  width: 30px !important;
+  padding-left: 0 !important;
+  text-align: right !important;
+  padding-right: 4px !important;
+}
+
+/* FIX 4: HC Table (Bloco 5) — headers visiveis no fundo claro */
+.section-block.d5 .eq-table thead th {
+  color: var(--t2);
+  background: rgba(12, 20, 37, 0.03);
+  border-bottom: 1.5px solid rgba(12, 20, 37, 0.10);
+}
+
+/* FIX 5: Tabela unificada (Bloco 2 / .d3) — headers navy */
+.section-block.d3 .eq-tbl-card {
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border: none;
+  box-shadow: none;
+}
+.section-block.d3 .eq-tbl-inner {
+  background: transparent;
+}
+.section-block.d3 .eq-table {
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--sh);
+}
+.section-block.d3 .eq-table thead tr:first-child th {
+  background: #0C1425;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 8px 6px;
+}
+.section-block.d3 .eq-table thead tr.eq-sub-hdr th {
+  background: rgba(12, 20, 37, 0.06);
+  color: var(--t3);
+  font-size: 8px;
+  text-transform: uppercase;
+}
+.section-block.d3 .eq-table tbody td {
+  background: rgba(255, 255, 255, 0.92);
+}
+.section-block.d3 .eq-tot-row td {
+  background: rgba(12, 20, 37, 0.04) !important;
+}
+
+/* FIX 6: Agenda — coluna de nomes 200px */
+.eq-ag-hdr,
+.eq-ag-totrow,
+.eq-loja-row,
+.eq-ssh,
+.eq-pr {
+  grid-template-columns: 200px repeat(14, 1fr);
+}
+.eq-lr-name {
+  max-width: 200px;
+  font-size: 11px;
+}
+.eq-ah-corner {
+  min-width: 200px;
+}
+.eq-ag-hdr,
+.eq-ag-totrow,
+.eq-ag-body,
+.eq-loja-row,
+.eq-ssh,
+.eq-pr {
+  min-width: 920px;
+}
