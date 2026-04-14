@@ -1,8 +1,9 @@
 // ============================================================
 // NEXO Intelligence Web v2 — Chart Factory
-// Versão original + correções:
-//   1. Eixos Y e Y2 dos evolutivos com display:false (sem números laterais)
-//   2. Rótulos acima das barras em cor escura, sem quebra/colisão
+// Correções aplicadas sobre a versão original:
+//   1. Rótulos sempre PRETOS (#1E2432) e SEMPRE ACIMA da barra
+//   2. Eixos Y e Y2 com display:false (sem números laterais)
+//   3. motivosDonut → barras horizontais com % visível
 // ============================================================
 var Charts = {
 
@@ -16,30 +17,31 @@ var Charts = {
 
   _defaults: function() {
     Chart.defaults.font.family = "'Outfit', sans-serif";
-    Chart.defaults.font.size = 11;
-    Chart.defaults.color = '#6B7280';
+    Chart.defaults.font.size   = 11;
+    Chart.defaults.color       = '#6B7280';
     Chart.defaults.plugins.legend.display = false;
   },
 
   colorByVal: function(val, thresholds) {
-    if (val >= thresholds.bad) return this.COLORS.red;
+    if (val >= thresholds.bad)  return this.COLORS.red;
     if (val >= thresholds.warn) return this.COLORS.orange;
     return this.COLORS.green;
   },
 
   colorByValInverted: function(val, thresholds) {
-    if (val < thresholds.bad) return this.COLORS.red;
+    if (val < thresholds.bad)  return this.COLORS.red;
     if (val < thresholds.warn) return this.COLORS.orange;
     return this.COLORS.green;
   },
 
-  // ---- EVOLUTIVO MENSAL (bar + line acumulado) ----
-  // CORREÇÃO 1: y e y2 com display:false — remove os números laterais completamente
-  // CORREÇÃO 2: rótulos escuros acima, sem quebrar
+  // ================================================================
+  // EVOLUTIVO MENSAL — bar + linha acumulado gold
+  // Correção: y/y2 display:false (sem eixos laterais)
+  // ================================================================
   evolutivoMensal: function(canvasId, data, color) {
     this._defaults();
-    var labels = data.map(function(d) { return d.label; });
-    var values = data.map(function(d) { return d.valor || d.taxa; });
+    var labels    = data.map(function(d) { return d.label; });
+    var values    = data.map(function(d) { return d.valor || d.taxa; });
     var acc = 0;
     var accValues = values.map(function(v) { acc += v; return acc; });
 
@@ -66,13 +68,9 @@ var Charts = {
         responsive: true, maintainAspectRatio: false,
         interaction: { mode: 'index', intersect: false },
         scales: {
-          // CORREÇÃO 1: display:false remove ambos os eixos numéricos laterais
           y:  { display: false, beginAtZero: true },
           y2: { display: false, beginAtZero: true },
-          x:  {
-            grid: { display: false },
-            ticks: { font: { size: 10 }, color: '#8A98B0' }
-          }
+          x:  { grid: { display: false }, ticks: { font: { size: 10 }, color: '#8A98B0' } }
         },
         plugins: {
           legend: {
@@ -97,12 +95,14 @@ var Charts = {
     });
   },
 
-  // ---- DIA DA SEMANA % ----
+  // ================================================================
+  // DIA DA SEMANA %
+  // ================================================================
   diaSemana: function(canvasId, data, thresholds) {
     this._defaults();
     var labels = data.map(function(d) { return d.dia; });
     var values = data.map(function(d) { return d.taxa; });
-    var th = thresholds || { bad: 20, warn: 14 };
+    var th   = thresholds || { bad: 20, warn: 14 };
     var self = this;
     var colors = values.map(function(v) { return self.colorByVal(v, th); });
 
@@ -116,23 +116,22 @@ var Charts = {
           x: { grid: { display: false }, ticks: { font: { size: 10 } } }
         },
         plugins: {
-          tooltip: {
-            backgroundColor: Charts.COLORS.navy,
-            callbacks: { label: function(ctx) { return ctx.parsed.y + '%'; } }
-          }
+          tooltip: { backgroundColor: Charts.COLORS.navy, callbacks: { label: function(ctx) { return ctx.parsed.y + '%'; } } }
         }
       },
       plugins: [this._barLabelsPlugin('%')]
     });
   },
 
-  // ---- DIA DA SEMANA Kg ----
+  // ================================================================
+  // DIA DA SEMANA Kg
+  // ================================================================
   diaSemanaKg: function(canvasId, data) {
     this._defaults();
     var labels = data.map(function(d) { return d.dia; });
     var values = data.map(function(d) { return d.kg; });
     var maxVal = Math.max.apply(null, values) || 1;
-    var self = this;
+    var self   = this;
     var colors = values.map(function(v) {
       return v >= maxVal * 0.8 ? self.COLORS.red
            : v >= maxVal * 0.5 ? self.COLORS.orange
@@ -149,23 +148,22 @@ var Charts = {
           x: { grid: { display: false }, ticks: { font: { size: 10 } } }
         },
         plugins: {
-          tooltip: {
-            backgroundColor: Charts.COLORS.navy,
-            callbacks: { label: function(ctx) { return ctx.parsed.y + ' kg'; } }
-          }
+          tooltip: { backgroundColor: Charts.COLORS.navy, callbacks: { label: function(ctx) { return ctx.parsed.y + ' kg'; } } }
         }
       },
       plugins: [this._barLabelsPlugin(' kg')]
     });
   },
 
-  // ---- MOTIVOS (horizontal bar) ----
+  // ================================================================
+  // MOTIVOS BAR — horizontal com %
+  // ================================================================
   motivosBar: function(canvasId, motivos) {
     this._defaults();
-    var sorted = Object.entries(motivos).sort(function(a, b) { return b[1] - a[1]; });
-    var total = sorted.reduce(function(s, e) { return s + e[1]; }, 0);
-    var labels = sorted.map(function(e) { return e[0]; });
-    var values = sorted.map(function(e) { return Utils.pct(e[1], total); });
+    var sorted  = Object.entries(motivos).sort(function(a, b) { return b[1] - a[1]; });
+    var total   = sorted.reduce(function(s, e) { return s + e[1]; }, 0);
+    var labels  = sorted.map(function(e) { return e[0]; });
+    var values  = sorted.map(function(e) { return Utils.pct(e[1], total); });
     var palette = [this.COLORS.red, this.COLORS.orange, this.COLORS.orange, '#D4AC6E', this.COLORS.blue, '#CBD5E1', '#A0AEC0'];
 
     return new Chart(document.getElementById(canvasId).getContext('2d'), {
@@ -179,10 +177,7 @@ var Charts = {
           y: { grid: { display: false }, ticks: { font: { size: 10 } } }
         },
         plugins: {
-          tooltip: {
-            backgroundColor: Charts.COLORS.navy,
-            callbacks: { label: function(ctx) { return ctx.parsed.x + '%'; } }
-          }
+          tooltip: { backgroundColor: Charts.COLORS.navy, callbacks: { label: function(ctx) { return ctx.parsed.x + '%'; } } }
         }
       },
       plugins: [{
@@ -193,10 +188,10 @@ var Charts = {
             var bar = chart.getDatasetMeta(0).data[i];
             if (!bar) return;
             ctx.save();
-            ctx.font = "600 10px 'Outfit', sans-serif";
-            ctx.fillStyle = '#0C1425';
-            ctx.textBaseline = 'middle';
-            ctx.textAlign = 'left';
+            ctx.font          = "600 10px 'Outfit', sans-serif";
+            ctx.fillStyle     = '#1E2432';
+            ctx.textBaseline  = 'middle';
+            ctx.textAlign     = 'left';
             ctx.fillText(v + '%', bar.x + 5, bar.y);
             ctx.restore();
           });
@@ -205,34 +200,61 @@ var Charts = {
     });
   },
 
-  // ---- MOTIVOS DONUT ----
+  // ================================================================
+  // MOTIVOS DONUT — substituído por barras horizontais
+  // Mesmo visual do motivosBar, mais legível que o donut
+  // ================================================================
   motivosDonut: function(canvasId, motivos) {
     this._defaults();
-    var sorted = Object.entries(motivos).sort(function(a, b) { return b[1] - a[1]; });
-    var total = sorted.reduce(function(s, e) { return s + e[1]; }, 0);
-    var labels = sorted.map(function(e) { return e[0]; });
-    var values = sorted.map(function(e) { return Utils.pct(e[1], total); });
+    var sorted  = Object.entries(motivos).sort(function(a, b) { return b[1] - a[1]; });
+    var total   = sorted.reduce(function(s, e) { return s + e[1]; }, 0);
+    var labels  = sorted.map(function(e) { return e[0]; });
+    var values  = sorted.map(function(e) { return Utils.pct(e[1], total); });
     var palette = [this.COLORS.red, '#E67E22', this.COLORS.orange, this.COLORS.gold, this.COLORS.blue, this.COLORS.purple, '#CBD5E1'];
 
-    return new Chart(document.getElementById(canvasId).getContext('2d'), {
-      type: 'doughnut',
-      data: {
-        labels: labels,
-        datasets: [{ data: values, backgroundColor: palette.slice(0, labels.length), borderWidth: 2, borderColor: '#fff', cutout: '50%' }]
-      },
+    // Altura dinâmica: 34px por item
+    var dynH = Math.max(140, labels.length * 34 + 16);
+    var el   = document.getElementById(canvasId);
+    if (el && el.parentElement) el.parentElement.style.height = dynH + 'px';
+
+    return new Chart(el.getContext('2d'), {
+      type: 'bar',
+      data: { labels: labels, datasets: [{ data: values, backgroundColor: palette.slice(0, labels.length), borderRadius: 5, barPercentage: 0.65 }] },
       options: {
-        responsive: true, maintainAspectRatio: false,
+        indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+        layout: { padding: { right: 40 } },
+        scales: {
+          x: { display: false },
+          y: { grid: { display: false }, ticks: { font: { size: 11 }, color: '#4A5A75', padding: 8 } }
+        },
         plugins: {
-          legend: {
-            display: true, position: 'bottom',
-            labels: { usePointStyle: true, pointStyle: 'circle', padding: 10, font: { size: 10 } }
-          }
+          legend: { display: false },
+          tooltip: { backgroundColor: Charts.COLORS.navy, callbacks: { label: function(ctx) { return ctx.parsed.x + '%'; } } }
         }
-      }
+      },
+      plugins: [{
+        id: 'donutAsPct',
+        afterDraw: function(chart) {
+          var ctx = chart.ctx;
+          chart.data.datasets[0].data.forEach(function(v, i) {
+            var bar = chart.getDatasetMeta(0).data[i];
+            if (!bar || !v) return;
+            ctx.save();
+            ctx.font          = "700 11px 'Outfit', sans-serif";
+            ctx.fillStyle     = '#1E2432';
+            ctx.textBaseline  = 'middle';
+            ctx.textAlign     = 'left';
+            ctx.fillText(v + '%', bar.x + 6, bar.y);
+            ctx.restore();
+          });
+        }
+      }]
     });
   },
 
-  // ---- SPARKLINE ----
+  // ================================================================
+  // SPARKLINE
+  // ================================================================
   sparkline: function(canvasId, data, color) {
     return new Chart(document.getElementById(canvasId).getContext('2d'), {
       type: 'line',
@@ -248,13 +270,15 @@ var Charts = {
     });
   },
 
-  // ---- HORÁRIO DE CHEGADA ----
+  // ================================================================
+  // HORÁRIO DE CHEGADA
+  // ================================================================
   horarioChegada: function(canvasId, data) {
     this._defaults();
     var labels = data.map(function(d) { return d.hora; });
     var values = data.map(function(d) { return d.count; });
     var maxVal = Math.max.apply(null, values) || 1;
-    var self = this;
+    var self   = this;
     var colors = values.map(function(v) {
       return v >= maxVal * 0.8 ? self.COLORS.green
            : v >= maxVal * 0.4 ? self.COLORS.blue
@@ -271,26 +295,24 @@ var Charts = {
           x: { grid: { display: false }, ticks: { font: { size: 9 } } }
         },
         plugins: {
-          tooltip: {
-            backgroundColor: Charts.COLORS.navy,
-            callbacks: { label: function(ctx) { return ctx.parsed.y + ' registros'; } }
-          }
+          tooltip: { backgroundColor: Charts.COLORS.navy, callbacks: { label: function(ctx) { return ctx.parsed.y + ' registros'; } } }
         }
       },
       plugins: [this._barLabelsPlugin()]
     });
   },
 
-  // ---- BAR LABELS PLUGIN ----
-  // CORREÇÃO 2: rótulos escuros (#0C1425), posicionados acima sem quebrar
-  // Lógica: se a barra tem altura >= 32px, rótulo dentro (branco)
-  //         se barra pequena, rótulo acima (escuro) com clearance mínimo de 4px
+  // ================================================================
+  // BAR LABELS PLUGIN
+  // Rótulos SEMPRE pretos (#1E2432), SEMPRE acima da barra
+  // Nunca brancos, nunca dentro
+  // ================================================================
   _barLabelsPlugin: function(suffix) {
     var s = suffix || '';
     return {
       id: 'nexoBarLabels',
       afterDraw: function(chart) {
-        var ctx = chart.ctx;
+        var ctx  = chart.ctx;
         var meta = chart.getDatasetMeta(0);
         if (!meta || meta.type !== 'bar') return;
 
@@ -298,22 +320,11 @@ var Charts = {
           var v = chart.data.datasets[0].data[i];
           if (v === undefined || v === null || v === 0) return;
 
-          var label = String(v) + s;
-          var barH  = bar.base - bar.y;  // altura em pixels
-
           ctx.save();
           ctx.font      = "600 10px 'Outfit', sans-serif";
+          ctx.fillStyle = '#1E2432';   // sempre preto — nunca branco
           ctx.textAlign = 'center';
-
-          if (barH >= 32) {
-            // Dentro da barra — branco
-            ctx.fillStyle = 'rgba(255,255,255,0.95)';
-            ctx.fillText(label, bar.x, bar.y + 13);
-          } else {
-            // Acima da barra — escuro, sem colidir
-            ctx.fillStyle = '#1E2432';
-            ctx.fillText(label, bar.x, bar.y - 4);
-          }
+          ctx.fillText(String(v) + s, bar.x, bar.y - 4);  // sempre acima
           ctx.restore();
         });
       }
