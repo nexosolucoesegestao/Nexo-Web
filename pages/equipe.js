@@ -492,6 +492,11 @@ Router.register('equipe', async function(container) {
       var canvas = document.getElementById(cs.id);
       if (!canvas) return;
       var minVal = Math.min.apply(null, cs.data.filter(function(v){return v>0}));
+      var nTicks = cs.labels.length;
+      var labelColW = 44;
+      var dataColW = (canvas.width - labelColW) / nTicks;
+      var padL = Math.round(labelColW + dataColW / 2);
+      var padR = Math.round(dataColW / 2);
       var ch = new Chart(canvas, {
         type:'line',
         data:{labels:cs.labels, datasets:[Object.assign({data:cs.data},lineCfg)]},
@@ -503,7 +508,7 @@ Router.register('equipe', async function(container) {
             x:{display:true, offset:false, grid:{display:false}, border:{display:false},
                ticks:{font:{family:'Outfit',size:10},color:'#9CA3AF'}}
           },
-          layout:{padding:{top:20,left:30,right:4,bottom:0}}
+          layout:{padding:{top:20,left:padL,right:padR,bottom:0}}
         },
         plugins:[dlPlugin]
       });
