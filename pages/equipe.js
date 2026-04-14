@@ -500,7 +500,7 @@ Router.register('equipe', async function(container) {
           plugins:{legend:{display:false}},
           scales:{
             y:{display:false, min:Math.max(0,minVal-15), max:100, grace:'10%'},
-            x:{display:true, grid:{display:false}, border:{display:false},
+            x:{display:true, offset:false, grid:{display:false}, border:{display:false},
                ticks:{font:{family:'Outfit',size:10},color:'#9CA3AF'}}
           },
           layout:{padding:{top:20,left:30,right:4,bottom:0}}
