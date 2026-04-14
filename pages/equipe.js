@@ -503,7 +503,7 @@ Router.register('equipe', async function(container) {
             x:{display:true, grid:{display:false}, border:{display:false},
                ticks:{font:{family:'Outfit',size:10},color:'#9CA3AF'}}
           },
-          layout:{padding:{top:20,left:42,right:8,bottom:0}}
+          layout:{padding:{top:20,left:30,right:4,bottom:0}}
         },
         plugins:[dlPlugin]
       });
