@@ -902,3 +902,15 @@ body::before{
 .eq-pr {
   min-width: 920px;
 }
+
+/* FIX: Tabela de dados dos graficos — layout fixo para alinhamento */
+.eq-data-table {
+  table-layout: fixed;
+  width: 100%;
+}
+.eq-data-table td:first-child {
+  width: 44px;
+  text-align: left;
+  padding-left: 4px;
+  padding-right: 2px;
+}
