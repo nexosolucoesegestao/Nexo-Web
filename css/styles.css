@@ -1405,21 +1405,58 @@ body::before{
 /* ══════════════════════════════════════════════════════════════
    BLOCO 2B: Leituras Matrix
    ══════════════════════════════════════════════════════════════ */
-.tmp-matrix{display:grid;grid-template-columns:140px repeat(3,1fr);gap:0;padding:0 20px 10px}
-.tmp-mcol-h{font-size:12px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.4px;text-align:center;padding:0 0 10px}
-.tmp-mcol-sp{}
-.tmp-mrow-label{display:flex;flex-direction:column;justify-content:center;padding:8px 12px 8px 0;border-bottom:1px solid rgba(0,0,0,.04)}
-.tmp-mrow-label:last-of-type{border-bottom:none}
-.tmp-mrl-name{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:#1F2937}
-.tmp-mrl-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
-.tmp-mrl-faixa{font-size:11px;font-weight:500;color:#6B7280;margin-top:2px;margin-left:14px}
-.tmp-mcell{padding:6px;border-bottom:1px solid rgba(0,0,0,.04);border-left:1px solid rgba(0,0,0,.03)}
-.tmp-mcell.last{border-bottom:none}
-.tmp-mcell-inner{height:78px;background:rgba(255,255,255,.5);border-radius:8px;border:1px solid rgba(0,0,0,.04);padding:4px}
-.tmp-mlegend{display:flex;justify-content:center;gap:18px;padding:0 20px;margin-top:8px;font-size:11px;color:#6B7280;font-weight:500}
-.tmp-mleg-item{display:flex;align-items:center;gap:5px}
-.tmp-mleg-zone{width:16px;height:8px;border-radius:2px;background:rgba(45,134,83,.18);border:1px dashed rgba(45,134,83,.5)}
-.tmp-mleg-dot{width:7px;height:7px;border-radius:50%;border:1.5px solid #fff;box-shadow:0 0 0 .5px rgba(0,0,0,.15)}
+.tmp-matrix {
+  display: grid;
+  grid-template-columns: 120px repeat(3,1fr);
+  gap: 0;
+  padding: 0 20px 10px 8px;
+}
+ 
+/* Headers das colunas */
+.tmp-mcol-h {
+  font-size: 10px;
+  font-weight: 700;
+  color: #6B7280;
+  text-transform: uppercase;
+  letter-spacing: .8px;
+  text-align: center;
+  padding: 0 0 12px;
+}
+.tmp-mcol-sp {}
+ 
+/* Labels dos equipamentos */
+.tmp-mrow-label {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 12px 16px 12px 4px;
+  border-bottom: 1px solid rgba(0,0,0,.05);
+}
+.tmp-mrow-label:last-of-type { border-bottom: none; }
+.tmp-mrl-name { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: #1F2937; }
+.tmp-mrl-dot  { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.tmp-mrl-faixa { font-size: 11px; font-weight: 500; color: #9CA3AF; margin-top: 2px; margin-left: 14px; }
+ 
+/* Células dos gráficos */
+.tmp-mcell { padding: 6px 4px; overflow: visible; border-bottom: 1px solid rgba(0,0,0,.04); border-left: 1px solid rgba(0,0,0,.03); }
+.tmp-mcell.last { border-bottom: none; }
+ 
+/* Card premium — glassmorphism igual ao tmp-trend-card */
+.tmp-mcell-inner {
+  height: 88px;
+  background: rgba(255,255,255,.86);
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,.95);
+  box-shadow: 0 2px 10px rgba(12,20,37,.06), 0 1px 3px rgba(12,20,37,.04);
+  padding: 6px 6px 2px;
+  overflow: visible;
+}
+ 
+/* Legenda */
+.tmp-mlegend { display: flex; justify-content: center; gap: 20px; padding: 8px 20px 4px; font-size: 11px; font-weight: 500; color: #6B7280; }
+.tmp-mleg-item { display: flex; align-items: center; gap: 5px; }
+.tmp-mleg-zone { width: 18px; height: 8px; border-radius: 2px; background: rgba(45,134,83,.15); border: 1px dashed rgba(45,134,83,.5); }
+.tmp-mleg-dot  { width: 7px; height: 7px; border-radius: 50%; border: 1.5px solid #fff; box-shadow: 0 0 0 .5px rgba(0,0,0,.15); }
 
 /* ══════════════════════════════════════════════════════════════
    BLOCO 3: Mapa Conformidade
