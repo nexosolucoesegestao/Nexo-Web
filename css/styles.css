@@ -1325,15 +1325,8 @@ body::before{
 /* ══════════════════════════════════════════════════════════════
    BLOCO 2: Tendencia Conformidade
    ══════════════════════════════════════════════════════════════ */
-/* ── Card — glassmorphism idêntico ao equipe ── */
-.tmp-trend-card {
-  background: rgba(255,255,255,.86);
-  border: 1px solid rgba(255,255,255,.95);
-  border-radius: 16px;
-  padding: 18px 14px 10px;
-  display: flex;
-  flex-direction: column;
-}
+.tmp-trend-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;padding:0 20px 20px}
+.tmp-trend-card{background:rgba(255,255,255,.86);border:1px solid rgba(255,255,255,.95);border-radius:16px;padding:18px 14px 10px;display:flex;flex-direction:column}
  
 /* ── Título do card ── */
 .tmp-trc-title {
