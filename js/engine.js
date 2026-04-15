@@ -492,4 +492,274 @@ var Engine = {
 
   _insightsTemperatura: function(data, insights) {},
   _insightsQuebra: function(data, insights) {}
+
+  // ============================================================
+  // TEMPERATURA KPI
+  // ============================================================
+  processTemperatura: function(temps, periodDias) {
+    if (!temps || temps.length === 0) return null;
+
+    var maxDate = temps.reduce(function(mx, t) { return t.data > mx ? t.data : mx; }, '2000-01-01');
+    var range = Utils.periodRange(periodDias, maxDate);
+    var atual = temps.filter(function(t) { return t.data >= range.desde && t.data <= range.ate; });
+    var anterior = temps.filter(function(t) { return t.data >= range.desdeAnterior && t.data <= range.ateAnterior; });
+
+    return {
+      termometros: this._calcTermometros(atual, anterior),
+      tendenciaConf: this._calcTendenciaConf(temps, maxDate),
+      leituras: this._calcLeituras(temps, maxDate),
+      mapaConf: this._calcMapaConf(temps, maxDate),
+      ranking: this._calcRankingTemp(atual, anterior)
+    };
+  },
+
+  // Helper: get flag value (handles both naming conventions)
+  _flagBalcao: function(t) {
+    var v = t.flag_balcao || t.conforme_balcao || '';
+    return v === 'CONFORME' || v === true ? 'CONFORME' : 'NAO CONFORME';
+  },
+  _flagResf: function(t) {
+    var v = t.flag_resfriados || t.conforme_camara_resf || '';
+    return v === 'CONFORME' || v === true ? 'CONFORME' : 'NAO CONFORME';
+  },
+  _flagCong: function(t) {
+    var v = t.flag_congelados || t.conforme_camara_cong || '';
+    return v === 'CONFORME' || v === true ? 'CONFORME' : 'NAO CONFORME';
+  },
+  _tempBalcao: function(t) { return parseFloat(t.balcao_refrigerado) || null; },
+  _tempResf: function(t) { return parseFloat(t.camara_resfriados) || null; },
+  _tempCong: function(t) {
+    var v = parseFloat(t.camara_congelados);
+    return isNaN(v) ? null : v;
+  },
+
+  _confPct: function(recs, flagFn) {
+    if (!recs.length) return 0;
+    var ok = recs.filter(function(t) { return flagFn(t) === 'CONFORME'; }).length;
+    return Math.round(ok / recs.length * 100);
+  },
+
+  _avgTemp: function(recs, tempFn) {
+    var vals = recs.map(tempFn).filter(function(v) { return v !== null; });
+    if (!vals.length) return null;
+    return +(vals.reduce(function(s, v) { return s + v; }, 0) / vals.length).toFixed(1);
+  },
+
+  // ── BLOCO 1: Termômetros ──
+  _calcTermometros: function(atual, anterior) {
+    var self = this;
+    var equips = [
+      { id: 'balcao', label: 'Balcao Refrigerado', faixa: '0 a 4', fMin: 0, fMax: 4, tempFn: self._tempBalcao, flagFn: self._flagBalcao },
+      { id: 'resf', label: 'Camara Resfriados', faixa: '0 a 4', fMin: 0, fMax: 4, tempFn: self._tempResf, flagFn: self._flagResf },
+      { id: 'cong', label: 'Camara Congelados', faixa: 'menor que -18', fMin: -30, fMax: -18, tempFn: self._tempCong, flagFn: self._flagCong }
+    ];
+    return equips.map(function(eq) {
+      var avgAtual = self._avgTemp(atual, eq.tempFn);
+      var avgAnt = self._avgTemp(anterior, eq.tempFn);
+      var confAtual = self._confPct(atual, eq.flagFn);
+      var confAnt = self._confPct(anterior, eq.flagFn);
+      var confOk = atual.filter(function(t) { return eq.flagFn(t) === 'CONFORME'; }).length;
+      return {
+        id: eq.id, label: eq.label, faixa: eq.faixa, fMin: eq.fMin, fMax: eq.fMax,
+        temp: avgAtual, tempAnt: avgAnt,
+        delta: avgAtual !== null && avgAnt !== null ? +(avgAtual - avgAnt).toFixed(1) : 0,
+        confPct: confAtual, confPctAnt: confAnt,
+        confOk: confOk, confTotal: atual.length
+      };
+    });
+  },
+
+  // ── BLOCO 2: Tendência Conformidade ──
+  _calcTendenciaConf: function(temps, maxDate) {
+    var self = this;
+    var result = {};
+    var filters = ['todos', 'balcao', 'resf', 'cong'];
+    filters.forEach(function(f) {
+      var flagFn;
+      if (f === 'balcao') flagFn = self._flagBalcao;
+      else if (f === 'resf') flagFn = self._flagResf;
+      else if (f === 'cong') flagFn = self._flagCong;
+      else flagFn = function(t) {
+        return (self._flagBalcao(t) === 'CONFORME' && self._flagResf(t) === 'CONFORME' && self._flagCong(t) === 'CONFORME') ? 'CONFORME' : 'NAO CONFORME';
+      };
+
+      // Mensal
+      var byMonth = Utils.groupBy(temps, function(t) { return Utils.monthKey(t.data); });
+      var months = Object.keys(byMonth).sort();
+      var mensal = months.map(function(m) {
+        var recs = byMonth[m];
+        var ok = recs.filter(function(t) { return flagFn(t) === 'CONFORME'; }).length;
+        return { label: Utils.monthName(recs[0].data), leit: recs.length, conf: Math.round(ok / recs.length * 100) };
+      });
+
+      // Semanal (ultimas 8 semanas a partir de maxDate)
+      var semanas = [];
+      var maxD = new Date(maxDate + 'T12:00:00');
+      for (var w = 7; w >= 0; w--) {
+        var fim = new Date(maxD); fim.setDate(fim.getDate() - w * 7);
+        var ini = new Date(fim); ini.setDate(ini.getDate() - 6);
+        var iniStr = ini.toISOString().slice(0, 10);
+        var fimStr = fim.toISOString().slice(0, 10);
+        var recs = temps.filter(function(t) { return t.data >= iniStr && t.data <= fimStr; });
+        var ok = recs.filter(function(t) { return flagFn(t) === 'CONFORME'; }).length;
+        semanas.push({ label: 'S' + (8 - w + 7), leit: recs.length, conf: recs.length ? Math.round(ok / recs.length * 100) : 0 });
+      }
+
+      // Diario (ultimos 7 dias)
+      var dias = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab'];
+      var last7 = [];
+      for (var d = 6; d >= 0; d--) {
+        var dt = new Date(maxD); dt.setDate(dt.getDate() - d);
+        var dtStr = dt.toISOString().slice(0, 10);
+        var recs = temps.filter(function(t) { return t.data === dtStr; });
+        var ok = recs.filter(function(t) { return flagFn(t) === 'CONFORME'; }).length;
+        last7.push({ label: dias[dt.getDay()], leit: recs.length, conf: recs.length ? Math.round(ok / recs.length * 100) : 0 });
+      }
+
+      // Calcular confAnt para variação
+      function addConfAnt(arr) {
+        for (var i = 0; i < arr.length; i++) {
+          arr[i].confAnt = i > 0 ? arr[i - 1].conf : null;
+        }
+        return arr;
+      }
+
+      result[f] = {
+        mensal: addConfAnt(mensal),
+        semanas: addConfAnt(semanas),
+        dias: addConfAnt(last7)
+      };
+    });
+    return result;
+  },
+
+  // ── BLOCO 2B: Leituras de Temperatura ──
+  _calcLeituras: function(temps, maxDate) {
+    var self = this;
+    var equips = [
+      { id: 'balcao', tempFn: self._tempBalcao, flagFn: self._flagBalcao, fMin: 0, fMax: 4 },
+      { id: 'resf', tempFn: self._tempResf, flagFn: self._flagResf, fMin: 0, fMax: 4 },
+      { id: 'cong', tempFn: self._tempCong, flagFn: self._flagCong, fMin: -30, fMax: -18 }
+    ];
+    var result = {};
+    var maxD = new Date(maxDate + 'T12:00:00');
+
+    equips.forEach(function(eq) {
+      // Mensal
+      var byMonth = Utils.groupBy(temps, function(t) { return Utils.monthKey(t.data); });
+      var months = Object.keys(byMonth).sort();
+      var mensal = months.map(function(m) {
+        return { label: Utils.monthName(byMonth[m][0].data), value: self._avgTemp(byMonth[m], eq.tempFn) };
+      });
+
+      // Semanal
+      var semanas = [];
+      for (var w = 7; w >= 0; w--) {
+        var fim = new Date(maxD); fim.setDate(fim.getDate() - w * 7);
+        var ini = new Date(fim); ini.setDate(ini.getDate() - 6);
+        var iniStr = ini.toISOString().slice(0, 10);
+        var fimStr = fim.toISOString().slice(0, 10);
+        var recs = temps.filter(function(t) { return t.data >= iniStr && t.data <= fimStr; });
+        semanas.push({ label: 'S' + (8 - w + 7), value: self._avgTemp(recs, eq.tempFn) });
+      }
+
+      // Diario
+      var dias = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab'];
+      var last7 = [];
+      for (var d = 6; d >= 0; d--) {
+        var dt = new Date(maxD); dt.setDate(dt.getDate() - d);
+        var dtStr = dt.toISOString().slice(0, 10);
+        var recs = temps.filter(function(t) { return t.data === dtStr; });
+        last7.push({ label: dias[dt.getDay()], value: self._avgTemp(recs, eq.tempFn) });
+      }
+
+      result[eq.id] = { mensal: mensal, semanas: semanas, dias: last7, fMin: eq.fMin, fMax: eq.fMax };
+    });
+    return result;
+  },
+
+  // ── BLOCO 3: Mapa de Conformidade ──
+  _calcMapaConf: function(temps, maxDate) {
+    var self = this;
+    var maxD = new Date(maxDate + 'T12:00:00');
+    var dates = [];
+    for (var i = 14; i >= 0; i--) {
+      var dt = new Date(maxD); dt.setDate(dt.getDate() - i);
+      dates.push(dt.toISOString().slice(0, 10));
+    }
+    var dateLabels = dates.map(function(d) {
+      return d.slice(5).replace('-', '/');
+    });
+
+    // Group by loja
+    var byLoja = Utils.groupBy(temps, 'loja_id');
+    var lojas = Object.keys(byLoja).map(function(lojaId) {
+      var byDate = {};
+      byLoja[lojaId].forEach(function(t) { byDate[t.data] = t; });
+      var cells = dates.map(function(d) {
+        var t = byDate[d];
+        if (!t) return { status: { todos: 'NA', balcao: 'NA', resf: 'NA', cong: 'NA' }, temps: null };
+        return {
+          status: {
+            todos: (self._flagBalcao(t) === 'CONFORME' && self._flagResf(t) === 'CONFORME' && self._flagCong(t) === 'CONFORME') ? 'OK' : 'NOK',
+            balcao: self._flagBalcao(t) === 'CONFORME' ? 'OK' : 'NOK',
+            resf: self._flagResf(t) === 'CONFORME' ? 'OK' : 'NOK',
+            cong: self._flagCong(t) === 'CONFORME' ? 'OK' : 'NOK'
+          },
+          temps: {
+            balcao: self._tempBalcao(t),
+            resf: self._tempResf(t),
+            cong: self._tempCong(t),
+            fb: self._flagBalcao(t),
+            fr: self._flagResf(t),
+            fc: self._flagCong(t)
+          }
+        };
+      });
+      return { id: lojaId, nome: self.lojaName(lojaId), cells: cells };
+    });
+
+    return { dates: dateLabels, lojas: lojas };
+  },
+
+  // ── BLOCO 4: Ranking ──
+  _calcRankingTemp: function(atual, anterior) {
+    var self = this;
+    var byLoja = Utils.groupBy(atual, 'loja_id');
+    var byLojaAnt = Utils.groupBy(anterior, 'loja_id');
+
+    var lojas = Object.keys(byLoja).map(function(lojaId) {
+      var recs = byLoja[lojaId];
+      var recsAnt = byLojaAnt[lojaId] || [];
+      return {
+        id: lojaId,
+        nome: self.lojaName(lojaId),
+        balcao: { pct: self._confPct(recs, self._flagBalcao), delta: self._confPct(recs, self._flagBalcao) - self._confPct(recsAnt, self._flagBalcao) },
+        resf: { pct: self._confPct(recs, self._flagResf), delta: self._confPct(recs, self._flagResf) - self._confPct(recsAnt, self._flagResf) },
+        cong: { pct: self._confPct(recs, self._flagCong), delta: self._confPct(recs, self._flagCong) - self._confPct(recsAnt, self._flagCong) }
+      };
+    });
+
+    // Sort worst first (avg of 3)
+    lojas.sort(function(a, b) {
+      return ((a.balcao.pct + a.resf.pct + a.cong.pct) / 3) - ((b.balcao.pct + b.resf.pct + b.cong.pct) / 3);
+    });
+
+    // Total rede
+    var totB = lojas.length ? Math.round(lojas.reduce(function(s, l) { return s + l.balcao.pct; }, 0) / lojas.length) : 0;
+    var totR = lojas.length ? Math.round(lojas.reduce(function(s, l) { return s + l.resf.pct; }, 0) / lojas.length) : 0;
+    var totC = lojas.length ? Math.round(lojas.reduce(function(s, l) { return s + l.cong.pct; }, 0) / lojas.length) : 0;
+    var totBd = lojas.length ? Math.round(lojas.reduce(function(s, l) { return s + l.balcao.delta; }, 0) / lojas.length) : 0;
+    var totRd = lojas.length ? Math.round(lojas.reduce(function(s, l) { return s + l.resf.delta; }, 0) / lojas.length) : 0;
+    var totCd = lojas.length ? Math.round(lojas.reduce(function(s, l) { return s + l.cong.delta; }, 0) / lojas.length) : 0;
+
+    return {
+      lojas: lojas,
+      total: {
+        balcao: { pct: totB, delta: totBd },
+        resf: { pct: totR, delta: totRd },
+        cong: { pct: totC, delta: totCd }
+      }
+    };
+  },
 };
