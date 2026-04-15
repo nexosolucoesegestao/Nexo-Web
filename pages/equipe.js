@@ -200,7 +200,7 @@ Router.register('equipe', async function(container) {
     var numDiasAnt = Object.keys(diasAnt).length || 1;
     var ativosCumAnt = ativosSetor * numDiasAnt;
     var efetSetorAnt = ativosCumAnt > 0 ? Math.round(presSetorOkAnt / ativosCumAnt * 100) : efetSetor;
-
+    var varPres = efetSetor - efetSetorAnt;
     // Motivos de ausencia
     var motivos = {};
     presNoPeriodo.filter(function(d) { return d.presente_str === 'NAO' && d.motivo_ausencia && d.motivo_ausencia.trim(); })
