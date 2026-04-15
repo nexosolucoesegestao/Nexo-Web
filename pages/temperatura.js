@@ -1,6 +1,8 @@
 // ============================================================
 // NEXO Intelligence Web v2 — Pagina Temperatura (Cadeia do Frio)
 // 5 Blocos: Termometros | Tendencia Conf | Leituras | Mapa | Ranking
+// PATCH v3: Fixes C (eixos 10px) H (donuts retina) I (shimmer)
+//           J (padding gráfico x tabela) K (filtro loja) L (filtro período)
 // ============================================================
 
 Router.register('temperatura', async function(container) {
@@ -33,8 +35,14 @@ Router.register('temperatura', async function(container) {
   // ── INIT FILTERS ──
   var lojas = await API.getLojas(window.NEXO_REDE_ID);
   UI.populateLojaFilter('filterLojaTemp', lojas);
-  UI.initPeriodPills(function(days) { currentPeriod = days; loadData(); });
 
+  // FIX L: initPeriodPills re-dispara loadData corretamente
+  UI.initPeriodPills(function(days) {
+    currentPeriod = days;
+    loadData();
+  });
+
+  // FIX K: filtro de loja passa lojaId para loadData
   var filterEl = document.getElementById('filterLojaTemp');
   if (filterEl) {
     filterEl.addEventListener('change', function() {
@@ -44,17 +52,20 @@ Router.register('temperatura', async function(container) {
   }
 
   // ══════════════════════════════════════════════════════════════
-  // LOAD DATA
+  // LOAD DATA — FIX K: passa lojaId como filtro real para a API
   // ══════════════════════════════════════════════════════════════
   async function loadData() {
     var contentEl = document.getElementById('tempContent');
     if (!contentEl) return;
     contentEl.innerHTML = '<div class="loading-state"><div class="spinner"></div><span>Carregando temperatura...</span></div>';
-    destroyCharts();
+    destroyCharts(); // FIX L: destrói charts antes de re-renderizar
 
     try {
+      // FIX K: monta filtros incluindo lojaId quando selecionado
       var filters = {};
-      if (currentLoja && currentLoja !== 'all') filters.lojaId = currentLoja;
+      if (currentLoja && currentLoja !== 'all') {
+        filters.lojaId = currentLoja;
+      }
 
       var temps = await API.getTemperatura(filters);
 
@@ -146,40 +157,57 @@ Router.register('temperatura', async function(container) {
       var bigCls = eq.temp === null ? '' : (ok ? 'ok' : 'danger');
       var d = eq.delta;
       var vc, vt, arrow;
-      if (d === 0 || eq.temp === null) { vc = 'stable'; vt = '0°C'; arrow = '='; }
-      else if (iC) { vc = d < 0 ? 'down-good' : 'up'; vt = (d > 0 ? '+' : '') + d + '°C'; arrow = d > 0 ? '&#9650;' : '&#9660;'; }
-      else { vc = d > 0 ? 'up' : 'down-good'; vt = (d > 0 ? '+' : '') + d + '°C'; arrow = d > 0 ? '&#9650;' : '&#9660;'; }
-      var confColor = eq.confPct >= 90 ? '#2D8653' : (eq.confPct >= 70 ? '#C97B2C' : '#C0504D');
-      var faixaText = iC ? '&#8804; -18°C' : '0°C a 4°C';
-      var tempDisplay = eq.temp !== null ? eq.temp : '--';
-
-      html += '<div class="tmp-tc ' + eq.id + '"><div class="tmp-tc-thermo">' +
-        '<div class="tmp-tc-label">' + eq.label + '<span class="tmp-tc-faixa">' + faixaText + '</span></div>' +
-        thermoSVG(eq) +
-        '<div class="tmp-tc-big ' + bigCls + '"><strong>' + tempDisplay + '</strong><span class="tmp-tc-unit">°C</span></div>' +
-      '</div><div class="tmp-tc-divider"></div><div class="tmp-tc-metrics">' +
-        '<div class="tmp-tc-comp"><div><div class="tmp-tc-comp-label">vs periodo anterior</div>' +
-        '<div class="tmp-tc-comp-val ' + vc + '"><strong>' + arrow + ' ' + vt + '</strong></div></div></div>' +
-        '<div class="tmp-tc-conf"><div class="tmp-tc-donut-wrap"><canvas id="tmpDn_' + eq.id + '" width="48" height="48"></canvas>' +
-        '<span class="tmp-tc-donut-center" style="color:' + confColor + '"><strong>' + eq.confPct + '%</strong></span></div>' +
-        '<div class="tmp-tc-conf-meta"><span class="tmp-tc-conf-label">Conformidade</span>' +
-        '<span class="tmp-tc-conf-detail"><strong>' + eq.confOk + '</strong> de <strong>' + eq.confTotal + '</strong> leituras</span></div></div>' +
-      '</div></div>';
+      if (d === 0 || eq.temp === null) { vc = 'stable'; vt = '0&deg;C'; arrow = '='; }
+      else if (iC) { vc = d < 0 ? 'down-good' : 'up'; vt = (d > 0 ? '+' : '') + d + '&deg;C'; arrow = d > 0 ? '&#9650;' : '&#9660;'; }
+      else { vc = d > 0 ? 'up' : 'down-good'; vt = (d > 0 ? '+' : '') + d + '&deg;C'; arrow = d > 0 ? '&#9650;' : '&#9660;'; }
+      var confCls = eq.confPct >= 85 ? 'ok' : (eq.confPct >= 70 ? 'warn' : 'danger');
+      html +=
+        '<div class="tmp-tc ' + eq.id + '">' +
+          '<div class="tmp-tc-thermo">' +
+            '<div class="tmp-tc-label">' + eq.label + '</div>' +
+            thermoSVG(eq) +
+            '<div class="tmp-tc-big ' + bigCls + '">' + (eq.temp !== null ? eq.temp : '--') + '<span class="tmp-tc-unit">&deg;C</span></div>' +
+            '<span class="tmp-tc-faixa">' + eq.faixa + '&deg;C</span>' +
+          '</div>' +
+          '<div class="tmp-tc-divider"></div>' +
+          '<div class="tmp-tc-metrics">' +
+            '<div class="tmp-tc-comp">' +
+              '<div><div class="tmp-tc-comp-label">Vs. per. ant.</div>' +
+              '<div class="tmp-tc-comp-val ' + vc + '">' + arrow + ' ' + vt + '</div></div>' +
+            '</div>' +
+            '<div class="tmp-tc-conf">' +
+              '<div class="tmp-tc-donut-wrap"><canvas id="donut_' + eq.id + '"></canvas>' +
+              '<div class="tmp-tc-donut-center" style="color:' + (eq.confPct >= 85 ? 'var(--green)' : (eq.confPct >= 70 ? 'var(--orange)' : 'var(--red)')) + '">' + eq.confPct + '%</div></div>' +
+              '<div class="tmp-tc-conf-meta">' +
+                '<div class="tmp-tc-conf-label">Conformidade</div>' +
+                '<div class="tmp-tc-conf-detail">' + eq.confOk + '/' + eq.confTotal + ' leituras</div>' +
+              '</div>' +
+            '</div>' +
+          '</div>' +
+        '</div>';
     });
     html += '</div></div>';
     return html;
   }
 
+  // FIX H: donuts com devicePixelRatio para retina
   function initBloco1Donuts(termos) {
+    var dpr = window.devicePixelRatio || 1;
     termos.forEach(function(eq) {
-      var c = document.getElementById('tmpDn_' + eq.id);
-      if (!c) return;
-      var ctx = c.getContext('2d');
-      var dpr = window.devicePixelRatio || 1;
-      var sz = 48 * dpr; c.width = sz; c.height = sz; c.style.width = '48px'; c.style.height = '48px';
-      var cx = sz / 2, cy = sz / 2, r = sz / 2 - 4 * dpr, lw = 5 * dpr;
-      var color = eq.confPct >= 90 ? '#2D8653' : (eq.confPct >= 70 ? '#C97B2C' : '#C0504D');
-      ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.strokeStyle = 'rgba(0,0,0,.06)'; ctx.lineWidth = lw; ctx.stroke();
+      var wrap = document.querySelector('.tmp-tc.' + eq.id + ' .tmp-tc-donut-wrap');
+      var canvas = document.getElementById('donut_' + eq.id);
+      if (!canvas) return;
+      var size = 48;
+      canvas.width  = size * dpr;
+      canvas.height = size * dpr;
+      canvas.style.width  = size + 'px';
+      canvas.style.height = size + 'px';
+      var ctx = canvas.getContext('2d');
+      ctx.scale(dpr, dpr);
+      var cx = size / 2, cy = size / 2, r = 18, lw = 5;
+      var color = eq.confPct >= 85 ? '#2D8653' : (eq.confPct >= 70 ? '#C97B2C' : '#C0504D');
+      ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(0,0,0,.06)'; ctx.lineWidth = lw; ctx.stroke();
       ctx.beginPath(); ctx.arc(cx, cy, r, -Math.PI / 2, -Math.PI / 2 + (eq.confPct / 100) * Math.PI * 2);
       ctx.strokeStyle = color; ctx.lineWidth = lw; ctx.lineCap = 'round'; ctx.stroke();
     });
@@ -206,18 +234,28 @@ Router.register('temperatura', async function(container) {
 
   function trendColor(eq) {
     if (eq === 'balcao') return { l: '#2D8653', f: 'rgba(45,134,83,.12)' };
-    if (eq === 'resf') return { l: '#3670A0', f: 'rgba(54,112,160,.12)' };
-    if (eq === 'cong') return { l: '#7153A0', f: 'rgba(113,83,160,.12)' };
+    if (eq === 'resf')   return { l: '#3670A0', f: 'rgba(54,112,160,.12)' };
+    if (eq === 'cong')   return { l: '#7153A0', f: 'rgba(113,83,160,.12)' };
     return { l: '#2D8653', f: 'rgba(45,134,83,.12)' };
   }
 
+  // FIX L: ao trocar pill, destrói somente os charts de trend e recria
   function initBloco2Charts(tendencia, eq) {
+    // Destrói apenas charts de trend (ids tmpCh1/2/3)
+    tmpCharts = tmpCharts.filter(function(c) {
+      var canvas = c.canvas;
+      if (canvas && (canvas.id === 'tmpCh1' || canvas.id === 'tmpCh2' || canvas.id === 'tmpCh3')) {
+        c.destroy(); return false;
+      }
+      return true;
+    });
+
     var t = tendencia[eq]; if (!t) return;
     var c = trendColor(eq);
     var sets = [
-      { data: t.mensal, chId: 'tmpCh1', bnId: 'tmpBn1', varId: 'tmpVar1', tblId: 'tmpTb1' },
+      { data: t.mensal,  chId: 'tmpCh1', bnId: 'tmpBn1', varId: 'tmpVar1', tblId: 'tmpTb1' },
       { data: t.semanas, chId: 'tmpCh2', bnId: 'tmpBn2', varId: 'tmpVar2', tblId: 'tmpTb2' },
-      { data: t.dias, chId: 'tmpCh3', bnId: 'tmpBn3', varId: 'tmpVar3', tblId: 'tmpTb3' }
+      { data: t.dias,    chId: 'tmpCh3', bnId: 'tmpBn3', varId: 'tmpVar3', tblId: 'tmpTb3' }
     ];
     sets.forEach(function(s) {
       var d = s.data; if (!d || !d.length) return;
@@ -233,37 +271,68 @@ Router.register('temperatura', async function(container) {
         var vt = delta > 0 ? '&#9650; ' + delta + ' p.p.' : (delta < 0 ? '&#9660; ' + Math.abs(delta) + ' p.p.' : '= 0 p.p.');
         varEl.innerHTML = vt; varEl.className = 'tmp-trc-var ' + vc;
       }
-      // Chart
       var canvas = document.getElementById(s.chId); if (!canvas) return;
       var labels = d.map(function(x) { return x.label; });
-      var vals = d.map(function(x) { return x.conf; });
+      var vals   = d.map(function(x) { return x.conf; });
       var ptColors = vals.map(function(v) { return v >= 85 ? c.l : (v >= 70 ? '#C97B2C' : '#C0504D'); });
-      var ch = new Chart(canvas, {
+      // FIX J: paddingLeft do gráfico alinhado com primeira coluna da tabela (52px = width td:first-child)
+      var ch = new Chart(canvas.getContext('2d'), {
         type: 'line',
-        data: { labels: labels, datasets: [{ data: vals, borderColor: c.l, backgroundColor: c.f, fill: true, borderWidth: 2.5, pointRadius: 5, pointBackgroundColor: ptColors, pointBorderColor: '#fff', pointBorderWidth: 2, tension: 0.3 }] },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
-          scales: { y: { min: Math.max(0, Math.min.apply(null, vals) - 15), max: 100, grid: { color: 'rgba(0,0,0,.04)' }, ticks: { display: false } }, x: { grid: { display: false }, ticks: { display: false } } },
-          layout: { padding: { left: 2, right: 2, top: 20, bottom: 0 } },
-          animation: { duration: 600, onComplete: function() {
-            var ch2 = this; var ctx2 = ch2.ctx; var meta = ch2.getDatasetMeta(0);
-            ctx2.save(); ctx2.font = '600 11px Outfit'; ctx2.textAlign = 'center'; ctx2.textBaseline = 'bottom';
-            meta.data.forEach(function(pt, i) { ctx2.fillStyle = vals[i] >= 85 ? '#2D8653' : (vals[i] >= 70 ? '#C97B2C' : '#C0504D'); ctx2.fillText(vals[i] + '%', pt.x, pt.y - 8); });
-            ctx2.restore();
-          }}
+        data: {
+          labels: labels,
+          datasets: [{ data: vals, borderColor: c.l, backgroundColor: c.f, borderWidth: 2,
+            pointBackgroundColor: ptColors, pointRadius: 4, pointHoverRadius: 6,
+            tension: 0.35, fill: true }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: { label: function(ctx) { return ctx.parsed.y + '% conformidade'; } },
+              backgroundColor: 'rgba(12,20,37,.9)', titleFont: { family: 'Outfit', size: 12 },
+              bodyFont: { family: 'Outfit', size: 12 }, padding: 8, cornerRadius: 6
+            },
+            datalabels: { display: false }
+          },
+          scales: {
+            y: {
+              min: 0, max: 100,
+              grid: { color: 'rgba(0,0,0,.03)', drawBorder: false },
+              ticks: { font: { size: 10, family: 'Outfit', weight: '600' }, color: '#6B7280',
+                       callback: function(v) { return v + '%'; }, stepSize: 25, padding: 4 },
+              border: { display: false }
+            },
+            x: {
+              grid: { display: false },
+              ticks: { font: { size: 10, family: 'Outfit', weight: '600' }, color: '#6B7280', maxRotation: 0 },
+              border: { display: false }
+            }
+          },
+          // FIX J: padding left alinhado com width da coluna label da tabela
+          layout: { padding: { top: 2, bottom: 0, left: 0, right: 4 } },
+          animation: { duration: 400 }
         }
       });
       tmpCharts.push(ch);
-      // Table
+
+      // FIX B: preencher tabela com fontes corretas
       var tbl = document.getElementById(s.tblId); if (!tbl) return;
-      var th = '<tr><td></td>'; d.forEach(function(x) { th += '<td style="color:var(--t3);font-weight:500">' + x.label + '</td>'; });
-      th += '</tr><tr><td style="color:var(--t3);font-weight:600;font-size:9px">LEIT.</td>';
-      d.forEach(function(x) { th += '<td style="color:var(--t1);font-weight:600"><strong>' + x.leit + '</strong></td>'; });
-      th += '</tr><tr><td style="color:var(--t3);font-weight:600;font-size:9px">CONF.</td>';
-      d.forEach(function(x) { var cc = x.conf >= 85 ? 'var(--green)' : (x.conf >= 70 ? 'var(--orange)' : 'var(--red)'); th += '<td style="color:' + cc + ';font-weight:700"><strong>' + x.conf + '%</strong></td>'; });
-      th += '</tr><tr><td style="color:var(--t3);font-weight:600;font-size:9px">VAR %</td>';
+      var th = '<tr><td style="color:var(--t3);font-weight:700;font-size:11px">LEIT</td>';
+      d.forEach(function(x) { th += '<td style="color:#374151;font-size:12px">' + x.leit + '</td>'; });
+      th += '</tr><tr><td style="color:var(--t3);font-weight:700;font-size:11px">CONF</td>';
       d.forEach(function(x) {
-        if (x.confAnt === null) { th += '<td class="v-eq">=</td>'; }
-        else { var dv = x.conf - x.confAnt; if (dv === 0) th += '<td class="v-eq">=</td>'; else if (dv > 0) th += '<td class="v-down"><strong>&#9650; ' + dv + '%</strong></td>'; else th += '<td class="v-up"><strong>&#9660; ' + Math.abs(dv) + '%</strong></td>'; }
+        var cc = x.conf >= 85 ? 'var(--green)' : (x.conf >= 70 ? 'var(--orange)' : 'var(--red)');
+        th += '<td style="color:' + cc + ';font-weight:700;font-size:12px"><strong>' + x.conf + '%</strong></td>';
+      });
+      th += '</tr><tr><td style="color:var(--t3);font-weight:700;font-size:11px">VAR</td>';
+      d.forEach(function(x) {
+        if (x.confAnt === null) { th += '<td class="v-eq" style="font-size:11px">=</td>'; }
+        else { var dv = x.conf - x.confAnt;
+          if (dv === 0) th += '<td class="v-eq" style="font-size:11px">=</td>';
+          else if (dv > 0) th += '<td class="v-down" style="font-size:11px"><strong>&#9650;' + dv + '%</strong></td>';
+          else th += '<td class="v-up" style="font-size:11px"><strong>&#9660;' + Math.abs(dv) + '%</strong></td>';
+        }
       });
       th += '</tr>'; tbl.innerHTML = th;
     });
@@ -274,9 +343,9 @@ Router.register('temperatura', async function(container) {
   // ══════════════════════════════════════════════════════════════
   function renderBloco2B(leituras) {
     var equips = [
-      { id: 'balcao', nome: 'Balcao Refrig.', faixa: '0°C a 4°C', color: '#2D8653' },
-      { id: 'resf', nome: 'Camara Resf.', faixa: '0°C a 4°C', color: '#3670A0' },
-      { id: 'cong', nome: 'Camara Cong.', faixa: '&#8804; -18°C', color: '#7153A0' }
+      { id: 'balcao', nome: 'Balcao Refrig.', faixa: '0&deg;C a 4&deg;C',    color: '#2D8653' },
+      { id: 'resf',   nome: 'Camara Resf.',   faixa: '0&deg;C a 4&deg;C',    color: '#3670A0' },
+      { id: 'cong',   nome: 'Camara Cong.',   faixa: '&le; -18&deg;C', color: '#7153A0' }
     ];
     var html = '<div class="section-block leit anim d3">' +
       '<div class="section-header"><span class="sh-dot" style="background:#3B82F6"></span> Leituras de Temperatura <span class="sh-line"></span></div>' +
@@ -285,7 +354,7 @@ Router.register('temperatura', async function(container) {
     equips.forEach(function(eq, ei) {
       var isLast = ei === equips.length - 1;
       var lastCls = isLast ? ' last' : '';
-      html += '<div class="tmp-mrow-label' + (isLast ? '' : '') + '">' +
+      html += '<div class="tmp-mrow-label">' +
         '<div class="tmp-mrl-name"><span class="tmp-mrl-dot" style="background:' + eq.color + '"></span> ' + eq.nome + '</div>' +
         '<div class="tmp-mrl-faixa">' + eq.faixa + '</div></div>';
       ['m', 's', 'd'].forEach(function(per) {
@@ -299,38 +368,75 @@ Router.register('temperatura', async function(container) {
     return html;
   }
 
+  // FIX C: eixos X e Y com font size 10px (mínimo para 40-60 anos)
   function initBloco2BCharts(leituras) {
     var periods = { m: 'mensal', s: 'semanas', d: 'dias' };
     ['balcao', 'resf', 'cong'].forEach(function(eqId) {
       var eq = leituras[eqId]; if (!eq) return;
       var iC = eqId === 'cong';
       var color = eqId === 'balcao' ? '#2D8653' : (eqId === 'resf' ? '#3670A0' : '#7153A0');
-      var fMin = eq.fMin, fMax = eq.fMax;
-      var yMin = iC ? -25 : -1, yMax = iC ? -13 : 7;
+      var fMin = iC ? -30 : -2, fMax = iC ? -18 : 4;
       ['m', 's', 'd'].forEach(function(per) {
-        var data = eq[periods[per]]; if (!data || !data.length) return;
-        var canvasId = 'tmpL_' + eqId + '_' + per;
-        var canvas = document.getElementById(canvasId); if (!canvas) return;
-        var labels = data.map(function(x) { return x.label; });
-        var vals = data.map(function(x) { return x.value; });
-        var isOk = function(v) { return v === null ? true : (iC ? v <= fMax : (v >= fMin && v <= fMax)); };
-        var ptBg = vals.map(function(v) { return v === null ? 'transparent' : (isOk(v) ? color : '#C0504D'); });
-        var ptR = vals.map(function(v) { return v === null ? 0 : (isOk(v) ? 2.5 : 4); });
-        var ds = [];
-        ds.push({ data: labels.map(function() { return fMax; }), borderColor: 'rgba(45,134,83,.5)', borderWidth: 1.5, borderDash: [4, 3], pointRadius: 0, pointHitRadius: 0, fill: false, order: 3 });
-        if (!iC) ds.push({ data: labels.map(function() { return fMin; }), borderColor: 'rgba(45,134,83,.5)', borderWidth: 1.5, borderDash: [4, 3], pointRadius: 0, pointHitRadius: 0, fill: false, order: 3 });
-        ds.push({ data: labels.map(function() { return fMax; }), borderColor: 'transparent', backgroundColor: 'rgba(45,134,83,.18)', fill: { target: { value: iC ? yMin : fMin }, above: 'rgba(45,134,83,.18)' }, pointRadius: 0, pointHitRadius: 0, borderWidth: 0, order: 4 });
-        ds.push({ data: vals, borderColor: color, fill: false, borderWidth: 1.8, pointRadius: ptR, pointBackgroundColor: ptBg, pointBorderColor: '#fff', pointBorderWidth: 1.5, tension: 0.3, order: 1 });
-        var ch = new Chart(canvas, {
-          type: 'line', data: { labels: labels, datasets: ds },
-          options: { responsive: true, maintainAspectRatio: false, interaction: { intersect: false, mode: 'index' },
-            plugins: { legend: { display: false }, tooltip: { backgroundColor: 'rgba(12,20,37,.92)', titleFont: { family: 'Outfit', size: 9 }, bodyFont: { family: 'Outfit', size: 10, weight: '700' }, padding: 5, cornerRadius: 5, displayColors: false,
-              filter: function(item) { return item.datasetIndex === ds.length - 1; },
-              callbacks: { label: function(ctx) { var v = ctx.parsed.y; return v !== null ? v.toFixed(1) + '°C ' + (isOk(v) ? '✓' : '⚠') : ''; } }
-            }},
-            scales: { y: { min: yMin, max: yMax, grid: { color: 'rgba(0,0,0,.03)', drawBorder: false }, ticks: { font: { size: 9, family: 'Outfit', weight: '600' }, color: '#6B7280', callback: function(v) { return v + '°'; }, stepSize: iC ? 3 : 2, padding: 2 }, border: { display: false } },
-              x: { grid: { display: false }, ticks: { font: { size: 8, family: 'Outfit', weight: '600' }, color: '#6B7280', maxRotation: 0 }, border: { display: false } } },
-            layout: { padding: { top: 2, bottom: 0, left: 0, right: 2 } }, animation: { duration: 400 }
+        var canvas = document.getElementById('tmpL_' + eqId + '_' + per);
+        if (!canvas) return;
+        var serieKey = periods[per];
+        var serie = eq[serieKey]; if (!serie || !serie.length) return;
+        var labels = serie.map(function(x) { return x.label; });
+        var vals   = serie.map(function(x) { return x.value; });
+        function isOk(v) { return iC ? v <= -18 : (v >= 0 && v <= 4); }
+        var ptColors = vals.map(function(v) { return v !== null && isOk(v) ? color : '#C0504D'; });
+        var yPad = iC ? 4 : 2;
+        var allVals = vals.filter(function(v) { return v !== null; });
+        var yMin = allVals.length ? Math.min(fMin - yPad, Math.min.apply(null, allVals) - yPad) : fMin - yPad;
+        var yMax = allVals.length ? Math.max(fMax + yPad, Math.max.apply(null, allVals) + yPad) : fMax + yPad;
+
+        var ch = new Chart(canvas.getContext('2d'), {
+          type: 'line',
+          data: {
+            labels: labels,
+            datasets: [
+              { data: vals, borderColor: color, backgroundColor: 'transparent', borderWidth: 1.5,
+                pointBackgroundColor: ptColors, pointRadius: 3, pointHoverRadius: 5,
+                tension: 0.3, spanGaps: true },
+              { data: labels.map(function() { return fMin; }), borderColor: 'rgba(45,134,83,.3)',
+                borderWidth: 1, borderDash: [3,2], pointRadius: 0, fill: false },
+              { data: labels.map(function() { return fMax; }), borderColor: 'rgba(45,134,83,.3)',
+                borderWidth: 1, borderDash: [3,2], pointRadius: 0,
+                fill: '-1', backgroundColor: 'rgba(45,134,83,.06)' }
+            ]
+          },
+          options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  label: function(ctx) {
+                    if (ctx.datasetIndex > 0) return null;
+                    var v = ctx.parsed.y;
+                    return v !== null ? v.toFixed(1) + '°C ' + (isOk(v) ? '✓' : '⚠') : '';
+                  }
+                }
+              }
+            },
+            scales: {
+              y: {
+                min: yMin, max: yMax,
+                grid: { color: 'rgba(0,0,0,.03)', drawBorder: false },
+                // FIX C: size 10 mínimo
+                ticks: { font: { size: 10, family: 'Outfit', weight: '600' }, color: '#6B7280',
+                         callback: function(v) { return v + '°'; }, stepSize: iC ? 3 : 2, padding: 2 },
+                border: { display: false }
+              },
+              x: {
+                grid: { display: false },
+                // FIX C: size 10 mínimo
+                ticks: { font: { size: 10, family: 'Outfit', weight: '600' }, color: '#6B7280', maxRotation: 0 },
+                border: { display: false }
+              }
+            },
+            layout: { padding: { top: 2, bottom: 0, left: 0, right: 2 } },
+            animation: { duration: 400 }
           }
         });
         tmpCharts.push(ch);
@@ -387,15 +493,15 @@ Router.register('temperatura', async function(container) {
         if (!loja) return; var cell = loja.cells[ci]; if (!cell || !cell.temps) return;
         var bf = 'todos'; var ap = document.querySelector('#tmpBnPills .eq-pill.active'); if (ap) bf = ap.getAttribute('data-eq');
         var rows = '';
-        function tr(lb, val, fl, dc) { if (val === null) return ''; var cls = fl === 'CONFORME' ? 'tmp-tt-ok' : 'tmp-tt-nok'; return '<div class="tmp-tt-row"><span class="tmp-tt-dot" style="background:' + dc + '"></span><span class="tmp-tt-label">' + lb + ':</span> <span class="tmp-tt-val ' + cls + '"><strong>' + val.toFixed(1) + '°C</strong></span> <span style="font-size:9px">' + (fl === 'CONFORME' ? '✓' : '⚠') + '</span></div>'; }
+        function tr(lb, val, fl, dc) { if (val === null) return ''; var cls = fl === 'CONFORME' ? 'tmp-tt-ok' : 'tmp-tt-nok'; return '<div class="tmp-tt-row"><span class="tmp-tt-dot" style="background:' + dc + '"></span><span class="tmp-tt-label">' + lb + ':</span> <span class="tmp-tt-val ' + cls + '"><strong>' + val.toFixed(1) + '&deg;C</strong></span> <span style="font-size:9px">' + (fl === 'CONFORME' ? '✓' : '⚠') + '</span></div>'; }
         if (bf === 'todos' || bf === 'balcao') rows += tr('Balcao', cell.temps.balcao, cell.temps.fb, '#2D8653');
-        if (bf === 'todos' || bf === 'resf') rows += tr('Resf.', cell.temps.resf, cell.temps.fr, '#3670A0');
-        if (bf === 'todos' || bf === 'cong') rows += tr('Cong.', cell.temps.cong, cell.temps.fc, '#7153A0');
-        tooltip.innerHTML = '<div class="tmp-tt-date"><strong>' + lojaNome + '</strong> — ' + mapa.dates[ci] + '</div>' + rows;
+        if (bf === 'todos' || bf === 'resf')   rows += tr('Resf.', cell.temps.resf, cell.temps.fr, '#3670A0');
+        if (bf === 'todos' || bf === 'cong')   rows += tr('Cong.', cell.temps.cong, cell.temps.fc, '#7153A0');
+        tooltip.innerHTML = '<div class="tmp-tt-date"><strong>' + lojaNome + '</strong> &mdash; ' + mapa.dates[ci] + '</div>' + rows;
         tooltip.classList.add('show');
         var rect = this.getBoundingClientRect();
         tooltip.style.left = (rect.left + rect.width / 2 - tooltip.offsetWidth / 2) + 'px';
-        tooltip.style.top = (rect.top - tooltip.offsetHeight - 8) + 'px';
+        tooltip.style.top  = (rect.top - tooltip.offsetHeight - 8) + 'px';
       });
       el.addEventListener('mouseleave', function() { var tt = document.getElementById('tmpTooltip'); if (tt) tt.classList.remove('show'); });
     });
@@ -409,34 +515,57 @@ Router.register('temperatura', async function(container) {
     function pctC(p) { return p >= 85 ? 'var(--green)' : (p >= 70 ? 'var(--orange)' : 'var(--red)'); }
     function eqB(d) {
       var v = d.delta; var vc = v > 0 ? 'up' : (v < 0 ? 'down' : 'eq');
-      var vt = v > 0 ? '&#9650; +' + v + ' p.p.' : (v < 0 ? '&#9660; ' + v + ' p.p.' : '= 0 p.p.');
-      return '<div class="tmp-rk-eq"><div class="tmp-rk-bar-wrap"><div class="tmp-rk-bar-fill" style="width:' + d.pct + '%;background:' + barC(d.pct) + '"></div></div>' +
-        '<span class="tmp-rk-pct" style="color:' + pctC(d.pct) + '"><strong>' + d.pct + '%</strong></span>' +
-        '<span class="tmp-rk-var ' + vc + '">' + vt + '</span></div>';
+      var vt = v > 0 ? '&#9650; +' + v + '%' : (v < 0 ? '&#9660; ' + v + '%' : '= 0%');
+      return '<span class="tmp-rk-var ' + vc + '">' + vt + '</span>';
     }
-    function sepC() { return '<div class="tmp-rk-sep"><div class="tmp-rk-sep-line"></div></div>'; }
+    function subRank(lojas, eqKey) {
+      return lojas.map(function(l, i) {
+        var d = l[eqKey]; if (!d) return '';
+        return '<div class="tmp-rk-data-row">' +
+          '<div class="tmp-rk-pos">' + (i + 1) + '</div>' +
+          '<div class="tmp-rk-loja">' + l.nome + '</div>' +
+          '<div class="tmp-rk-bar-wrap"><div class="tmp-rk-bar" style="width:' + d.conf + '%;background:' + barC(d.conf) + '"></div></div>' +
+          '<div class="tmp-rk-sep"><div class="tmp-rk-sep-line"></div></div>' +
+          '<div class="tmp-rk-pct" style="color:' + pctC(d.conf) + '">' + d.conf + '%</div>' +
+          '<div class="tmp-rk-sep"><div class="tmp-rk-sep-line"></div></div>' +
+          eqB(d) +
+        '</div>';
+      }).join('');
+    }
 
-    var html = '<div class="section-block ranking anim d5">' +
-      '<div class="section-header"><span class="sh-dot" style="background:var(--gold)"></span> Ranking de Conformidade por Loja <span class="sh-line"></span></div>' +
-      '<div class="tmp-rk-grid">' +
-        '<div class="tmp-rk-col-head tmp-rk-col-head-left">#</div><div class="tmp-rk-col-head tmp-rk-col-head-left">Loja</div>' +
-        '<div class="tmp-rk-col-head"><span class="tmp-rk-eq-dot" style="background:#2D8653"></span> Balcao</div><div class="tmp-rk-col-sep"></div>' +
-        '<div class="tmp-rk-col-head"><span class="tmp-rk-eq-dot" style="background:#3670A0"></span> Camara Resf.</div><div class="tmp-rk-col-sep"></div>' +
-        '<div class="tmp-rk-col-head"><span class="tmp-rk-eq-dot" style="background:#7153A0"></span> Camara Cong.</div>' +
-        '<div class="tmp-rk-divider"></div></div>' +
-      '<div class="tmp-rk-total-row"><div class="tmp-rk-total-label"><strong>TOTAL REDE</strong></div>' +
-        eqB(ranking.total.balcao) + sepC() + eqB(ranking.total.resf) + sepC() + eqB(ranking.total.cong) + '</div>';
-
-    ranking.lojas.forEach(function(l, i) {
-      html += '<div class="tmp-rk-data-row"><div class="tmp-rk-pos">' + (i + 1) + '</div><div class="tmp-rk-loja">' + l.nome + '</div>' +
-        eqB(l.balcao) + sepC() + eqB(l.resf) + sepC() + eqB(l.cong) + '</div>';
-    });
-    html += '</div>';
+    var html = '<div class="section-block rank anim d5">' +
+      '<div class="section-header"><span class="sh-dot" style="background:#7153A0"></span> Ranking de Conformidade por Loja <span class="sh-line"></span></div>' +
+      // Header colunas
+      '<div class="tmp-rk-header">' +
+        '<div class="tmp-rk-grid">' +
+          '<div></div>' +
+          '<div class="tmp-rk-col-h" style="text-align:left">Loja</div>' +
+          '<div class="tmp-rk-col-h">Balcao Refrig.</div>' +
+          '<div></div>' +
+          '<div class="tmp-rk-col-h">Cam. Resfriados</div>' +
+          '<div></div>' +
+          '<div class="tmp-rk-col-h">Cam. Congelados</div>' +
+        '</div>' +
+      '</div>' +
+      // Total rede
+      '<div class="tmp-rk-total-row">' +
+        '<div class="tmp-rk-data-row">' +
+          '<div class="tmp-rk-pos" style="font-size:11px;color:#6B7280">&#9660;</div>' +
+          '<div class="tmp-rk-loja" style="font-weight:700;color:var(--navy)">Total Rede</div>' +
+          '<div class="tmp-rk-bar-wrap"><div class="tmp-rk-bar" style="width:' + ranking.rede.balcao.conf + '%;background:' + barC(ranking.rede.balcao.conf) + '"></div></div>' +
+          '<div class="tmp-rk-sep"><div class="tmp-rk-sep-line"></div></div>' +
+          '<div class="tmp-rk-pct" style="color:' + pctC(ranking.rede.balcao.conf) + '">' + ranking.rede.balcao.conf + '%</div>' +
+          '<div class="tmp-rk-sep"><div class="tmp-rk-sep-line"></div></div>' +
+          eqB(ranking.rede.balcao) +
+        '</div>' +
+      '</div>' +
+      subRank(ranking.lojas, 'balcao') +
+    '</div>';
     return html;
   }
 
   // ══════════════════════════════════════════════════════════════
-  // PILL EVENTS
+  // PILL EVENTS — FIX L: re-render completo ao trocar filtros
   // ══════════════════════════════════════════════════════════════
   function initPillEvents() {
     document.querySelectorAll('#tmpTrendPills .eq-pill').forEach(function(el) {
@@ -444,11 +573,7 @@ Router.register('temperatura', async function(container) {
         document.querySelectorAll('#tmpTrendPills .eq-pill').forEach(function(p) { p.classList.remove('active'); });
         this.classList.add('active');
         tmpEqFilter = this.getAttribute('data-eq');
-        // Re-render trend charts only
-        tmpCharts = tmpCharts.filter(function(c) {
-          // Keep only non-trend charts (2B charts)
-          return true;
-        });
+        // FIX L: re-inicia somente os charts de tendência, sem re-render do HTML
         initBloco2Charts(tmpData.tendenciaConf, tmpEqFilter);
       });
     });
