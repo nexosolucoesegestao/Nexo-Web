@@ -1117,33 +1117,211 @@ body::before{
 /* ══════════════════════════════════════════════════════════════
    BLOCO 1: Termometros
    ══════════════════════════════════════════════════════════════ */
-.tmp-thermo-row{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;padding:0 20px 20px}
-.tmp-tc{display:flex;align-items:stretch;border-radius:14px;border:1px solid rgba(0,0,0,.05);overflow:hidden;transition:box-shadow .3s,transform .25s;background:#fff}
-.tmp-tc:hover{box-shadow:0 8px 28px rgba(12,20,37,.08);transform:translateY(-2px)}
-.tmp-tc-thermo{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px 14px 12px;position:relative;min-width:90px}
-.tmp-tc-thermo::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
-.tmp-tc.balcao .tmp-tc-thermo{background:rgba(45,134,83,.04)}.tmp-tc.balcao .tmp-tc-thermo::before{background:linear-gradient(90deg,#86EFAC,#2D8653)}
-.tmp-tc.resf .tmp-tc-thermo{background:rgba(54,112,160,.04)}.tmp-tc.resf .tmp-tc-thermo::before{background:linear-gradient(90deg,#93C5FD,#3670A0)}
-.tmp-tc.cong .tmp-tc-thermo{background:rgba(113,83,160,.04)}.tmp-tc.cong .tmp-tc-thermo::before{background:linear-gradient(90deg,#C4B5FD,#7153A0)}
-.tmp-tc-label{font-size:11px;font-weight:700;color:#4B5563;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;text-align:center;line-height:1.2}
-.tmp-tc-faixa{font-size:10px;color:#6B7280;font-weight:500;display:block;margin-top:2px}
-.tmp-tc-big{font-size:30px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1;margin-top:4px}
-.tmp-tc-big.ok{color:var(--green)}.tmp-tc-big.warn{color:var(--orange)}.tmp-tc-big.danger{color:var(--red)}
-.tmp-tc-unit{font-size:14px;font-weight:500;color:#6B7280}
-.tmp-tc-divider{width:1px;background:rgba(0,0,0,.06);margin:10px 0}
-.tmp-tc-metrics{flex:1;display:flex;flex-direction:column;justify-content:center;padding:14px 16px;gap:10px}
-.tmp-tc-comp{display:flex;align-items:center;gap:8px}
-.tmp-tc-comp-label{font-size:11px;color:#6B7280;font-weight:600;text-transform:uppercase;letter-spacing:.3px;line-height:1.2}
-.tmp-tc-comp-val{font-size:18px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1}
-.tmp-tc-comp-val.up{color:var(--red)}.tmp-tc-comp-val.down-good{color:var(--green)}.tmp-tc-comp-val.stable{color:#6B7280}
-.tmp-tc-conf{display:flex;align-items:center;gap:10px}
-.tmp-tc-donut-wrap{position:relative;width:48px;height:48px;flex-shrink:0}
-.tmp-tc-donut-wrap canvas{width:48px;height:48px}
-.tmp-tc-donut-center{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:13px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1}
-.tmp-tc-conf-meta{display:flex;flex-direction:column;gap:2px}
-.tmp-tc-conf-label{font-size:11px;color:#4B5563;font-weight:600;text-transform:uppercase;letter-spacing:.3px}
-.tmp-tc-conf-detail{font-size:12px;color:#374151;font-weight:500}
-
+/* ── Row: gap e padding ── */
+.tmp-thermo-row {
+  display: grid;
+  grid-template-columns: repeat(3,1fr);
+  gap: 16px;
+  padding: 0 20px 20px;
+}
+ 
+/* ── Card: borda gold, sombra, hover ── */
+.tmp-tc {
+  display: flex;
+  align-items: stretch;
+  border-radius: 14px;
+  border: 1px solid rgba(201,168,76,.2);
+  box-shadow: 0 4px 20px rgba(12,20,37,.1);
+  overflow: hidden;
+  transition: box-shadow .3s, transform .25s;
+  background: #fff;
+  position: relative;
+}
+.tmp-tc:hover {
+  box-shadow: 0 8px 32px rgba(12,20,37,.16);
+  transform: translateY(-2px);
+}
+ 
+/* ── Coluna do termômetro: fundo navy premium ── */
+.tmp-tc.balcao .tmp-tc-thermo,
+.tmp-tc.resf   .tmp-tc-thermo,
+.tmp-tc.cong   .tmp-tc-thermo {
+  background: linear-gradient(175deg, #0C1425 0%, #1A2744 100%);
+  border-right: 1px solid rgba(201,168,76,.1);
+}
+/* Linha gold no topo de cada card */
+.tmp-tc.balcao .tmp-tc-thermo::before,
+.tmp-tc.resf   .tmp-tc-thermo::before,
+.tmp-tc.cong   .tmp-tc-thermo::before {
+  background: linear-gradient(90deg,#C9A84C,#E8C96A,#C9A84C);
+  height: 2px;
+}
+.tmp-tc-thermo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 16px 10px 12px;
+  position: relative;
+  min-width: 90px;
+  max-width: 110px;
+  width: 100px;
+  flex-shrink: 0;
+}
+.tmp-tc-thermo::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+}
+ 
+/* ── Textos na área dark ── */
+.tmp-tc-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: rgba(255,255,255,.5);
+  text-transform: uppercase;
+  letter-spacing: .7px;
+  margin-bottom: 4px;
+  text-align: center;
+  line-height: 1.2;
+}
+.tmp-tc-faixa {
+  font-size: 10px;
+  color: rgba(255,255,255,.65);
+  font-weight: 500;
+  display: block;
+  margin-top: 2px;
+  text-align: center;
+}
+.tmp-tc-big {
+  font-size: 28px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  margin-top: 4px;
+  color: #FFFFFF;
+}
+.tmp-tc-big.ok     { color: #FFFFFF; }
+.tmp-tc-big.danger { color: #FFFFFF; }
+.tmp-tc-unit {
+  font-size: 12px;
+  font-weight: 400;
+  color: rgba(255,255,255,.35);
+}
+ 
+/* ── Divisor gold entre colunas ── */
+.tmp-tc-divider {
+  width: 1px;
+  background: rgba(201,168,76,.12);
+  margin: 10px 0;
+  flex-shrink: 0;
+}
+ 
+/* ── Coluna de métricas: branco, vertical centralizado ── */
+.tmp-tc-metrics {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 14px 12px;
+  gap: 14px;
+  text-align: center;
+  min-width: 130px;
+  background: #ffffff;
+}
+ 
+/* ── VS período anterior ── */
+.tmp-tc-comp {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  width: 100%;
+}
+.tmp-tc-comp-label {
+  font-size: 9px;
+  color: #9CA3AF;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  text-align: center;
+  margin-bottom: 2px;
+}
+.tmp-tc-comp-val {
+  font-size: 16px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  text-align: center;
+}
+/* Delta: cores semânticas + gold para estável */
+.tmp-tc-comp-val.up        { color: var(--red); }
+.tmp-tc-comp-val.down-good { color: var(--green); }
+.tmp-tc-comp-val.stable    { color: #C9A84C; } /* gold quando = 0 */
+ 
+/* Separador sutil gold entre VS e Conformidade */
+.tmp-tc-comp::after {
+  content: '';
+  display: block;
+  width: 32px;
+  height: 1px;
+  background: rgba(201,168,76,.2);
+  margin: 6px auto 0;
+}
+ 
+/* ── Conformidade: donut 80px premium ── */
+.tmp-tc-conf {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  width: 100%;
+}
+.tmp-tc-donut-wrap {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  flex-shrink: 0;
+  margin: 0 auto;
+}
+.tmp-tc-donut-wrap canvas {
+  width: 80px !important;
+  height: 80px !important;
+  display: block;
+}
+.tmp-tc-donut-center {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%,-50%);
+  font-size: 19px;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.5px;
+  line-height: 1;
+}
+.tmp-tc-conf-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 1px;
+}
+.tmp-tc-conf-label {
+  font-size: 9px;
+  color: #9CA3AF;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  display: block;
+}
+.tmp-tc-conf-detail {
+  font-size: 11px;
+  color: #6B7280;
+  font-weight: 500;
+  display: block;
+}
 /* ══════════════════════════════════════════════════════════════
    BLOCO 2: Tendencia Conformidade
    ══════════════════════════════════════════════════════════════ */
