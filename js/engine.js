@@ -490,7 +490,70 @@ var Engine = {
     }
   },
 
-  _insightsTemperatura: function(data, insights) {},
+  _insightsTemperatura: function(data, insights) {
+    var tmp = data.temperaturaData;
+    if (!tmp || !tmp.termometros) return;
+ 
+    var termos = tmp.termometros;
+    var ranking = tmp.ranking;
+ 
+    // ── CRÍTICOS: equipamento fora da faixa ──
+    termos.forEach(function(eq) {
+      if (eq.temp === null) return;
+      var iC = eq.id === 'cong';
+      var ok = iC ? eq.temp <= -18 : (eq.temp >= 0 && eq.temp <= 4);
+      if (!ok) {
+        var faixaStr = iC ? 'abaixo de -18°C' : 'entre 0°C e 4°C';
+        insights.criticos.push({
+          titulo: eq.label + ': ' + eq.temp + '°C — FORA DA FAIXA',
+          narrativa: eq.label + ' registrou media de ' + eq.temp + '°C no periodo. A faixa segura e ' + faixaStr + '. Risco de perda de qualidade e contaminacao.',
+          acao: 'Verificar regulagem e vedacao do equipamento. Acionar tecnico imediatamente se persistir.'
+        });
+      }
+    });
+ 
+    // ── CRÍTICOS: conformidade abaixo de 70% ──
+    termos.forEach(function(eq) {
+      if (eq.confPct < 70) {
+        insights.criticos.push({
+          titulo: eq.label + ': ' + eq.confPct + '% de conformidade',
+          narrativa: 'Mais de ' + (100 - eq.confPct) + '% das leituras do ' + eq.label + ' estao fora da faixa ideal. Tendencia de queda vs periodo anterior: ' + (eq.confPctAnt !== null ? (eq.confPct - eq.confPctAnt) + ' p.p.' : 'sem dado anterior') + '.',
+          acao: 'Revisar rotina de higienizacao, carga do equipamento e temperatura de abastecimento.'
+        });
+      }
+    });
+ 
+    // ── OPORTUNIDADES: pior loja no ranking ──
+    if (ranking && ranking.lojas && ranking.lojas.length > 0) {
+      var piorLoja = ranking.lojas[ranking.lojas.length - 1];
+      if (piorLoja) {
+        var eqs = ['balcao','resf','cong'];
+        var piorEq = null; var piorConf = 100;
+        eqs.forEach(function(k) { if (piorLoja[k] && piorLoja[k].conf < piorConf) { piorConf = piorLoja[k].conf; piorEq = k; } });
+        if (piorEq && piorConf < 85) {
+          insights.oportunidades.push({
+            titulo: piorLoja.nome + ': maior risco de cadeia do frio',
+            narrativa: 'Esta loja apresenta a menor conformidade da rede (' + piorConf + '% no ' + piorEq + '). Risco de perda de produtos e multas sanitarias.',
+            acao: 'Priorizar auditoria presencial de temperatura em ' + piorLoja.nome + ' esta semana.'
+          });
+        }
+      }
+    }
+ 
+    // ── EVOLUÇÃO: variação de conformidade ──
+    termos.forEach(function(eq) {
+      if (eq.confPctAnt === null) return;
+      var delta = eq.confPct - eq.confPctAnt;
+      if (Math.abs(delta) >= 5) {
+        var melhorou = delta > 0;
+        insights.evolucao.push({
+          titulo: eq.label + ': conformidade ' + (melhorou ? 'subiu' : 'caiu') + ' ' + Math.abs(delta) + ' p.p.',
+          narrativa: 'Conformidade atual: ' + eq.confPct + '%. ' + (melhorou ? 'Melhoria consistente na cadeia do frio.' : 'Queda preocupante — pode indicar falha no equipamento ou no processo.'),
+          acao: melhorou ? 'Manter procedimento atual de controle de temperatura.' : 'Verificar causa da queda: carga excessiva, abertura frequente ou falha mecanica.'
+        });
+      }
+    });
+  },
  _insightsQuebra: function(data, insights) {},
 
   // ============================================================
