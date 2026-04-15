@@ -491,7 +491,7 @@ var Engine = {
   },
 
   _insightsTemperatura: function(data, insights) {},
-  _insightsQuebra: function(data, insights) {}
+ _insightsQuebra: function(data, insights) {},
 
   // ============================================================
   // TEMPERATURA KPI
