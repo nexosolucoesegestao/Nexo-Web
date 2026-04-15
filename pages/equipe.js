@@ -491,7 +491,10 @@ Router.register('equipe', async function(container) {
     chartSets.forEach(function(cs) {
       var canvas = document.getElementById(cs.id);
       if (!canvas) return;
-      var minVal = Math.min.apply(null, cs.data.filter(function(v){return v>0}));
+      var nonZero = cs.data.filter(function(v){return v>0});
+      var hasZeros = cs.data.some(function(v){return v===0});
+      var minVal = nonZero.length > 0 ? Math.min.apply(null, nonZero) : 0;
+      var yMin = (hasZeros || nonZero.length <= 1) ? 0 : Math.max(0, minVal - 15);
       var nTk = cs.labels.length;
       var colW = 44;
       var dW = (canvas.width - colW) / nTk;
@@ -504,7 +507,7 @@ Router.register('equipe', async function(container) {
           responsive:true, maintainAspectRatio:false,
           plugins:{legend:{display:false}},
           scales:{
-            y:{display:false, min:Math.max(0,minVal-15), max:100, grace:'10%'},
+             y:{display:false, min:yMin, max:100, grace:'10%'},
             x:{display:true, offset:false, grid:{display:false}, border:{display:false},
                ticks:{font:{family:'Outfit',size:10},color:'#9CA3AF'}}
           },
