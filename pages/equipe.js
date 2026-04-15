@@ -168,7 +168,6 @@ Router.register('equipe', async function(container) {
     pessoasSetor.forEach(function(p) { setorIds[p.id] = true; });
     var presSetorRecs = presNoPeriodo.filter(function(d) { return setorIds[d.pessoa_id]; });
     var presSetorOk = presSetorRecs.filter(function(d) { return d.presente_str === 'SIM'; }).length;
-    var efetSetor = presSetorRecs.length > 0 ? Math.round(presSetorOk / presSetorRecs.length * 100) : 0;
     var mediaPresSetor = Math.round(presSetorOk / numDias);
     var mediAusentesSetor = Math.round((presSetorRecs.length - presSetorOk) / numDias);
 
@@ -177,14 +176,16 @@ Router.register('equipe', async function(container) {
     pessoasTerc.forEach(function(p) { tercIds[p.id] = true; });
     var presTercRecs = presNoPeriodo.filter(function(d) { return tercIds[d.pessoa_id]; });
     var presTercOk = presTercRecs.filter(function(d) { return d.presente_str === 'SIM'; }).length;
-    var efetTerc = presTercRecs.length > 0 ? Math.round(presTercOk / presTercRecs.length * 100) : 0;
     var mediaTercPres = Math.round(presTercOk / numDias);
-
+    var ativosTercCum = pessoasTerc.length * numDias;
+    var efetTerc = ativosTercCum > 0 ? Math.round(presTercOk / ativosTercCum * 100) : 0;
     // Pessoas sem registro no periodo = inativos
     var pessoasComRegistro = {};
     presNoPeriodo.forEach(function(d) { pessoasComRegistro[d.pessoa_id] = true; });
     var inativos = pessoasSetor.filter(function(p) { return !pessoasComRegistro[p.id]; });
     var ativosSetor = pessoasSetor.length - inativos.length;
+    var ativosCumulativo = ativosSetor * numDias;
+    var efetSetor = ativosCumulativo > 0 ? Math.round(presSetorOk / ativosCumulativo * 100) : 0;
 
     // FIX: terceiros presentes no dia = media, nao contagem total
     var tercAusentesMedia = Math.max(0, pessoasTerc.length - mediaTercPres);
@@ -194,8 +195,11 @@ Router.register('equipe', async function(container) {
     var presAntPeriodo = presenca.filter(function(d) { return d.data >= rangeAnt.desde && d.data <= rangeAnt.ate; });
     var presSetorAnt = presAntPeriodo.filter(function(d) { return setorIds[d.pessoa_id]; });
     var presSetorOkAnt = presSetorAnt.filter(function(d) { return d.presente_str === 'SIM'; }).length;
-    var efetSetorAnt = presSetorAnt.length > 0 ? Math.round(presSetorOkAnt / presSetorAnt.length * 100) : efetSetor;
-    var varPres = efetSetor - efetSetorAnt;
+    var diasAnt = {};
+    presAntPeriodo.forEach(function(d) { diasAnt[d.data] = true; });
+    var numDiasAnt = Object.keys(diasAnt).length || 1;
+    var ativosCumAnt = ativosSetor * numDiasAnt;
+    var efetSetorAnt = ativosCumAnt > 0 ? Math.round(presSetorOkAnt / ativosCumAnt * 100) : efetSetor;
 
     // Motivos de ausencia
     var motivos = {};
@@ -220,9 +224,10 @@ Router.register('equipe', async function(container) {
     });
 
     // RENDER ALL BLOCKS
-    renderBloco1(efetSetor, efetTerc, pessoasSetor.length, ativosSetor, inativos.length,
+     renderBloco1(efetSetor, efetTerc, pessoasSetor.length, ativosSetor, inativos.length,
                  mediaPresSetor, mediAusentesSetor, varPres,
-                 pessoasTerc.length, mediaTercPres, tercAusentesMedia, marcaPresenca, motivosList);
+                 pessoasTerc.length, mediaTercPres, tercAusentesMedia, marcaPresenca, motivosList,
+                 numDias, ativosCumulativo, presSetorOk);
     renderBloco3(presenca, maxDate);
     renderBloco2(presNoPeriodo, pessoas, lojas, pessoasSetor, pessoasTerc);
     renderBloco4(presenca, pessoas, lojas, maxDate);
@@ -234,8 +239,8 @@ Router.register('equipe', async function(container) {
   // ══════════════════════════════════════════════════════════
   function renderBloco1(efetS, efetT, cadastrados, ativos, inativosCount,
                         presentes, ausentes, varPres,
-                        totalTerc, mediaTercPres, tercAusentes, marcaPresenca, motivosList) {
-
+                        totalTerc, mediaTercPres, tercAusentes, marcaPresenca, motivosList,
+                        numDias, ativosCumulativo, totalPresentes) {
     var html = '<div class="section-block anim d1">' +
       '<div class="section-header"><span class="sh-dot" style="background:var(--navy)"></span> Efetividade e quadro de pessoal <span class="sh-line"></span></div>' +
       '<div class="eq-top-row">' +
