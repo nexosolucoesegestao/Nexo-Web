@@ -955,3 +955,151 @@ body::before{
 .section-block.d5 .eq-tot-hc td {
   background: rgba(12, 20, 37, 0.04) !important;
 }
+
+/* 1. SECTION BLOCKS → strip-like com borda lateral + hover + shimmer */
+.section-block {
+  background: var(--card);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: var(--radius);
+  border: 1px solid var(--card-border);
+  box-shadow: var(--sh);
+  overflow: hidden;
+  position: relative;
+  padding: 0;
+  transition: transform 0.28s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.25s;
+}
+ 
+/* Spring lift hover */
+.section-block:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--sh-h);
+}
+ 
+/* Shimmer sweep */
+.section-block::after {
+  content: '';
+  position: absolute;
+  top: 0; left: -120%; width: 50%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.18), transparent);
+  transition: left 0.65s ease;
+  pointer-events: none;
+  z-index: 2;
+}
+.section-block:hover::after {
+  left: 160%;
+}
+ 
+/* Borda lateral gradiente metalico — verde esmeralda (default Equipe) */
+.section-block::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 4px;
+  border-radius: 4px 0 0 4px;
+  z-index: 1;
+  background: linear-gradient(180deg, #50a870 0%, #2D8653 45%, #1a5c34 100%);
+}
+ 
+/* Bloco 2/d3 (tabela unificada) — borda azul */
+.section-block.d3::before {
+  background: linear-gradient(180deg, #6090c0 0%, #3670A0 45%, #1e4a78 100%);
+}
+ 
+/* Bloco 4 (agenda) — borda gold */
+.section-block.d4::before {
+  background: linear-gradient(180deg, #e8c96a 0%, #C9A84C 45%, #a07830 100%);
+}
+ 
+/* Bloco 5 (HC table) — borda purple */
+.section-block.d5::before {
+  background: linear-gradient(180deg, #9070c0 0%, #7153A0 45%, #4e3478 100%);
+}
+ 
+/* 2. SECTION HEADERS — premium com padding e border-bottom */
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 20px 14px;
+  border-bottom: 1px solid rgba(26,39,68,0.06);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--t1);
+  margin-bottom: 0;
+}
+ 
+/* Esconder a linha horizontal (border-bottom faz o papel) */
+.sh-line {
+  display: none;
+}
+ 
+/* 3. Conteudo dos blocos — remover card styling duplicado */
+.eq-top-row {
+  margin: 0;
+  border-radius: 0;
+  border: none;
+  box-shadow: none;
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+ 
+.eq-tri-grid {
+  padding: 16px 20px 18px;
+}
+ 
+.eq-legend-bar {
+  padding: 0 20px;
+}
+ 
+.eq-sub-info {
+  padding: 0 20px;
+}
+ 
+.eq-agenda {
+  border-radius: 0;
+  border: none;
+  box-shadow: none;
+  background: transparent;
+}
+ 
+/* Tabelas internas — sem card duplicado */
+.section-block.d3 .eq-tbl-card,
+.section-block.d5 .eq-tbl-card {
+  border-radius: 0;
+  box-shadow: none;
+  border: none;
+}
+.section-block.d3 .eq-table,
+.section-block.d5 .eq-table {
+  border-radius: 0;
+  box-shadow: none;
+}
+ 
+/* 4. CHART CARDS — spring hover + shimmer */
+.eq-chart-card {
+  transition: transform 0.26s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.22s;
+  position: relative;
+  overflow: hidden;
+}
+.eq-chart-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--sh-h);
+}
+.eq-chart-card::after {
+  content: '';
+  position: absolute;
+  top: 0; left: -120%; width: 50%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.18), transparent);
+  transition: left 0.6s ease;
+  pointer-events: none;
+}
+.eq-chart-card:hover::after {
+  left: 160%;
+}
+ 
+/* 5. Animacao d5 (faltava) */
+.anim.d5 {
+  animation: stripIn 0.45s cubic-bezier(0.16,1,0.3,1) 0.33s both;
+}
