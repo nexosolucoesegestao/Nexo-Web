@@ -1325,20 +1325,86 @@ body::before{
 /* ══════════════════════════════════════════════════════════════
    BLOCO 2: Tendencia Conformidade
    ══════════════════════════════════════════════════════════════ */
-.tmp-trend-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;padding:0 20px 20px}
-.tmp-trend-card{background:rgba(255,255,255,.6);border:1px solid rgba(0,0,0,.04);border-radius:14px;padding:16px 14px 10px;display:flex;flex-direction:column}
-.tmp-trc-title{font-size:11px;font-weight:700;color:#4B5563;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
-.tmp-trc-bn-row{display:flex;align-items:baseline;gap:8px;margin-bottom:10px}
-.tmp-trc-bn{font-size:28px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1}
-.tmp-trc-bn.ok{color:var(--green)}.tmp-trc-bn.warn{color:var(--orange)}.tmp-trc-bn.danger{color:var(--red)}
-.tmp-trc-var{font-size:12px;font-weight:700;padding:2px 8px;border-radius:10px}
-.tmp-trc-var.up-bad{background:rgba(192,80,77,.1);color:var(--red)}
-.tmp-trc-var.down-good{background:rgba(45,134,83,.1);color:var(--green)}
-.tmp-trc-var.stable{background:rgba(107,114,128,.1);color:#6B7280}
-.tmp-trc-chart{height:120px;margin-bottom:4px;position:relative}
-.tmp-trc-tbl{width:100%;border-collapse:collapse;table-layout:fixed;font-size:11px}
-.tmp-trc-tbl td{padding:3px 0;text-align:center;font-variant-numeric:tabular-nums;vertical-align:middle;color:#374151}
-.tmp-trc-tbl td:first-child{text-align:left;font-weight:700;color:#6B7280;width:52px;font-size:10px;text-transform:uppercase;letter-spacing:.3px}
+/* ── Card — glassmorphism idêntico ao equipe ── */
+.tmp-trend-card {
+  background: rgba(255,255,255,.86);
+  border: 1px solid rgba(255,255,255,.95);
+  border-radius: 16px;
+  padding: 18px 14px 10px;
+  display: flex;
+  flex-direction: column;
+}
+ 
+/* ── Título do card ── */
+.tmp-trc-title {
+  font-size: 9px;
+  font-weight: 600;
+  color: #9CA3AF;
+  text-transform: uppercase;
+  letter-spacing: 1.26px;
+  margin-bottom: 4px;
+}
+ 
+/* ── Big number — tamanho igual ao equipe (22px) ── */
+.tmp-trc-bn {
+  font-size: 22px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+.tmp-trc-bn.ok     { color: var(--green); }
+.tmp-trc-bn.warn   { color: var(--orange); }
+.tmp-trc-bn.danger { color: var(--red); }
+ 
+/* ── Badge de variação — idêntico ao equipe ── */
+.tmp-trc-var {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+  line-height: 1.3;
+}
+.tmp-trc-var.down-good { color: var(--green);  background: rgba(45,134,83,.08); }
+.tmp-trc-var.up-bad    { color: var(--red);    background: rgba(192,80,77,.08); }
+.tmp-trc-var.stable    { color: #9CA3AF;       background: rgba(156,163,175,.08); }
+ 
+/* ── Área do gráfico ── */
+.tmp-trc-chart {
+  height: 120px;
+  position: relative;
+  margin-bottom: 0;
+}
+ 
+/* ── Tabela — idêntica ao .eq-data-table do equipe ── */
+.tmp-trc-tbl {
+  table-layout: fixed;
+  width: 100%;
+  border-collapse: collapse;
+}
+.tmp-trc-tbl td {
+  font-size: 8px;
+  font-weight: 600;
+  text-align: center;
+  padding: 4px 2px;
+  color: #374151;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.tmp-trc-tbl td:first-child {
+  width: 44px;
+  min-width: 44px;
+  text-align: left;
+  color: #9CA3AF;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding-left: 4px;
+  padding-right: 2px;
+}
+ 
+/* ── Cores semânticas nas células da tabela ── */
+.tmp-trc-tbl .v-green { color: var(--green) !important; }
+.tmp-trc-tbl .v-red   { color: var(--red)   !important; }
+.tmp-trc-tbl .v-gray  { color: #9CA3AF      !important; }
 
 /* Variation colors in tables */
 .v-up{color:var(--red);font-weight:700}.v-down{color:var(--green);font-weight:700}.v-eq{color:#6B7280}
