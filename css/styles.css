@@ -1546,27 +1546,174 @@ body::before{
 /* ══════════════════════════════════════════════════════════════
    BLOCO 4: Ranking
    ══════════════════════════════════════════════════════════════ */
-.tmp-rk-grid{display:grid;grid-template-columns:30px 120px 1fr 12px 1fr 12px 1fr;align-items:center;padding:0 20px}
-.tmp-rk-col-head{display:flex;align-items:center;justify-content:center;gap:5px;font-size:12px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.3px;padding-bottom:12px}
-.tmp-rk-col-head-left{justify-content:flex-start;padding-left:2px}
-.tmp-rk-eq-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
-.tmp-rk-col-sep{padding-bottom:12px}
-.tmp-rk-divider{grid-column:1/-1;height:2px;background:rgba(0,0,0,.06);margin-bottom:10px}
-.tmp-rk-total-row{display:grid;grid-template-columns:30px 120px 1fr 12px 1fr 12px 1fr;align-items:center;background:rgba(12,20,37,.03);border-radius:10px;padding:12px 20px;margin:0 20px 12px}
-.tmp-rk-total-label{grid-column:1/3;font-size:13px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.5px}
-.tmp-rk-eq{display:flex;align-items:center;gap:8px;padding:0 6px}
-.tmp-rk-bar-wrap{flex:1;height:7px;background:rgba(0,0,0,.04);border-radius:4px;overflow:hidden;min-width:50px}
-.tmp-rk-bar-fill{height:100%;border-radius:4px;transition:width .6s ease}
-.tmp-rk-pct{font-size:14px;font-weight:700;font-variant-numeric:tabular-nums;min-width:40px;text-align:right}
-.tmp-rk-var{font-size:11px;font-weight:600;padding:2px 7px;border-radius:8px;min-width:58px;text-align:center;white-space:nowrap}
-.tmp-rk-var.up{background:rgba(45,134,83,.1);color:var(--green)}.tmp-rk-var.down{background:rgba(192,80,77,.1);color:var(--red)}.tmp-rk-var.eq{background:rgba(107,114,128,.08);color:#6B7280}
-.tmp-rk-sep{display:flex;justify-content:center;align-items:center}.tmp-rk-sep-line{width:1px;height:28px;background:rgba(0,0,0,.06)}
-.tmp-rk-data-row{display:grid;grid-template-columns:30px 120px 1fr 12px 1fr 12px 1fr;align-items:center;padding:10px 20px;border-bottom:1px solid rgba(0,0,0,.04);transition:background .15s;border-radius:6px}
-.tmp-rk-data-row:hover{background:rgba(255,255,255,.7)}.tmp-rk-data-row:last-child{border-bottom:none}
-.tmp-rk-pos{text-align:center;font-size:13px;font-weight:700;color:#6B7280;font-variant-numeric:tabular-nums}
-.tmp-rk-loja{font-size:14px;font-weight:600;color:#1F2937;padding-left:2px}
-.tmp-rk-total-row .tmp-rk-bar-wrap{height:9px}.tmp-rk-total-row .tmp-rk-pct{font-size:16px;font-weight:800}.tmp-rk-total-row .tmp-rk-var{font-size:12px;font-weight:700}
-
+.tmp-rk-grid,
+.tmp-rk-total-row,
+.tmp-rk-data-row {
+  display: grid;
+  grid-template-columns: 28px 210px 1px 1fr 1px 1fr 1px 1fr 1px 68px;
+  align-items: center;
+  gap: 0;
+}
+ 
+/* Header: navy, sem bolinhas, sem gap */
+.tmp-rk-grid {
+  padding: 0;
+  border-radius: 14px 14px 0 0;
+  overflow: hidden;
+}
+.tmp-rk-col-head {
+  background: #0C1425;
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .6px;
+  padding: 10px 4px;
+  text-align: center;
+}
+.tmp-rk-col-head-left { text-align: left; padding-left: 20px; }
+/* Seps do header: navy contínuo */
+.tmp-rk-grid .tmp-rk-col-sep { background: #0C1425; }
+/* Coluna ader. no header */
+#th-rk-ader {
+  background: #0C1425;
+  color: #ffffff;
+  cursor: pointer;
+  text-align: center;
+  font-size: 10px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+/* Divider abaixo do header */
+.tmp-rk-divider {
+  grid-column: 1 / -1;
+  height: 1px;
+  background: rgba(201,168,76,.25);
+}
+ 
+/* Total Rede */
+.tmp-rk-total-row {
+  margin: 0 !important;
+  padding: 0 !important;
+  background: rgba(12,20,37,.02);
+  border-bottom: 2px solid rgba(0,0,0,.08);
+  border-top: 1px solid rgba(0,0,0,.06);
+  min-height: 38px;
+  align-items: stretch;
+}
+.tmp-rk-total-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #0C1425;
+  text-transform: uppercase;
+  letter-spacing: .3px;
+  padding-left: 20px;
+  display: flex;
+  align-items: center;
+}
+ 
+/* Linhas de dados */
+.tmp-rk-data-row {
+  border-bottom: 1px solid rgba(0,0,0,.04);
+  padding: 0 !important;
+  min-height: 36px;
+  align-items: center;  /* centralizado verticalmente */
+}
+.tmp-rk-data-row:hover { background: rgba(12,20,37,.02); }
+ 
+/* Número posição */
+.tmp-rk-pos {
+  font-size: 11px;
+  font-weight: 700;
+  color: #9CA3AF;
+  text-align: center;
+  padding-left: 4px;
+}
+ 
+/* Nome da loja — centralizado verticalmente */
+.tmp-rk-loja {
+  font-size: 11px;
+  font-weight: 600;
+  color: #1F2937;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-right: 8px;
+  display: flex;
+  align-items: center;
+}
+ 
+/* Quadrante equipamento */
+.tmp-rk-eq {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 4px;
+}
+ 
+/* Barra de progresso */
+.tmp-rk-bar-wrap {
+  flex: 1;
+  height: 4px;
+  background: rgba(0,0,0,.07);
+  border-radius: 2px;
+  overflow: hidden;
+  max-width: 120px;
+}
+.tmp-rk-bar-fill { height: 100%; border-radius: 2px; }
+ 
+/* Percentual */
+.tmp-rk-pct {
+  font-size: 12px;
+  font-weight: 700;
+  min-width: 36px;
+  text-align: right;
+  flex-shrink: 0;
+}
+ 
+/* Variação */
+.tmp-rk-var {
+  font-size: 9px;
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+  background: transparent;
+  min-width: 48px;
+  text-align: right;
+}
+.tmp-rk-var.up   { color: var(--green); }
+.tmp-rk-var.down { color: var(--red);   }
+.tmp-rk-var.eq   { color: #9CA3AF;      }
+ 
+/* Divisórias verticais nas linhas — dourado */
+.tmp-rk-data-row .tmp-rk-sep,
+.tmp-rk-total-row .tmp-rk-sep {
+  display: flex;
+  align-self: stretch;
+  align-items: stretch;
+  justify-content: center;
+  padding: 0;
+}
+.tmp-rk-data-row .tmp-rk-sep .tmp-rk-sep-line,
+.tmp-rk-total-row .tmp-rk-sep .tmp-rk-sep-line {
+  width: 1px;
+  flex: 1;
+  background: rgba(201,168,76,.30);
+}
+ 
+/* Coluna aderência — centralizada */
+.td-rk-ader {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+ 
+/* Total rede barra mais grossa */
+.tmp-rk-total-row .tmp-rk-pct { font-size: 13px; }
+.tmp-rk-total-row .tmp-rk-bar-wrap { height: 5px; }
 /* ══════════════════════════════════════════════════════════════
    PILLS override (temperatura-specific, higher specificity)
    ══════════════════════════════════════════════════════════════ */
