@@ -1998,3 +1998,23 @@ body::before{
 .mc-heat-legend{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:10px}
 
 /* heatmap cells — reusar .hc da styles.css */
+
+/* Fix gap cotações → IPCA */
+.mc-cot-block { padding-bottom: 20px !important; }
+.mc-cot-grid { margin-bottom: 0; }
+
+/* Fix toolbar background */
+.mc-toolbar {
+  background: rgba(255,255,255,0.72);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(26,39,68,0.1);
+  padding: 10px 24px;
+  margin: -20px -20px 16px -20px;
+  border-radius: 16px 16px 0 0;
+}
+
+/* Fix farol dot herdado */
+.mc-ibn.mc-fw .mc-fd { background: var(--orange) !important; }
+.mc-ibn.mc-fr .mc-fd { background: var(--red) !important; }
+.mc-ibn.mc-fb .mc-fd { background: var(--blue) !important; }
+.mc-ibn.mc-fg .mc-fd { background: var(--green) !important; }
