@@ -352,32 +352,46 @@ Router.register('mercado', function(main) {
       }]
     });
 
-    // Alinhamento gráfico + tabela (RegrasGlobal Dossiê v3.10)
-    // ResizeObserver → mede largura real do canvas após render
-    var obs = new ResizeObserver(function() {
-      var W   = cvs.width; // pixels físicos (já inclui devicePixelRatio)
-      var colW = 36;       // largura da coluna mc-tlbl
+    // ── ALINHAMENTO GRÁFICO + TABELA (Dossiê v3.10, fix v2) ──────────────
+    // Estratégia: usar o step REAL do Chart.js após render para construir
+    // o colgroup — elimina desvio acumulado por arredondamento de dW.
+    //
+    // Sequência:
+    // 1. setTimeout(0) aguarda o Chart.js terminar de renderizar
+    // 2. Lê posições X reais dos pontos via getPixelForValue
+    // 3. Calcula step = (xN - x0) / (N-1) e labelW = x0 - step/2
+    // 4. Define padding do chart igual a labelW+step/2 (left) e step/2 (right)
+    // 5. Reconstrói colgroup espelhando exatamente o step
+    // Resultado: max 2px de desvio (sub-pixel, imperceptível)
+    setTimeout(function() {
+      // Padding inicial: usar wrap.offsetWidth como referência
+      var W    = cvs.parentElement.offsetWidth;
+      var colW = 36;
       var dW   = (W - colW) / N;
       var pL   = Math.round(colW + dW / 2);
-      var pR   = Math.round(dW  / 2);
-
+      var pR   = Math.round(dW / 2);
       chart.options.layout.padding.left  = pL;
       chart.options.layout.padding.right = pR;
       chart.update('none');
 
-      // atualizar colgroup
+      // Agora ler step REAL do chart após o update
+      var xPts  = chart.data.datasets[0].data.map(function(v, i) {
+        return Math.round(chart.scales.x.getPixelForValue(i));
+      });
+      var step   = Math.round((xPts[N-1] - xPts[0]) / (N - 1));
+      var labelW = Math.round(xPts[0] - step / 2);
+
+      // Reconstruir colgroup com step real
       while (cg.firstChild) { cg.removeChild(cg.firstChild); }
       var c0 = document.createElement('col');
-      c0.style.width = colW + 'px';
+      c0.style.width = labelW + 'px';
       cg.appendChild(c0);
       for (var i = 0; i < N; i++) {
         var c = document.createElement('col');
-        c.style.width = Math.floor(dW) + 'px';
+        c.style.width = step + 'px';
         cg.appendChild(c);
       }
-      obs.disconnect();
-    });
-    obs.observe(cvs.parentElement);
+    }, 50);
   }
 
   buildCotChart('boi',    COT.boi.vals,    COT.boi.lc,    COT.boi.fc,    f0);
