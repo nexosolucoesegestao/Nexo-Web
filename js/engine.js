@@ -3,6 +3,15 @@
 // Processa dados e gera: aggregations, rankings, insights cruzados
 // ============================================================
 var Engine = {
+  // ────────────────────────────────────────────────────────────
+  // MAX_MESES_VISUAL: limite de meses exibidos nos gráficos evolutivos.
+  // Decisão 16/Abr/2026: 6 meses garante legibilidade no canvas de 228px
+  // (gap de 38px entre barras). Dados completos continuam disponíveis
+  // para engine/IA — apenas a saída dos métodos de evolutivo é cortada.
+  // Aplicar a mesma regra em qualquer novo evolutivo mensal.
+  // ────────────────────────────────────────────────────────────
+  MAX_MESES_VISUAL: 6,
+
   _prodMap: {},
   _lojaMap: {},
   _pessoaMap: {},
