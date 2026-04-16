@@ -56,7 +56,7 @@ var API = {
       var page = 0;
       var hasMore = true;
       var baseUrl = this._url(table, query);
-      while (hasMore && page < 200) {
+      while (hasMore && page < 50) {
         var from = page * pageSize;
         var to = from + pageSize - 1;
         var headers = this._headers();
