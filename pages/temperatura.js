@@ -477,22 +477,97 @@ Router.register('temperatura', async function(container) {
       '<div class="tmp-bn-legend"><div class="tmp-bn-legend-item"><span class="tmp-leg-d" style="background:var(--green)"></span> Conforme</div><div class="tmp-bn-legend-item"><span class="tmp-leg-d" style="background:var(--red)"></span> Nao conforme</div><div class="tmp-bn-legend-item"><span class="tmp-leg-d" style="background:#D1D5DB"></span> Sem dado</div></div></div>';
   }
 
+  var _bnSortAsc = false; // estado global de ordenação da coluna aderência
+
+  function heatColor(pct) {
+    if (pct === null) return { bg: '#F3F4F6', color: '#9CA3AF' };
+    if (pct >= 95) return { bg: 'rgba(45,134,83,.20)',  color: '#1a6b3c' };
+    if (pct >= 85) return { bg: 'rgba(45,134,83,.12)',  color: '#2D8653' };
+    if (pct >= 70) return { bg: 'rgba(201,123,44,.14)', color: '#C97B2C' };
+    return              { bg: 'rgba(192,80,77,.14)',    color: '#C0504D' };
+  }
+
+  function dataToDDMM(str) {
+    // Converte MM/DD → DD/MM se necessário (dados vêm como MM/DD do engine)
+    var p = str.split('/');
+    if (p.length !== 2) return str;
+    // Heurística: se primeiro número > 12 já é dia
+    if (parseInt(p[0]) > 12) return str; // já DD/MM
+    return p[1] + '/' + p[0]; // converte MM/DD → DD/MM
+  }
+
+  function dateToWeekDay(ddmm) {
+    var dias = ['Dom','Seg','Ter','Qua','Qui','Sex','Sab'];
+    var p = ddmm.split('/');
+    if (p.length !== 2) return '';
+    var d = new Date(2026, parseInt(p[1]) - 1, parseInt(p[0]));
+    return dias[d.getDay()];
+  }
+
   function renderBnTable(mapa, filter) {
     var tbl = document.getElementById('tmpBnTable'); if (!tbl) return;
-    var h = '<thead><tr><th>Loja</th>';
-    mapa.dates.forEach(function(d) { h += '<th>'+d+'</th>'; });
+
+    // Cabeçalho: datas em DD/MM + dia da semana abaixo
+    var h = '<thead><tr><th style="text-align:left;padding-left:14px">Loja</th>';
+    mapa.dates.forEach(function(d) {
+      var ddmm = dataToDDMM(d);
+      var dia  = dateToWeekDay(ddmm);
+      h += '<th style="text-align:center"><span style="display:block;line-height:1.3">' + ddmm + '</span>' +
+           '<span style="display:block;font-size:9px;font-weight:500;opacity:.65;line-height:1.2">' + dia + '</span></th>';
+    });
+    h += '<th id="th-aderencia" style="cursor:pointer;white-space:nowrap;min-width:64px;text-align:center" title="Clique para ordenar">' +
+         'Ader. <span id="sort-arrow">' + (_bnSortAsc ? '\u25b2' : '\u25bc') + '</span></th>';
     h += '</tr></thead><tbody>';
-    mapa.lojas.forEach(function(loja) {
-      h += '<tr><td>'+loja.nome+'</td>';
+
+    // Calcular aderência por loja
+    var lojaRows = mapa.lojas.map(function(loja) {
+      var ok = 0, total = 0;
+      loja.cells.forEach(function(cell) {
+        var st = cell.status[filter] || 'NA';
+        if (st === 'OK')  { ok++; total++; }
+        if (st === 'NOK') { total++; }
+      });
+      return { loja: loja, pct: total > 0 ? Math.round(ok / total * 100) : null };
+    });
+
+    // Ordenar por aderência
+    lojaRows.sort(function(a, b) {
+      var pa = a.pct === null ? -1 : a.pct;
+      var pb = b.pct === null ? -1 : b.pct;
+      return _bnSortAsc ? pa - pb : pb - pa;
+    });
+
+    // Linhas
+    lojaRows.forEach(function(item) {
+      var loja = item.loja;
+      h += '<tr><td style="font-size:11px;font-weight:600;color:#1F2937;padding-left:14px;white-space:nowrap">' + loja.nome + '</td>';
       loja.cells.forEach(function(cell, ci) {
         var st = cell.status[filter] || 'NA';
-        var cc = st==='OK'?'tmp-cell-ok':(st==='NOK'?'tmp-cell-nok':'tmp-cell-na');
         var dc = st==='OK'?'tmp-farol-ok':(st==='NOK'?'tmp-farol-nok':'tmp-farol-na');
-        h += '<td class="'+cc+'"><span class="tmp-farol '+dc+'" data-loja="'+loja.nome+'" data-ci="'+ci+'"></span></td>';
+        h += '<td style="text-align:center;padding:6px 4px;border-bottom:1px solid rgba(0,0,0,.04)">' +
+             '<span class="tmp-farol ' + dc + '" data-loja="' + loja.nome + '" data-ci="' + ci + '"></span></td>';
       });
+      // Coluna aderência com heatmap
+      var hc = heatColor(item.pct);
+      h += '<td class="td-aderencia" style="text-align:center;padding:4px 6px;vertical-align:middle;border-bottom:1px solid rgba(0,0,0,.04)">' +
+           (item.pct !== null
+             ? '<span style="display:inline-block;padding:3px 10px;border-radius:6px;font-size:11px;font-weight:700;background:' + hc.bg + ';color:' + hc.color + '">' + item.pct + '%</span>'
+             : '<span style="color:#9CA3AF;font-size:11px">\u2014</span>') +
+           '</td>';
       h += '</tr>';
     });
+
     tbl.innerHTML = h + '</tbody>';
+
+    // Evento de sort
+    var thAd = document.getElementById('th-aderencia');
+    if (thAd) {
+      thAd.addEventListener('click', function() {
+        _bnSortAsc = !_bnSortAsc;
+        renderBnTable(mapa, filter);
+        attachBnTooltips(mapa);
+      });
+    }
   }
 
   function attachBnTooltips(mapa) {
