@@ -723,9 +723,7 @@ var Engine = {
       var mensal = months.map(function(m) {
         return { label: Utils.monthName(byMonth[m][0].data), value: self._avgTemp(byMonth[m], eq.tempFn) };
       });
-        return { label: Utils.monthName(byMonth[m][0].data), value: self._avgTemp(byMonth[m], eq.tempFn) };
-      });
-
+      
       // Semanal
       var semanas = [];
       for (var w = 7; w >= 0; w--) {
