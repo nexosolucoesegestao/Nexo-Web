@@ -231,7 +231,7 @@ var Engine = {
 
   _calcEvoMensal: function(disp) {
     var byMonth = Utils.groupBy(disp, function(d) { return Utils.monthKey(d.data); });
-    var months = Object.keys(byMonth).sort();
+    var months = Object.keys(byMonth).sort().slice(-Engine.MAX_MESES_VISUAL);
     return {
       ruptura: months.map(function(m) {
         var recs = byMonth[m];
@@ -303,7 +303,7 @@ var Engine = {
     var porDiaSemana = dias.map(function(nome, i) { return { dia: nome, kg: Utils.round1(byDow[i]) }; });
 
     var byMonth = Utils.groupBy(quebra, function(d) { return Utils.monthKey(d.data); });
-    var months = Object.keys(byMonth).sort();
+    var months = Object.keys(byMonth).sort().slice(-Engine.MAX_MESES_VISUAL);
     var evolutivoMensal = months.map(function(m) {
       var recs = byMonth[m];
       var kg = recs.reduce(function(s, d) { return s + (parseFloat(d.peso_kg) || 0); }, 0);
@@ -413,7 +413,7 @@ var Engine = {
     var horarios = Object.keys(horaCount).sort().map(function(k) { return { hora: k, count: horaCount[k] }; });
 
     var byMonth = Utils.groupBy(presenca, function(d) { return Utils.monthKey(d.data); });
-    var months = Object.keys(byMonth).sort();
+    var months = Object.keys(byMonth).sort().slice(-Engine.MAX_MESES_VISUAL);
     var evoPresenca = months.map(function(m) {
       var recs = byMonth[m];
       var pres = recs.filter(function(d) { return d.presente_str === 'SIM'; }).length;
@@ -655,9 +655,9 @@ var Engine = {
         return (self._flagBalcao(t) === 'CONFORME' && self._flagResf(t) === 'CONFORME' && self._flagCong(t) === 'CONFORME') ? 'CONFORME' : 'NAO CONFORME';
       };
 
-      // Mensal
+     // Mensal
       var byMonth = Utils.groupBy(temps, function(t) { return Utils.monthKey(t.data); });
-      var months = Object.keys(byMonth).sort();
+      var months = Object.keys(byMonth).sort().slice(-Engine.MAX_MESES_VISUAL);
       var mensal = months.map(function(m) {
         var recs = byMonth[m];
         var ok = recs.filter(function(t) { return flagFn(t) === 'CONFORME'; }).length;
@@ -719,8 +719,10 @@ var Engine = {
     equips.forEach(function(eq) {
       // Mensal
       var byMonth = Utils.groupBy(temps, function(t) { return Utils.monthKey(t.data); });
-      var months = Object.keys(byMonth).sort();
+      var months = Object.keys(byMonth).sort().slice(-Engine.MAX_MESES_VISUAL);
       var mensal = months.map(function(m) {
+        return { label: Utils.monthName(byMonth[m][0].data), value: self._avgTemp(byMonth[m], eq.tempFn) };
+      });
         return { label: Utils.monthName(byMonth[m][0].data), value: self._avgTemp(byMonth[m], eq.tempFn) };
       });
 
