@@ -1461,18 +1461,72 @@ body::before{
 /* ══════════════════════════════════════════════════════════════
    BLOCO 3: Mapa Conformidade
    ══════════════════════════════════════════════════════════════ */
-.tmp-bn-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;padding:0 20px}
-.tmp-bn-table{width:100%;border-collapse:separate;border-spacing:3px;font-size:13px}
-.tmp-bn-table th{background:var(--navy);color:#fff;font-weight:600;font-size:12px;padding:8px 6px;text-align:center;white-space:nowrap;border-radius:5px}
-.tmp-bn-table th:first-child{text-align:left;padding-left:12px;min-width:120px}
-.tmp-bn-table td{padding:8px 4px;text-align:center;border-radius:5px;vertical-align:middle}
-.tmp-bn-table td:first-child{text-align:left;padding-left:12px;background:rgba(255,255,255,.7);font-weight:600;color:#1F2937;font-size:13px}
-.tmp-cell-ok{background:rgba(45,134,83,.08)}.tmp-cell-nok{background:rgba(192,80,77,.08)}.tmp-cell-na{background:rgba(0,0,0,.02)}
-.tmp-farol{display:inline-block;width:12px;height:12px;border-radius:50%;cursor:pointer;transition:transform .15s,box-shadow .15s}
-.tmp-farol:hover{transform:scale(1.4);box-shadow:0 0 0 3px rgba(0,0,0,.06)}
-.tmp-farol-ok{background:var(--green);box-shadow:0 0 0 2px rgba(45,134,83,.15)}
-.tmp-farol-nok{background:var(--red);box-shadow:0 0 0 2px rgba(192,80,77,.15)}
-.tmp-farol-na{background:#D1D5DB;cursor:default}.tmp-farol-na:hover{transform:none;box-shadow:none}
+.tmp-bn-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+ 
+/* Header: navy com letras brancas */
+.tmp-bn-table thead th {
+  background: #0C1425;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 8px 4px;
+  letter-spacing: .3px;
+  text-align: center;
+  border-bottom: 2px solid rgba(12,20,37,.3);
+  white-space: nowrap;
+}
+.tmp-bn-table thead th:first-child {
+  text-align: left;
+  padding-left: 14px;
+}
+ 
+/* Células: sem fundo colorido */
+.tmp-bn-table tbody td {
+  background: transparent;
+  padding: 6px 4px;
+  border-bottom: 1px solid rgba(0,0,0,.04);
+  text-align: center;
+  vertical-align: middle;
+}
+.tmp-bn-table tbody td:first-child {
+  font-size: 11px;
+  font-weight: 600;
+  color: #1F2937;
+  text-align: left;
+  padding-left: 14px;
+  white-space: nowrap;
+}
+ 
+/* Remover fundos coloridos das classes de status */
+.tmp-cell-ok,
+.tmp-cell-nok,
+.tmp-cell-na { background: transparent !important; }
+ 
+/* Hover sutil */
+.tmp-bn-table tbody tr:hover td {
+  background: rgba(12,20,37,.02);
+}
+ 
+/* Faróis maiores e com sombra */
+.tmp-farol {
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  display: inline-block;
+  border: 2px solid rgba(255,255,255,.9);
+  box-shadow: 0 1px 3px rgba(0,0,0,.15);
+}
+.tmp-farol-ok  { background: #2D8653; }
+.tmp-farol-nok { background: #C0504D; }
+.tmp-farol-na  { background: #D1D5DB; opacity: .5; }
+ 
+/* Coluna aderência — cursor pointer no header */
+#th-aderencia { cursor: pointer; min-width: 64px; }
 
 /* Tooltip */
 .tmp-bn-tooltip{position:fixed;z-index:1000;background:rgba(12,20,37,.94);color:#fff;border-radius:8px;padding:8px 12px;font-size:12px;font-family:'Outfit',sans-serif;pointer-events:none;opacity:0;transition:opacity .15s;max-width:220px;box-shadow:0 8px 24px rgba(0,0,0,.2);line-height:1.5}
