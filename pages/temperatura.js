@@ -630,8 +630,7 @@ Router.register('temperatura', async function(container) {
     }
 
     // Grid: 28px(#) 210px(loja) 1px(sep) 1fr(balcao) 1px(sep) 1fr(resf) 1px(sep) 1fr(cong) 1px(sep) 68px(ader)
-    var GRID = '28px 210px 1px 1fr 1px 1fr 1px 1fr 1px 68px';
-
+    var GRID = '28px 210px 1px 1fr 1px 1fr 1px 1fr 1px 70px';
     // Calcular aderência média por loja (média dos 3 equipamentos)
     function calcAder(lojaData) {
       var pcts = [lojaData.balcao.pct, lojaData.resf.pct, lojaData.cong.pct];
@@ -650,7 +649,7 @@ Router.register('temperatura', async function(container) {
     // Header: sem bolinhas, só texto. Seps incluem o Ader. no final.
     var html = '<div class="section-block ranking anim d5">' +
       '<div class="section-header"><span class="sh-dot" style="background:var(--gold)"></span> Ranking de Conformidade por Loja <span class="sh-line"></span></div>' +
-      '<div class="tmp-rk-grid" id="rkHeaderGrid" style="grid-template-columns:'+GRID+';padding:0;gap:0;border-radius:16px 16px 0 0;overflow:hidden;margin:-1px -1px 0 -1px;width:calc(100% + 2px)">' +
+      '<div class="tmp-rk-grid" id="rkHeaderGrid" style="grid-template-columns:'+GRID+';padding:0;gap:0;overflow:hidden;margin:-1px 0 0 -1px;width:calc(100% + 1px)">' +
         '<div class="tmp-rk-col-head tmp-rk-col-head-left" style="padding-left:20px">#</div>' +
         '<div class="tmp-rk-col-head tmp-rk-col-head-left">Loja</div>' +
         '<div class="tmp-rk-col-sep" style="background:#0C1425"></div>' +
