@@ -110,7 +110,10 @@
       destroyCharts();
 
       // Fetch ALL data (no date filter) for evolutivo mensal
-      var allFilters = {};
+      // Janela fixa de 12 meses para evolutivo + rankings + big numbers
+      var hoje = new Date();
+      var doze = new Date(hoje.getFullYear() - 1, hoje.getMonth(), 1);
+      var allFilters = { desde: doze.toISOString().slice(0, 10) };
       if (currentLoja !== 'all') allFilters.lojaId = currentLoja;
       var allDisponibilidade = await API.getDisponibilidade(allFilters);
 
