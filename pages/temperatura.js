@@ -80,6 +80,7 @@ Router.register('temperatura', async function(container) {
       renderBnTable(d.mapaConf, 'todos');
       attachBnTooltips(d.mapaConf);
       initPillEvents();
+      initBloco4Events();
     }, 50);
   }
 
@@ -597,24 +598,134 @@ Router.register('temperatura', async function(container) {
   // ══════════════════════════════════════════════════════════════
   // BLOCO 4 — RANKING
   // ══════════════════════════════════════════════════════════════
+  var _rkSortAsc = false; // estado global de ordenação da coluna aderência
+
+  function rkHeatColor(pct) {
+    if (pct === null) return { bg: '#F3F4F6', color: '#9CA3AF' };
+    if (pct >= 95) return { bg: 'rgba(45,134,83,.20)',  color: '#1a6b3c' };
+    if (pct >= 85) return { bg: 'rgba(45,134,83,.12)',  color: '#2D8653' };
+    if (pct >= 70) return { bg: 'rgba(201,123,44,.14)', color: '#C97B2C' };
+    return              { bg: 'rgba(192,80,77,.14)',    color: '#C0504D' };
+  }
+
   function renderBloco4(ranking) {
-    function barC(p){return p>=85?'#2D8653':(p>=70?'#C97B2C':'#C0504D');}
-    function pctC(p){return p>=85?'var(--green)':(p>=70?'var(--orange)':'var(--red)');}
-    function eqB(d){
-      var v=d.delta,vc=v>0?'up':(v<0?'down':'eq'),vt=v>0?'\u25b2 +'+v+' p.p.':(v<0?'\u25bc '+v+' p.p.':'= 0 p.p.');
-      return '<div class="tmp-rk-eq"><div class="tmp-rk-bar-wrap"><div class="tmp-rk-bar-fill" style="width:'+d.pct+'%;background:'+barC(d.pct)+'"></div></div><span class="tmp-rk-pct" style="color:'+pctC(d.pct)+'"><strong>'+d.pct+'%</strong></span><span class="tmp-rk-var '+vc+'">'+vt+'</span></div>';
+    function barC(p){ return p>=85?'#2D8653':(p>=70?'#C97B2C':'#C0504D'); }
+    function pctC(p){ return p>=85?'var(--green)':(p>=70?'var(--orange)':'var(--red)'); }
+    function eqB(d) {
+      var v=d.delta, vc=v>0?'up':(v<0?'down':'eq'), vt=v>0?'\u25b2 +'+v+' p.p.':(v<0?'\u25bc '+v+' p.p.':'= 0 p.p.');
+      return '<div class="tmp-rk-eq">' +
+        '<div class="tmp-rk-bar-wrap"><div class="tmp-rk-bar-fill" style="width:'+d.pct+'%;background:'+barC(d.pct)+'"></div></div>' +
+        '<span class="tmp-rk-pct" style="color:'+pctC(d.pct)+'"><strong>'+d.pct+'%</strong></span>' +
+        '<span class="tmp-rk-var '+vc+'">'+vt+'</span>' +
+        '</div>';
     }
-    function sepC(){ return '<div class="tmp-rk-sep"><div class="tmp-rk-sep-line"></div></div>'; }
-    var html='<div class="section-block ranking anim d5"><div class="section-header"><span class="sh-dot" style="background:var(--gold)"></span> Ranking de Conformidade por Loja <span class="sh-line"></span></div>' +
-      '<div class="tmp-rk-grid"><div class="tmp-rk-col-head tmp-rk-col-head-left">#</div><div class="tmp-rk-col-head tmp-rk-col-head-left">Loja</div>' +
-      '<div class="tmp-rk-col-head"><span class="tmp-rk-eq-dot" style="background:#2D8653"></span> Balcao</div><div class="tmp-rk-col-sep"></div>' +
-      '<div class="tmp-rk-col-head"><span class="tmp-rk-eq-dot" style="background:#3670A0"></span> Camara Resf.</div><div class="tmp-rk-col-sep"></div>' +
-      '<div class="tmp-rk-col-head"><span class="tmp-rk-eq-dot" style="background:#7153A0"></span> Camara Cong.</div><div class="tmp-rk-divider"></div></div>' +
-      '<div class="tmp-rk-total-row"><div class="tmp-rk-total-label"><strong>TOTAL REDE</strong></div>'+eqB(ranking.total.balcao)+sepC()+eqB(ranking.total.resf)+sepC()+eqB(ranking.total.cong)+'</div>';
-    ranking.lojas.forEach(function(l,i){
-      html+='<div class="tmp-rk-data-row"><div class="tmp-rk-pos">'+(i+1)+'</div><div class="tmp-rk-loja">'+l.nome+'</div>'+eqB(l.balcao)+sepC()+eqB(l.resf)+sepC()+eqB(l.cong)+'</div>';
+    function sepC() { return '<div class="tmp-rk-sep"><div class="tmp-rk-sep-line"></div></div>'; }
+    function aderBadge(pct) {
+      var hc = rkHeatColor(pct);
+      return '<div class="td-rk-ader">' +
+        (pct !== null
+          ? '<span style="display:inline-block;padding:2px 10px;border-radius:5px;font-size:11px;font-weight:700;background:'+hc.bg+';color:'+hc.color+'">'+pct+'%</span>'
+          : '<span style="color:#9CA3AF">\u2014</span>') +
+        '</div>';
+    }
+
+    // Grid: 28px(#) 210px(loja) 1px(sep) 1fr(balcao) 1px(sep) 1fr(resf) 1px(sep) 1fr(cong) 1px(sep) 68px(ader)
+    var GRID = '28px 210px 1px 1fr 1px 1fr 1px 1fr 1px 68px';
+
+    // Calcular aderência média por loja (média dos 3 equipamentos)
+    function calcAder(lojaData) {
+      var pcts = [lojaData.balcao.pct, lojaData.resf.pct, lojaData.cong.pct];
+      return Math.round(pcts.reduce(function(a,b){return a+b;},0) / pcts.length);
+    }
+
+    // Aderência do total
+    var totalAder = Math.round([ranking.total.balcao.pct, ranking.total.resf.pct, ranking.total.cong.pct]
+      .reduce(function(a,b){return a+b;},0) / 3);
+
+    // Ordenar lojas por aderência desc (padrão)
+    var lojas = ranking.lojas.slice().sort(function(a, b) {
+      return _rkSortAsc ? calcAder(a) - calcAder(b) : calcAder(b) - calcAder(a);
     });
-    return html+'</div>';
+
+    // Header: sem bolinhas, só texto. Seps incluem o Ader. no final.
+    var html = '<div class="section-block ranking anim d5">' +
+      '<div class="section-header"><span class="sh-dot" style="background:var(--gold)"></span> Ranking de Conformidade por Loja <span class="sh-line"></span></div>' +
+      '<div class="tmp-rk-grid" id="rkHeaderGrid" style="grid-template-columns:'+GRID+';padding:0;gap:0;border-radius:14px 14px 0 0;overflow:hidden">' +
+        '<div class="tmp-rk-col-head tmp-rk-col-head-left" style="padding-left:20px">#</div>' +
+        '<div class="tmp-rk-col-head tmp-rk-col-head-left">Loja</div>' +
+        '<div class="tmp-rk-col-sep" style="background:#0C1425"></div>' +
+        '<div class="tmp-rk-col-head" style="text-align:center">Balcao</div>' +
+        '<div class="tmp-rk-col-sep" style="background:#0C1425"></div>' +
+        '<div class="tmp-rk-col-head" style="text-align:center">Camara Resf.</div>' +
+        '<div class="tmp-rk-col-sep" style="background:#0C1425"></div>' +
+        '<div class="tmp-rk-col-head" style="text-align:center">Camara Cong.</div>' +
+        '<div class="tmp-rk-col-sep" style="background:#0C1425"></div>' +
+        '<div id="th-rk-ader" class="tmp-rk-col-head" style="text-align:center;cursor:pointer;background:#0C1425;color:#fff" title="Clique para ordenar">' +
+          'Ader. <span id="rk-ader-arrow">\u25bc</span>' +
+        '</div>' +
+        '<div class="tmp-rk-divider"></div>' +
+      '</div>' +
+      // Total Rede
+      '<div class="tmp-rk-total-row" id="rkTotalRow" style="margin:0;padding:0">' +
+        '<div></div>' + // célula # vazia
+        '<div class="tmp-rk-total-label"><strong>TOTAL REDE</strong></div>' +
+        sepC() + eqB(ranking.total.balcao) +
+        sepC() + eqB(ranking.total.resf) +
+        sepC() + eqB(ranking.total.cong) +
+        sepC() + aderBadge(totalAder) +
+      '</div>';
+
+    // Linhas de dados
+    lojas.forEach(function(l, i) {
+      var ader = calcAder(l);
+      html += '<div class="tmp-rk-data-row" style="padding:0">' +
+        '<div class="tmp-rk-pos">' + (i+1) + '</div>' +
+        '<div class="tmp-rk-loja">' + l.nome + '</div>' +
+        sepC() + eqB(l.balcao) +
+        sepC() + eqB(l.resf) +
+        sepC() + eqB(l.cong) +
+        sepC() + aderBadge(ader) +
+      '</div>';
+    });
+
+    return html + '</div>';
+  }
+
+  function initBloco4Events() {
+    // Após render, aplicar grid exato e sort
+    setTimeout(function() {
+      var dataRow = document.querySelector('.tmp-rk-data-row');
+      if (!dataRow) return;
+      var exactGrid = window.getComputedStyle(dataRow).gridTemplateColumns;
+
+      // Forçar mesmo grid no total e header
+      var totalRow = document.getElementById('rkTotalRow');
+      if (totalRow) totalRow.style.cssText =
+        'grid-template-columns:'+exactGrid+'!important;margin:0!important;padding:0!important;' +
+        'background:rgba(12,20,37,.02)!important;border-bottom:2px solid rgba(0,0,0,.08)!important;' +
+        'border-top:1px solid rgba(0,0,0,.06)!important;min-height:38px!important;align-items:stretch!important;';
+
+      var headerGrid = document.getElementById('rkHeaderGrid');
+      if (headerGrid) headerGrid.style.gridTemplateColumns = exactGrid;
+
+      // Evento sort
+      var thAder = document.getElementById('th-rk-ader');
+      if (thAder) {
+        thAder.addEventListener('click', function() {
+          _rkSortAsc = !_rkSortAsc;
+          var arrow = document.getElementById('rk-ader-arrow');
+          if (arrow) arrow.textContent = _rkSortAsc ? '\u25b2' : '\u25bc';
+          // Re-render bloco 4
+          var rankingSection = document.querySelector('.section-block.ranking');
+          if (rankingSection && tmpData) {
+            var tmp = document.createElement('div');
+            tmp.innerHTML = renderBloco4(tmpData.ranking);
+            rankingSection.parentNode.replaceChild(tmp.firstChild, rankingSection);
+            initBloco4Events();
+          }
+        });
+      }
+    }, 100);
   }
 
   // ══════════════════════════════════════════════════════════════
