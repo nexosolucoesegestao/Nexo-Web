@@ -28,7 +28,7 @@ Router.register('temperatura', async function(container) {
         '<button class="pp" data-d="60">60d</button>' +
         '<button class="pp" data-d="90">90d</button>' +
       '</div>' +
-      '<select class="loja-filter" id="filterLojaTemp"><option value="all">Todas as lojas</option></select>' +
+      '<select class="filter-select" id="filterLojaTemp"><option value="all">Todas as lojas</option></select>' +
     '</div>' +
     '<div id="tempContent"><div class="loading-state"><div class="spinner"></div><span>Carregando temperatura...</span></div></div>';
 
