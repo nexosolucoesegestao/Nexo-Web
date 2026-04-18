@@ -1939,3 +1939,55 @@ body::before{
 .mc-pvt tbody tr:hover td{background:rgba(12,20,37,0.025)!important}
 .mc-pvt tfoot td{background:rgba(12,20,37,0.04)!important;font-weight:700!important;border-top:2px solid rgba(12,20,37,0.1)!important}
 .mc-heat-legend{display:flex!important;gap:6px!important;flex-wrap:wrap!important;align-items:center!important;margin-top:10px!important}
+
+/* ═══ FIX v3.1 — adicionados após validação em produção ═══ */
+
+/* Cards painel contexto: fundo e borda explícitos */
+.mc-cc {
+  background: #fff !important;
+  border: 1.5px solid rgba(26,39,68,0.10) !important;
+  border-radius: 10px !important;
+  box-shadow: 0 1px 4px rgba(12,20,37,0.05) !important;
+  display: grid !important;
+}
+.mc-cc.c1::after{background:linear-gradient(90deg,#3670A0,#5BA3D9)!important}
+.mc-cc.c2::after{background:var(--gm)!important}
+.mc-cc.c3::after{background:linear-gradient(90deg,#C0504D,#E07070)!important}
+.mc-cc.c4::after{background:linear-gradient(90deg,#2D8653,#4CAF7D)!important}
+.mc-cc.c5::after{background:linear-gradient(90deg,#C97B2C,#E8A84C)!important}
+.mc-cc.c6::after{background:linear-gradient(90deg,#7153A0,#9B7BC4)!important}
+.mc-cc.c7::after{background:linear-gradient(90deg,#C0504D,#7153A0)!important}
+.mc-cc.c8::after{background:linear-gradient(90deg,#2D8653,#3670A0)!important}
+.mc-cc.c9::after{background:linear-gradient(90deg,#C9A84C,#E8C96A)!important}
+
+/* Pills: reset do estilo nativo do browser */
+.mc-pills { display:flex!important;gap:6px!important;margin-bottom:16px!important; }
+.mc-pill {
+  padding: 5px 14px !important;
+  border-radius: 20px !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  border: 1px solid rgba(26,39,68,0.12) !important;
+  background: rgba(255,255,255,0.78) !important;
+  color: var(--t2) !important;
+  font-family: 'Outfit', sans-serif !important;
+  transition: all .18s !important;
+  outline: none !important;
+  -webkit-appearance: none !important;
+  appearance: none !important;
+}
+.mc-pill.active {
+  background: var(--navy) !important;
+  color: var(--gold) !important;
+  border-color: var(--navy) !important;
+}
+
+/* IPCA bars: padding-top para rótulos não colidirem com título */
+.mc-ipca-bars {
+  height: auto !important;
+  min-height: 100px !important;
+  padding-top: 18px !important;
+}
+.mc-ig-bars { height: 90px !important; }
+.mc-ig-lbl  { font-size: 10px !important; }
