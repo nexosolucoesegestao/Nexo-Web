@@ -358,7 +358,7 @@ Router.register('mercado', function(main) {
         responsive:true, maintainAspectRatio:false,
         plugins: { legend:{display:false}, tooltip:{callbacks:{label:function(ctx){return ' '+fmtFn(ctx.parsed.y);}}} },
         scales: { x:{display:false,offset:false}, y:{display:false,min:mn-pad,max:mx+pad} },
-        layout: { padding:{top:22,left:0,right:0,bottom:0} }
+        layout: { padding:{top:32,left:0,right:0,bottom:0} }
       },
       plugins: [{ id:'dl', afterDraw: function(ch) {
         var ctx2=ch.ctx;
