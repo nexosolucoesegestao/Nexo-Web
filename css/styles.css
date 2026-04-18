@@ -1985,3 +1985,218 @@ body::before{
 .mc-pvt tbody tr:hover td { background:rgba(12,20,37,0.025) }
 .mc-pvt tfoot td { background:rgba(12,20,37,0.04);font-weight:700;border-top:2px solid rgba(12,20,37,0.1) }
 .mc-heat-legend { display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:10px }
+
+/* ============================================================
+   NEXO Intelligence Web — Mercado & Clima — CSS Patch v3
+   Sessão: 17-18 Abr 2026 — Todos os ajustes visuais aprovados
+   Acrescentar ao FINAL de css/styles.css
+   (substitui patches anteriores)
+   ============================================================ */
+
+/* ═══════════════════════════════════════════════════════════
+   TOOLBAR
+   ═══════════════════════════════════════════════════════════ */
+.mc-toolbar {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  flex-wrap: wrap !important;
+  padding: 10px 0 12px !important;
+  margin-bottom: 16px !important;
+  background: transparent !important;
+  border: none !important;
+}
+.mc-tb-label {
+  font-size: 10px !important;
+  font-weight: 600 !important;
+  color: var(--t2) !important;
+  text-transform: uppercase !important;
+  letter-spacing: 1.2px !important;
+}
+.mc-toolbar .filter-select {
+  background: rgba(255,255,255,0.78) !important;
+  color: var(--t2) !important;
+  border: 1px solid rgba(26,39,68,0.10) !important;
+  border-radius: 20px !important;
+  padding: 5px 16px !important;
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  font-family: 'Outfit', sans-serif !important;
+}
+.mc-loc-btn {
+  background: rgba(255,255,255,0.78) !important;
+  color: var(--blue) !important;
+  border: 1px solid rgba(54,112,160,0.25) !important;
+  border-radius: 20px !important;
+  padding: 5px 16px !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  font-family: 'Outfit', sans-serif !important;
+}
+.mc-tb-sep { width:1px !important; height:18px !important; background:rgba(26,39,68,0.15) !important; margin:0 4px !important; }
+
+/* ═══════════════════════════════════════════════════════════
+   SECTION HEADERS — títulos colados aos blocos
+   ═══════════════════════════════════════════════════════════ */
+.section-header { margin-bottom: 8px !important; margin-top: 24px !important; }
+.mc-cot-block,
+.mc-ipca-block,
+.mc-cal-block,
+.mc-exp-block { margin-top: 0 !important; padding-top: 16px !important; }
+
+/* ═══════════════════════════════════════════════════════════
+   PAINEL CONTEXTO — 3 grupos em linha
+   ═══════════════════════════════════════════════════════════ */
+.mc-ctx-block { padding: 12px 14px 14px !important; overflow: hidden !important; }
+
+/* Wrapper externo 3 grupos */
+.mc-grupos-outer {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr 1fr !important;
+  gap: 10px !important;
+  overflow: visible !important;
+}
+.mc-grupo-col { display: flex !important; flex-direction: column !important; gap: 6px !important; }
+.mc-grupo-lbl {
+  display: inline-flex !important; align-items: center !important; gap: 5px !important;
+  padding: 3px 9px !important; border-radius: 6px !important;
+  font-size: 9px !important; font-weight: 700 !important;
+  text-transform: uppercase !important; letter-spacing: 1px !important;
+  color: #fff !important; width: fit-content !important; height: 20px !important;
+}
+.mc-grupo-cards {
+  display: grid !important;
+  grid-template-columns: repeat(3, 1fr) !important;
+  gap: 4px !important;
+  overflow: visible !important;
+}
+
+/* Cards: 5 linhas fixas simétricas */
+.mc-cc {
+  overflow: hidden !important; min-width: 0 !important;
+  grid-template-rows: 28px 28px 16px 20px 78px !important;
+  padding: 12px 10px 14px !important; gap: 5px !important;
+  transition: transform .25s cubic-bezier(0.34,1.4,0.64,1), box-shadow .25s ease !important;
+  position: relative !important; z-index: 1 !important; cursor: default !important;
+}
+.mc-cc:hover {
+  transform: scale(1.32) !important;
+  box-shadow: 0 20px 56px rgba(12,20,37,0.28), 0 6px 16px rgba(12,20,37,0.14) !important;
+  z-index: 100 !important;
+}
+.mc-cc:hover .mc-cc-insight {
+  height: auto !important; -webkit-line-clamp: unset !important;
+  display: block !important; overflow: visible !important;
+}
+.mc-cc-top    { overflow: hidden !important; min-width: 0 !important; gap: 2px !important; }
+.mc-cc-lbl    {
+  min-width: 0 !important; overflow: hidden !important;
+  white-space: normal !important; display: -webkit-box !important;
+  -webkit-line-clamp: 2 !important; -webkit-box-orient: vertical !important;
+  font-size: 8.5px !important; letter-spacing: 0.6px !important; line-height: 1.2 !important;
+}
+.mc-cc-icons  { flex-shrink: 0 !important; }
+.mc-cc-val    { min-width:0 !important; overflow:hidden !important; white-space:nowrap !important; text-overflow:ellipsis !important; }
+.mc-cc-sub    { min-width:0 !important; overflow:hidden !important; white-space:nowrap !important; text-overflow:ellipsis !important; }
+.mc-cc-badge-row { min-width:0 !important; overflow:hidden !important; }
+.mc-cc-badge-row .mc-badge { max-width:100% !important; overflow:hidden !important; text-overflow:ellipsis !important; white-space:nowrap !important; }
+.mc-cc-insight {
+  font-size: 10px !important; line-height: 1.45 !important;
+  height: 78px !important; overflow: hidden !important; display: block !important;
+}
+.mc-cc-insight strong { font-weight: 700 !important; color: var(--t1) !important; }
+
+/* ═══════════════════════════════════════════════════════════
+   ANÁLISE INTEGRADA — hover scale
+   ═══════════════════════════════════════════════════════════ */
+.mc-ins-block, .mc-ins-grid { overflow: visible !important; position: relative !important; }
+.mc-ins-card {
+  transition: transform .25s cubic-bezier(0.34,1.4,0.64,1), box-shadow .25s ease !important;
+  position: relative !important; z-index: 1 !important; cursor: default !important;
+}
+.mc-ins-card:hover {
+  transform: scale(1.18) !important;
+  box-shadow: 0 20px 56px rgba(12,20,37,0.28), 0 6px 16px rgba(12,20,37,0.14) !important;
+  z-index: 100 !important; overflow: visible !important;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   COTAÇÕES — tabela sem linha Valor, com thead de meses
+   ═══════════════════════════════════════════════════════════ */
+.mc-tbl thead th {
+  text-align: center !important;
+  padding: 4px 0 3px !important;
+  font-size: 8.5px !important;
+  font-weight: 600 !important;
+  color: var(--t3) !important;
+  white-space: nowrap !important;
+  border: none !important;
+  background: transparent !important;
+}
+.mc-tbl thead th:first-child { text-align: left !important; font-size: 0 !important; }
+
+/* ═══════════════════════════════════════════════════════════
+   IPCA — barras com gradiente + rótulos colados
+   ═══════════════════════════════════════════════════════════ */
+/* Barras degradê por série */
+.mc-ig-bars .mc-ig-b:nth-child(1) {
+  background: linear-gradient(180deg, #5B7A99 0%, rgba(12,20,37,0.28) 100%) !important;
+  border-radius: 4px 4px 0 0 !important;
+}
+.mc-ig-bars .mc-ig-b:nth-child(2) {
+  background: linear-gradient(180deg, #E8A84C 0%, #C97B2C 100%) !important;
+  border-radius: 4px 4px 0 0 !important;
+}
+.mc-ig-bars .mc-ig-b:nth-child(3) {
+  background: linear-gradient(180deg, #E07070 0%, #C0504D 100%) !important;
+  border-radius: 4px 4px 0 0 !important;
+}
+.mc-ig-b:hover { filter: brightness(1.12) !important; cursor: default !important; }
+
+/* Cada grupo: flex-column com labels no topo e barras no fundo */
+.mc-ig {
+  display: flex !important; flex-direction: column !important;
+  align-items: stretch !important; justify-content: flex-end !important; flex: 1 !important;
+}
+.mc-ig-lbls { display: flex !important; gap: 2px !important; margin-bottom: 3px !important; }
+.mc-ig-lbl  {
+  flex: 1 !important; text-align: center !important;
+  font-size: 10.5px !important; font-weight: 700 !important;
+  color: var(--t1) !important; line-height: 1 !important; white-space: nowrap !important;
+}
+.mc-ipca-bars {
+  display: flex !important; align-items: flex-end !important;
+  gap: 10px !important; height: 110px !important; overflow: visible !important;
+}
+/* Espaço entre título e barras para rótulos não colidirem */
+.mc-ipca-chart-ttl { margin-bottom: 14px !important; }
+
+/* ═══════════════════════════════════════════════════════════
+   CALENDÁRIO — eventos 10px + tooltip
+   ═══════════════════════════════════════════════════════════ */
+.mc-cev {
+  font-size: 10px !important;
+  padding: 2px 6px !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  cursor: default !important;
+}
+/* Tooltip do calendário (injetado via JS no body) */
+#mc-cal-ev-tip {
+  position: fixed !important;
+  z-index: 99999 !important;
+  background: #0C1425 !important;
+  color: #fff !important;
+  border-radius: 10px !important;
+  padding: 10px 14px !important;
+  max-width: 220px !important;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.35) !important;
+  font-family: 'Outfit', sans-serif !important;
+  font-size: 11px !important;
+  line-height: 1.5 !important;
+  pointer-events: none !important;
+  white-space: normal !important;
+  display: none;
+}
+#mc-cal-ev-tip.mc-visible { display: block !important; }
