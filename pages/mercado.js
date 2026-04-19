@@ -1,13 +1,11 @@
 // ============================================================
 // NEXO Intelligence Web — pages/mercado.js
-// Mercado & Clima — v2.0
-// Sessão: 17-18 Abr 2026
-// Todos os ajustes visuais validados e aprovados
+// Mercado & Clima — v2.1
+// Sessão: 18-19 Abr 2026 — Todos os ajustes aprovados
 // ============================================================
 
 Router.register('mercado', function(main) {
 
-  // ── Dados simulados (substituir por API real na v2) ────────
   var MESES = ['Nov/25','Dez/25','Jan/26','Fev/26','Mar/26','Abr/26'];
 
   var COT = {
@@ -24,6 +22,19 @@ Router.register('mercado', function(main) {
     {m:'Mar/26', g:0.44, a:0.90, c:1.08},
     {m:'Abr/26*',g:0.50, a:0.71, c:0.95}
   ];
+
+  // ── SVGs padrão sidebar NEXO ───────────────────────────────
+  var ICONS = {
+    clima:    '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1v6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><circle cx="6" cy="8.5" r="2" stroke="currentColor" stroke-width="1.3"/><path d="M7.5 3h1M7.5 5h1" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg>',
+    data:     '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="1.5" y="2.5" width="9" height="8" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M1.5 5h9" stroke="currentColor" stroke-width="1.1"/><path d="M4 1.5v2M8 1.5v2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><circle cx="6" cy="8" r="1" fill="currentColor"/></svg>',
+    pagto:    '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="4.5" stroke="currentColor" stroke-width="1.3"/><path d="M6 3.5v5M4.5 7.5c0 .6.67 1 1.5 1s1.5-.4 1.5-1-.67-1-1.5-1-1.5-.4-1.5-1 .67-1 1.5-1 1.5.4 1.5 1" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>',
+    alta:     '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1.5 9L4.5 5.5L7 7.5L10.5 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/><path d="M8.5 3h2v2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    baixa:    '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1.5 3L4.5 6.5L7 4.5L10.5 9" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/><path d="M8.5 9h2v-2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    frio:     '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1.5v9M1.5 6h9" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M3.5 3.5l5 5M8.5 3.5l-5 5" stroke="currentColor" stroke-width="1" stroke-linecap="round"/><circle cx="6" cy="6" r="1.2" fill="currentColor"/></svg>',
+    barras:   '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="1.5" y="5" width="2" height="5" rx="1" fill="currentColor" opacity="0.4"/><rect x="5" y="3" width="2" height="7" rx="1" fill="currentColor" opacity="0.7"/><rect x="8.5" y="1.5" width="2" height="8.5" rx="1" fill="currentColor"/></svg>',
+    raio:     '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M7 1.5L3.5 6.5H6L5 10.5L8.5 5.5H6L7 1.5Z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>',
+    globo:    '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="5.5" cy="6" r="4" stroke="currentColor" stroke-width="1.2"/><path d="M1.5 6h8M5.5 2c-1.2 1.5-1.2 5.5 0 8M5.5 2c1.2 1.5 1.2 5.5 0 8" stroke="currentColor" stroke-width="0.9"/><path d="M9 3l2-2M11 1l-2.5 0M11 1l0 2.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  };
 
   // ── Helpers ────────────────────────────────────────────────
   function f0(v) { return parseFloat(v).toFixed(0); }
@@ -51,19 +62,30 @@ Router.register('mercado', function(main) {
     '</div></div>';
   }
 
-  function ctxCard(cls, lbl, icon, val, valSm, sub, subBold, bdgCls, bdgTxt, insight, htT, htB, htG, htR, boldTerms) {
+  // ── ctxCard: ícone SVG no padrão sidebar ───────────────────
+  // val: big number principal (sempre número em destaque)
+  // sub: texto secundário abaixo do big number
+  // subBold: se true, sub fica colorido/bold
+  // valNum: quando o big number seria texto (ex: "Dia das Mães"),
+  //         usar valNum para o número e valTxt para o texto descritivo na sub
+  function ctxCard(cls, lbl, iconKey, iconColor, val, sub, subBold, bdgCls, bdgTxt, insight, htT, htB, htG, htR, boldTerms) {
     var subHtml = sub
       ? '<div class="mc-cc-sub'+(subBold?' mc-bold':'')+'">'+sub+'</div>'
       : '<div class="mc-cc-sub mc-empty">—</div>';
-    // Aplicar negrito nos termos principais do insight
     var ins = insight;
     if (boldTerms) {
       boldTerms.forEach(function(t) { ins = ins.replace(t, '<strong>'+t+'</strong>'); });
     }
+    var iconSvg = ICONS[iconKey] || '';
+    // Aplicar cor ao SVG via currentColor + wrapper com color style
+    var iconHtml = '<span class="mc-cc-icon" style="color:'+iconColor+'">'+iconSvg+'</span>';
+
     return '<div class="mc-cc '+cls+'">' +
-      '<div class="mc-cc-top"><div class="mc-cc-lbl">'+lbl+'</div>' +
-      '<div class="mc-cc-icons">'+hb(htT,htB,htG,htR)+'<span class="mc-cc-icon">'+icon+'</span></div></div>' +
-      '<div class="mc-cc-val'+(valSm?' sm':'')+'">'+val+'</div>' +
+      '<div class="mc-cc-top">' +
+        '<div class="mc-cc-lbl">'+lbl+'</div>' +
+        '<div class="mc-cc-icons">'+hb(htT,htB,htG,htR)+iconHtml+'</div>' +
+      '</div>' +
+      '<div class="mc-cc-val">'+val+'</div>' +
       subHtml +
       '<div class="mc-cc-badge-row"><span class="mc-badge '+bdgCls+'">'+bdgTxt+'</span></div>' +
       '<div class="mc-cc-insight">'+ins+'</div>' +
@@ -76,7 +98,7 @@ Router.register('mercado', function(main) {
         '<div class="mc-ibn-lbl">'+lbl+'</div>'+hb(htT,htB,htG,htR)+'</div>' +
         '<div class="mc-farol mc-f'+fCls+'"><div class="mc-fd"></div>'+fTxt+'</div>' +
       '</div>' +
-      '<div class="mc-ibn-val" style="color:var(--'+valColor+')">'+val+'</div>' +
+      '<div class="mc-ibn-val" style="color:'+valColor+'">'+val+'</div>' +
       '<div class="mc-ibn-sub">'+sub+'</div>' +
     '</div>';
   }
@@ -107,7 +129,7 @@ Router.register('mercado', function(main) {
     '<select class="filter-select"><option>Últimas 6 semanas</option><option>Últimos 6 meses</option></select>' +
   '</div>' +
 
-  // ── B1: PAINEL CONTEXTO (3 grupos × 3 cards) ───────────────
+  // ── B1: PAINEL CONTEXTO ────────────────────────────────────
   '<div class="section-header anim d1"><div class="sh-dot"></div><span class="sh-title">Painel de Contexto</span><span class="sh-badge">Bate-olho · Atualizado agora</span></div>' +
   '<div class="section-block anim d1 mc-ctx-block">' +
     '<div class="mc-grupos-outer">' +
@@ -116,17 +138,28 @@ Router.register('mercado', function(main) {
       '<div class="mc-grupo-col">' +
         '<div class="mc-grupo-lbl" style="background:#3670A0">📍 Operacional</div>' +
         '<div class="mc-grupo-cards">' +
-          ctxCard('c1','Clima Hoje','☀️','33°C',false,'Patrocínio · Sol · Min 19°C',false,'wn','Sáb 36°C previsto',
+          ctxCard('c1','Clima Hoje','clima','#3670A0',
+            '33°C',
+            'Patrocínio · Sol · Min 19°C', false,
+            'wn','Sáb 36°C previsto',
             'Calor no fim de semana → demanda churrasco ALTA. Monitorar cadeia do frio.',
             'Clima Hoje','Temperatura atual na cidade selecionada. Fonte: OpenWeather API.',
             '✓ Abaixo 28°C: clima neutro','✗ Acima 32°C: atenção na cadeia do frio',
             ['demanda churrasco ALTA']) +
-          ctxCard('c2','Próxima Data','📅','Dia das Mães',true,'11 dias',true,'wn','Alto impacto · 11/05',
+          // Próxima Data: big number = "11 dias", sub = "Dia das Mães"
+          ctxCard('c2','Próxima Data','data','#C9A84C',
+            '11<span class="mc-unit" style="font-size:11px;margin-left:3px;font-weight:400">dias</span>',
+            'Dia das Mães', true,
+            'wn','Alto impacto · 11/05',
             'Iniciar comunicação no balcão esta semana. Kit churrasco família.',
             'Datas Estratégicas','Próxima data comemorativa relevante para açougue e rotisseria.',
             '✓ Com 7+ dias: tempo hábil','✗ Menos de 3 dias: ação emergencial',
             ['Kit churrasco família']) +
-          ctxCard('c9','Próx. Pagamento','💰','Dia 20',true,'4 dias',true,'wn','Pico de demanda',
+          // Próx. Pagamento: big number = "4 dias", sub = "Dia 20"
+          ctxCard('c9','Próx. Pagamento','pagto','#2D8653',
+            '4<span class="mc-unit" style="font-size:11px;margin-left:3px;font-weight:400">dias</span>',
+            'Dia 20', true,
+            'wn','Pico de demanda',
             'Entrada de salário em 4 dias — garantir estoque de bovino e suíno antes.',
             'Calendário de Pagamentos','Dias 5, 10, 15 e último útil do mês concentram maior fluxo de compras.',
             '✓ Com 3+ dias: preparar estoque antecipado','✗ Amanhã: último momento para reposição',
@@ -137,17 +170,26 @@ Router.register('mercado', function(main) {
       '<div class="mc-grupo-col">' +
         '<div class="mc-grupo-lbl" style="background:#C0504D">🥩 Cotações</div>' +
         '<div class="mc-grupo-cards">' +
-          ctxCard('c3','Boi Gordo','🐄','366<span class="mc-unit">/@</span>',false,'',false,'up','▲ +4,2% no mês',
+          ctxCard('c3','Boi Gordo','alta','#C0504D',
+            '366<span class="mc-unit">/@</span>',
+            '', false,
+            'up','▲ +4,2% no mês',
             'Tendência de alta — revisar preço do traseiro esta semana.',
             'Boi Gordo (CEPEA)','Cotação R$/arroba em SP. R$10/@ de alta ≈ +R$0,67/kg na carne.',
             '✓ Estável/queda: margem protegida','✗ Alta 2+ meses: revisar preço do traseiro',
             ['revisar preço do traseiro esta semana']) +
-          ctxCard('c4','Suíno Vivo','🐷','6,96<span class="mc-unit">/kg</span>',false,'',false,'dn','▼ -2,8% semana',
+          ctxCard('c4','Suíno Vivo','baixa','#2D8653',
+            '6,96<span class="mc-unit">/kg</span>',
+            '', false,
+            'dn','▼ -2,8% semana',
             'Janela de compra aberta — reforçar mix suíno agora.',
             'Suíno Vivo (CEPEA)','Cotação R$/kg posto SP. Base de custo para costelinha, lombo e pernil.',
             '✓ Em queda: janela de compra aberta','✗ Acima R$8,00: revisar preços',
             ['Janela de compra aberta']) +
-          ctxCard('c5','Frango Cong.','🐔','8,10<span class="mc-unit">/kg</span>',false,'',false,'nt','↔ Estável',
+          ctxCard('c5','Frango Cong.','frio','#7153A0',
+            '8,10<span class="mc-unit">/kg</span>',
+            '', false,
+            'nt','↔ Estável',
             'Margem protegida · Favorável para rotisseria.',
             'Frango Atacado (CEPEA)','Cotação R$/kg frango congelado atacado SP. Referência para rotisseria.',
             '✓ Estável: margem previsível','✗ Alta acima 10%: revisar frango assado',
@@ -158,17 +200,26 @@ Router.register('mercado', function(main) {
       '<div class="mc-grupo-col">' +
         '<div class="mc-grupo-lbl" style="background:#7153A0">📈 Macro</div>' +
         '<div class="mc-grupo-cards">' +
-          ctxCard('c7','Boi Futuro B3','📉','342<span class="mc-unit">/@</span>',false,'Mai/26 · B3',false,'dn','▼ -6,6% vs físico',
+          ctxCard('c7','Boi Futuro B3','raio','#C0504D',
+            '342<span class="mc-unit">/@</span>',
+            'Mai/26 · B3', false,
+            'dn','▼ -6,6% vs físico',
             'Mercado prevê queda em maio — avaliar adiar compra de boi gordo.',
             'Contrato Futuro Boi (B3)','Preço que o mercado espera para o boi gordo. Futuro abaixo físico = mercado prevê queda.',
             '✓ Futuro abaixo físico: aguardar para comprar','✗ Futuro acima físico: antecipar compra agora',
             ['avaliar adiar compra de boi gordo']) +
-          ctxCard('c8','Export. Bovina','🌍','+15,1%',true,'vs Abr/2025 · COMEX',false,'up','▲ Recorde Abr/26',
+          ctxCard('c8','Export. Bovina','globo','#2D8653',
+            '+15,1%',
+            'vs Abr/2025 · COMEX', false,
+            'up','▲ Recorde Abr/26',
             'Exportação recorde → pressão de alta no boi. Antecipar compras bovinas.',
             'Exportação Carne Bovina (COMEX)','Exportação em alta = frigoríficos preferem mercado externo = boi interno tende a subir.',
             '✓ Estável/queda: oferta interna normal','✗ Em alta: boi interno tende a subir',
             ['Antecipar compras bovinas']) +
-          ctxCard('c6','IPCA Alim.','📊','+0,9%',false,'Acum. 12m: +8,1%',false,'up','▲ Acima da meta',
+          ctxCard('c6','IPCA Alim.','barras','#7153A0',
+            '+0,9%',
+            'Acum. 12m: +8,1%', false,
+            'up','▲ Acima da meta',
             'Consumidor pressionado — priorizar mix de valor percebido alto.',
             'IPCA Alimentação (IBGE)','Variação mensal dos preços de alimentos. 2× acima do geral = consumidor migra para cortes baratos.',
             '✓ Abaixo 0,5%/mês: pressão baixa','✗ Acima 0,8%/mês: reforce mix de valor',
@@ -193,8 +244,6 @@ Router.register('mercado', function(main) {
   '<div class="section-block anim d2 mc-cot-block">' +
     '<div class="mc-pills" id="mc-pills-cot"><button class="mc-pill">Dia</button><button class="mc-pill">Semana</button><button class="mc-pill active">Mês</button></div>' +
     '<div class="mc-cot-grid">' +
-
-    // BOI
     '<div class="mc-cot-card">' +
       '<div class="mc-cot-head"><span class="mc-cot-icon">🐄</span><span class="mc-cot-ttl">Boi Gordo</span>'+hb('Boi Gordo (R$/@)','Preço por arroba no mercado paulista. R$10/@ de alta ≈ +R$0,67/kg.','✓ Estável: margem protegida','✗ Alta 2+ meses: repasse obrigatório')+'</div>' +
       '<div class="mc-cot-bn">366<span class="mc-unit">/@</span></div>' +
@@ -206,8 +255,6 @@ Router.register('mercado', function(main) {
       '</tbody></table>' +
       '<div class="mc-cot-pill mc-pill-warn">⚠ Cruzar 380/@ → repassar no traseiro</div>' +
     '</div>' +
-
-    // SUÍNO
     '<div class="mc-cot-card">' +
       '<div class="mc-cot-head"><span class="mc-cot-icon">🐷</span><span class="mc-cot-ttl">Suíno Vivo</span>'+hb('Suíno Vivo (R$/kg)','Cotação posto SP. Base de custo para costelinha, lombo e pernil.','✓ Em queda: compre mais','✗ Acima R$8,00: revisar preços')+'</div>' +
       '<div class="mc-cot-bn">6,96<span class="mc-unit">/kg</span></div>' +
@@ -219,8 +266,6 @@ Router.register('mercado', function(main) {
       '</tbody></table>' +
       '<div class="mc-cot-pill mc-pill-opp">✓ Janela de compra — reforçar costelinha e lombo</div>' +
     '</div>' +
-
-    // FRANGO
     '<div class="mc-cot-card">' +
       '<div class="mc-cot-head"><span class="mc-cot-icon">🐔</span><span class="mc-cot-ttl">Frango Congelado</span>'+hb('Frango Atacado (R$/kg)','Cotação frango congelado atacado SP. Referência de custo para rotisseria.','✓ Estável: margem previsível','✗ Alta acima 10%: revisar frango assado')+'</div>' +
       '<div class="mc-cot-bn">8,10<span class="mc-unit">/kg</span></div>' +
@@ -232,7 +277,6 @@ Router.register('mercado', function(main) {
       '</tbody></table>' +
       '<div class="mc-cot-pill mc-pill-ok">◎ Margem protegida · Rotisseria favorável</div>' +
     '</div>' +
-
     '</div>' +
   '</div>' +
 
@@ -242,10 +286,10 @@ Router.register('mercado', function(main) {
     '<div class="mc-pills" id="mc-pills-ipca"><button class="mc-pill">Dia</button><button class="mc-pill">Semana</button><button class="mc-pill active">Mês</button></div>' +
     '<div class="mc-ipca-layout">' +
       '<div class="mc-ipca-bns">' +
-        ipcaBn('fw','Atenção','w','IPCA Geral','orange','<strong>+5,48%</strong>','Acumulado 12m · Meta: 3,5%','IPCA Geral','Índice oficial de inflação do Brasil (IBGE). Meta BCB 2026: 3,5%/ano.','✓ Abaixo de 4%: economia sob controle','✗ Acima de 5%: custos operacionais crescentes') +
-        ipcaBn('fr','Crítico','r','IPCA Alimentação','red','<strong>+8,1%</strong>','Acumulado 12m · Acima do geral','IPCA Alimentação','2× acima do geral = consumidor migra para cortes baratos.','✓ Próximo ao geral: pressão equilibrada','✗ 2× acima: consumidor corta cortes nobres') +
-        ipcaBn('fr','Crítico','r','IPCA Carnes','red','<strong>+10,3%</strong>','Acumulado 12m · 2× acima do geral','IPCA Carnes','Subcomponente específico para carnes.','✓ Abaixo de 5%: consumidor compra com conforto','✗ Acima de 8%: promova proteínas alternativas') +
-        ipcaBn('fb','Monitorar','b','Dólar Comercial','blue','<strong>R$ 5,72</strong>','Comercial venda · Banco Central','Dólar Comercial (BCB)','Câmbio do BCB. Dólar alto encarece cortes exportáveis.','✓ Abaixo R$5,50: pressão cambial baixa','✗ Acima R$6,00: risco de alta nos cortes nobres') +
+        ipcaBn('fw','Atenção','w','IPCA Geral','#C97B2C','<strong>+5,48%</strong>','Acumulado 12m · Meta: 3,5%','IPCA Geral','Índice oficial de inflação do Brasil (IBGE). Meta BCB 2026: 3,5%/ano.','✓ Abaixo de 4%: economia sob controle','✗ Acima de 5%: custos operacionais crescentes') +
+        ipcaBn('fr','Crítico','r','IPCA Alimentação','#C0504D','<strong>+8,1%</strong>','Acumulado 12m · Acima do geral','IPCA Alimentação','2× acima do geral = consumidor migra para cortes baratos.','✓ Próximo ao geral: pressão equilibrada','✗ 2× acima: consumidor corta cortes nobres') +
+        ipcaBn('fr','Crítico','r','IPCA Carnes','#C0504D','<strong>+10,3%</strong>','Acumulado 12m · 2× acima do geral','IPCA Carnes','Subcomponente específico para carnes.','✓ Abaixo de 5%: consumidor compra com conforto','✗ Acima de 8%: promova proteínas alternativas') +
+        ipcaBn('fb','Monitorar','b','Dólar Comercial','#3670A0','<strong>R$ 5,72</strong>','Comercial venda · Banco Central','Dólar Comercial (BCB)','Câmbio do BCB. Dólar alto encarece cortes exportáveis.','✓ Abaixo R$5,50: pressão cambial baixa','✗ Acima R$6,00: risco de alta nos cortes nobres') +
       '</div>' +
       '<div class="mc-ipca-chart-area">' +
         '<div class="mc-ipca-chart-ttl">Evolução mensal — últimos 6 meses</div>' +
@@ -272,7 +316,7 @@ Router.register('mercado', function(main) {
       cd('pagto','20',[['pagto','💰 Pagto. FGTS']])+
       cd('','21',[['feriado','Tiradentes']])+cd('','22',[['sazon','Dia da Terra']])+
       cd('','23',[['custom','Reunião Rede']])+cd('','24')+
-      cd('calhov','25',[['sazon','🐷 Dia Suíno']],'tip-suino')+
+      cd('','25',[['sazon','🐷 Dia Suíno']],'tip-suino')+
       cd('','26')+cd('','27')+cd('','28')+cd('','29')+
       cd('pagto','30',[['pagto','💰 Último útil']])+
       cd('other','1')+cd('other','2')+
@@ -295,7 +339,6 @@ Router.register('mercado', function(main) {
     '<div class="mc-heat-legend"><span style="font-size:10px;color:var(--t3);font-weight:600">Heatmap:</span><span class="hc u3" style="font-size:10px;padding:2px 8px">Alta forte</span><span class="hc u1" style="font-size:10px;padding:2px 8px">Alta leve</span><span class="hc n0" style="font-size:10px;padding:2px 8px">Estável</span><span class="hc d1" style="font-size:10px;padding:2px 8px">Queda leve</span><span class="hc d3" style="font-size:10px;padding:2px 8px">Queda forte</span></div>' +
   '</div>' +
 
-  // Tooltip calendário
   '<div class="mc-cal-tip" id="tip-suino"><div class="mc-ct-title">🐷 Dia da Carne Suína</div><div class="mc-ct-date">Sábado, 25 de Abril · 9 dias</div><div class="mc-ct-body">Suíno vivo em queda (-2,8%) + FGTS dia 20 = janela dupla. Margem favorável para ação promocional com alta demanda.</div><div class="mc-ct-action">→ Reforçar costelinha, lombo e pernil. Comunicar no balcão antes do dia 20.</div></div>';
 
   // ── RENDER ─────────────────────────────────────────────────
@@ -311,7 +354,7 @@ Router.register('mercado', function(main) {
     });
   });
 
-  // ── TOOLTIP GLOBAL para .mc-hb ─────────────────────────────
+  // ── TOOLTIP GLOBAL ─────────────────────────────────────────
   var globalTip = document.getElementById('mc-global-tip');
   if (!globalTip) {
     globalTip = document.createElement('div');
@@ -333,7 +376,7 @@ Router.register('mercado', function(main) {
     hbEl.addEventListener('mouseleave', function(){ globalTip.style.opacity = '0'; });
   });
 
-  // ── COTAÇÕES: Chart.js + tabela thead meses ────────────────
+  // ── COTAÇÕES ───────────────────────────────────────────────
   var N = MESES.length;
 
   function buildCotChart(id, data, lc, fc, fmtFn) {
@@ -370,7 +413,7 @@ Router.register('mercado', function(main) {
       }}]
     });
 
-    // Adicionar thead com meses
+    // Thead com meses
     if (!tbl.querySelector('thead')) {
       var thead=document.createElement('thead'), tr=document.createElement('tr');
       var th0=document.createElement('th'); th0.style.cssText='padding:4px 0 3px;border:none;background:transparent;font-size:0'; tr.appendChild(th0);
@@ -382,16 +425,17 @@ Router.register('mercado', function(main) {
       thead.appendChild(tr); tbl.insertBefore(thead,tbl.firstChild);
     }
 
-    // Alinhamento gráfico + tabela — lê step real após render
+    // Alinhamento gráfico + tabela via step real do Chart.js
     setTimeout(function() {
-      var W = cvs.parentElement.offsetWidth, colW = 36, dW = (W-colW)/N;
+      var W = cvs.parentElement.offsetWidth;
+      if (!W) return;
+      var colW = 36, dW = (W-colW)/N;
       chart.options.layout.padding.left  = Math.round(colW+dW/2);
       chart.options.layout.padding.right = Math.round(dW/2);
       chart.update('none');
-      // Step real do chart após update
       var xPts = chart.data.datasets[0].data.map(function(v,i){ return Math.round(chart.scales.x.getPixelForValue(i)); });
-      var step  = Math.round((xPts[N-1]-xPts[0])/(N-1));
-      var lblW  = Math.round(xPts[0] - step/2);
+      var step = Math.round((xPts[N-1]-xPts[0])/(N-1));
+      var lblW = Math.round(xPts[0] - step/2);
       while(cg.firstChild){ cg.removeChild(cg.firstChild); }
       var c0=document.createElement('col'); c0.style.width=lblW+'px'; cg.appendChild(c0);
       for(var i=0;i<N;i++){ var c=document.createElement('col'); c.style.width=step+'px'; cg.appendChild(c); }
@@ -402,26 +446,22 @@ Router.register('mercado', function(main) {
   buildCotChart('suino',  COT.suino.vals,  COT.suino.lc,  COT.suino.fc,  f2);
   buildCotChart('frango', COT.frango.vals, COT.frango.lc, COT.frango.fc, f2);
 
-  // ── IPCA BARS — flex-column: label em cima, barra em baixo ─
+  // ── IPCA BARS ──────────────────────────────────────────────
   (function() {
     var el = main.querySelector('#mc-ipca-bars'); if (!el) return;
     var allV = IPCA_DATA.reduce(function(a,d){ return a.concat([d.g,d.a,d.c]); },[]);
     var MX = Math.max.apply(null,allV);
-    var H  = 90; // altura máxima das barras
+    var H  = 90;
     var COLS = ['rgba(12,20,37,0.28)','#C97B2C','#C0504D'];
 
     IPCA_DATA.forEach(function(d) {
       var vals = [d.g,d.a,d.c];
       var grp = document.createElement('div'); grp.className='mc-ig';
-
-      // Linha de labels — um por barra, alinhados com flex
       var lblRow = document.createElement('div'); lblRow.className='mc-ig-lbls';
       vals.forEach(function(v) {
         var l=document.createElement('div'); l.className='mc-ig-lbl';
         l.textContent='+'+v.toFixed(2); lblRow.appendChild(l);
       });
-
-      // Linha de barras
       var bRow = document.createElement('div'); bRow.className='mc-ig-bars';
       vals.forEach(function(v,j) {
         var b=document.createElement('div'); b.className='mc-ig-b';
@@ -429,10 +469,8 @@ Router.register('mercado', function(main) {
         b.style.background=COLS[j];
         bRow.appendChild(b);
       });
-
       var base=document.createElement('div'); base.className='mc-ig-base';
       var lm=document.createElement('div');   lm.className='mc-ig-x'; lm.textContent=d.m;
-
       grp.appendChild(lblRow); grp.appendChild(bRow); grp.appendChild(base); grp.appendChild(lm);
       el.appendChild(grp);
     });
@@ -453,7 +491,7 @@ Router.register('mercado', function(main) {
     });
   })();
 
-  // ── TOOLTIP CALENDÁRIO (dias com calhov) ───────────────────
+  // ── TOOLTIP CALENDÁRIO ─────────────────────────────────────
   main.querySelectorAll('.mc-cd.calhov').forEach(function(day) {
     day.addEventListener('mouseenter', function() {
       var tip=main.querySelector('#'+(this.getAttribute('data-tip')||'')); if(!tip) return;
@@ -466,7 +504,7 @@ Router.register('mercado', function(main) {
     });
   });
 
-  // ── TOOLTIP EVENTOS CALENDÁRIO (.mc-cev) ───────────────────
+  // ── TOOLTIP EVENTOS CALENDÁRIO ─────────────────────────────
   var calEvTip = document.getElementById('mc-cal-ev-tip');
   if (!calEvTip) {
     calEvTip = document.createElement('div');
@@ -475,7 +513,7 @@ Router.register('mercado', function(main) {
     document.body.appendChild(calEvTip);
   }
   main.querySelectorAll('.mc-cev').forEach(function(ev) {
-    var catColor = {feriado:'#C0504D', pagto:'#2D8653', sazon:'#7A5800', clima:'#3670A0', custom:'#7153A0'};
+    var catColor = {feriado:'#C0504D',pagto:'#2D8653',sazon:'#7A5800',clima:'#3670A0',custom:'#7153A0'};
     ev.addEventListener('mouseenter', function() {
       var txt=ev.textContent.trim(), cat=Object.keys(catColor).find(function(k){ return ev.classList.contains(k); })||'custom';
       calEvTip.innerHTML='<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:'+catColor[cat]+';margin-right:6px;vertical-align:middle"></span><strong>'+txt+'</strong>';
