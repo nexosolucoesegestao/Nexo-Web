@@ -1848,16 +1848,29 @@ body::before{
 
 /* Elementos internos do card */
 .mc-cc-top    { overflow:hidden!important;min-width:0!important;gap:2px!important; }
-.mc-cc-lbl    { min-width:0!important;overflow:hidden!important;white-space:normal!important;display:-webkit-box!important;-webkit-line-clamp:2!important;-webkit-box-orient:vertical!important;font-size:8.5px!important;letter-spacing:0.6px!important;line-height:1.2!important; }
+.mc-cc-lbl {
+  min-width:0!important;overflow:hidden!important;
+  white-space:normal!important;display:-webkit-box!important;
+  -webkit-line-clamp:2!important;-webkit-box-orient:vertical!important;
+  font-size:9px!important;       /* AJUSTE: padronizado 9px */
+  font-weight:700!important;
+  text-transform:uppercase!important; /* AJUSTE: maiúsculas */
+  letter-spacing:0.7px!important;
+  line-height:1.2!important;
+  color:var(--t3)!important;
+}
 .mc-cc-icons  { flex-shrink:0!important; }
 .mc-cc-val    { font-size:19px!important;font-weight:700!important;color:#1F2937!important;font-variant-numeric:tabular-nums!important;min-width:0!important;overflow:hidden!important;white-space:nowrap!important;text-overflow:ellipsis!important; }
 .mc-cc-val.sm { font-size:14px!important;font-weight:700!important; }
 .mc-unit      { font-size:10px!important;font-weight:400!important;color:#9CA3AF!important;margin-left:1px!important; }
-.mc-cc-sub    { min-width:0!important;overflow:hidden!important;white-space:nowrap!important;text-overflow:ellipsis!important; }
-.mc-cc-sub.mc-bold  { font-weight:700!important;font-size:12px!important;color:#C97B2C!important; }
+/* Sub (Patrocínio, Mai/26·B3...) — AJUSTE: reduzido para 9px */
+.mc-cc-sub    { min-width:0!important;overflow:hidden!important;white-space:nowrap!important;text-overflow:ellipsis!important;font-size:9px!important;color:var(--t2)!important; }
+.mc-cc-sub.mc-bold  { font-weight:700!important;font-size:11px!important;color:#C97B2C!important; }
 .mc-cc-sub.mc-empty { visibility:hidden!important; }
+/* Badge colorido — AJUSTE: 9px, padding compacto */
 .mc-cc-badge-row    { min-width:0!important;overflow:hidden!important; }
-.mc-cc-badge-row .mc-badge { max-width:100%!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important; }
+.mc-cc-badge-row .mc-badge { max-width:100%!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important;font-size:9px!important;padding:2px 6px!important; }
+/* Insight — 10px conforme aprovado */
 .mc-cc-insight { font-size:10px!important;line-height:1.45!important;height:78px!important;overflow:hidden!important;display:block!important; }
 .mc-cc-insight strong { font-weight:700!important;color:#1F2937!important; }
 
@@ -1926,9 +1939,9 @@ body::before{
 .mc-ibn-sub { font-size:10px!important;color:var(--t2)!important; }
 .mc-ipca-chart-ttl { font-size:10px!important;font-weight:700!important;color:var(--t3)!important;text-transform:uppercase!important;letter-spacing:.9px!important;margin-bottom:14px!important; }
 
-/* FIX CRÍTICO: rótulos IPCA colados às barras
-   .mc-ipca-bars sem altura fixa — cresce com conteúdo
-   padding-top reserva espaço para os labels acima das barras */
+/* FIX CRÍTICO: rótulos IPCA imediatamente acima de cada barra
+   Nova estrutura: mc-ig > mc-ig-bars > mc-ig-col > [mc-ig-lbl, mc-ig-b]
+   Cada coluna = flex-column com label no topo e barra em baixo */
 .mc-ipca-bars {
   display:flex!important;
   align-items:flex-end!important;
@@ -1936,27 +1949,45 @@ body::before{
   height:auto!important;
   min-height:90px!important;
   overflow:visible!important;
-  padding-top:20px!important;
+  padding-top:16px!important;
 }
-/* .mc-ig sem altura fixa — justify-content:flex-end empurra conteúdo para baixo */
 .mc-ig {
   display:flex!important;
   flex-direction:column!important;
   align-items:stretch!important;
-  justify-content:flex-end!important;
   flex:1!important;
+}
+/* .mc-ig-bars agora é o container das 3 colunas lado a lado */
+.mc-ig-bars {
+  display:flex!important;
+  gap:2px!important;
+  align-items:flex-end!important;
+  width:100%!important;
   height:auto!important;
 }
-.mc-ig-lbls { display:flex!important;gap:2px!important;margin-bottom:2px!important;flex-shrink:0!important; }
-.mc-ig-lbl  { flex:1!important;text-align:center!important;font-size:10px!important;font-weight:700!important;color:var(--t1)!important;line-height:1!important;white-space:nowrap!important; }
-/* .mc-ig-bars com altura fixa — as barras têm tamanho definido */
-.mc-ig-bars { display:flex!important;gap:2px!important;align-items:flex-end!important;width:100%!important;height:90px!important;flex-shrink:0!important; }
-.mc-ig-b { flex:1!important;border-radius:3px 3px 0 0!important;transition:filter .18s!important; }
+/* Cada coluna: label no topo, barra embaixo — sem gap entre eles */
+.mc-ig-col {
+  flex:1!important;
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:center!important;
+  justify-content:flex-end!important;
+}
+.mc-ig-lbl {
+  font-size:10px!important;
+  font-weight:700!important;
+  color:var(--t1)!important;
+  line-height:1!important;
+  white-space:nowrap!important;
+  text-align:center!important;
+  margin-bottom:2px!important; /* 2px entre label e barra */
+}
+.mc-ig-b { width:100%!important;border-radius:3px 3px 0 0!important;transition:filter .18s!important;flex-shrink:0!important; }
 .mc-ig-b:hover{filter:brightness(1.12)!important;cursor:default!important}
-/* Gradientes nas barras */
-.mc-ig-bars .mc-ig-b:nth-child(1){background:linear-gradient(180deg,#5B7A99 0%,rgba(12,20,37,0.28) 100%)!important}
-.mc-ig-bars .mc-ig-b:nth-child(2){background:linear-gradient(180deg,#E8A84C 0%,#C97B2C 100%)!important}
-.mc-ig-bars .mc-ig-b:nth-child(3){background:linear-gradient(180deg,#E07070 0%,#C0504D 100%)!important}
+/* Gradientes nas barras por posição dentro da coluna */
+.mc-ig-col:nth-child(1) .mc-ig-b{background:linear-gradient(180deg,#5B7A99 0%,rgba(12,20,37,0.28) 100%)!important}
+.mc-ig-col:nth-child(2) .mc-ig-b{background:linear-gradient(180deg,#E8A84C 0%,#C97B2C 100%)!important}
+.mc-ig-col:nth-child(3) .mc-ig-b{background:linear-gradient(180deg,#E07070 0%,#C0504D 100%)!important}
 .mc-ig-base { width:100%!important;height:2px!important;background:rgba(26,39,68,0.08)!important;border-radius:1px!important;margin-top:1px!important; }
 .mc-ig-x    { font-size:9.5px!important;font-weight:600!important;color:var(--t2)!important;text-align:center!important;margin-top:5px!important;white-space:nowrap!important; }
 .mc-ipca-leg { display:flex!important;gap:12px!important;flex-wrap:wrap!important;margin-top:12px!important;padding-top:10px!important;border-top:1px solid var(--bd)!important; }
@@ -2024,4 +2055,70 @@ body::before{
 .hc.d1  { background:rgba(45,134,83,0.10)!important;color:#1A6040!important;font-weight:500!important; }
 .hc.d2  { background:rgba(45,134,83,0.16)!important;color:#1A6040!important;font-weight:600!important; }
 .hc.d3  { background:rgba(45,134,83,0.24)!important;color:#0F4028!important;font-weight:700!important; }
-.mc-ig-lbl  { font-size: 10px !important; }
+
+/* ═══ FIX v3.3 — Painel Contexto: tipografia e ícones SVG ═══ */
+
+/* Label: 9px uppercase padrão sidebar */
+.mc-cc-lbl {
+  font-size: 9px !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.8px !important;
+  font-weight: 700 !important;
+  color: var(--t3) !important;
+  white-space: normal !important;
+  display: block !important;
+  -webkit-line-clamp: unset !important;
+  line-height: 1.3 !important;
+}
+
+/* Top row: label à esquerda, ícone+? fixos à direita */
+.mc-cc-top {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: flex-start !important;
+  gap: 4px !important;
+  overflow: visible !important;
+  min-height: 28px !important;
+}
+.mc-cc-icons {
+  display: flex !important;
+  align-items: center !important;
+  gap: 3px !important;
+  flex-shrink: 0 !important;
+  align-self: flex-start !important;
+}
+.mc-cc-icon {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 14px !important;
+  height: 14px !important;
+}
+.mc-cc-icon svg {
+  width: 12px !important;
+  height: 12px !important;
+  flex-shrink: 0 !important;
+}
+
+/* Sub: 10px secundário */
+.mc-cc-sub { font-size: 10px !important; color: var(--t2) !important; font-weight: 400 !important; }
+.mc-cc-sub.mc-bold { font-size: 10px !important; font-weight: 700 !important; color: #C97B2C !important; }
+
+/* Big numbers: 19px uniforme, coloridos por card */
+.mc-cc-val, .mc-cc-val.sm {
+  font-size: 19px !important;
+  font-weight: 700 !important;
+  line-height: 1.1 !important;
+}
+/* Operacional */
+.mc-cc.c1 .mc-cc-val { color: #3670A0 !important; }
+.mc-cc.c2 .mc-cc-val { color: #C9A84C !important; }
+.mc-cc.c9 .mc-cc-val { color: #2D8653 !important; }
+/* Cotações */
+.mc-cc.c3 .mc-cc-val { color: #C0504D !important; }
+.mc-cc.c4 .mc-cc-val { color: #2D8653 !important; }
+.mc-cc.c5 .mc-cc-val { color: #7153A0 !important; }
+/* Macro */
+.mc-cc.c7 .mc-cc-val { color: #C0504D !important; }
+.mc-cc.c8 .mc-cc-val { color: #2D8653 !important; }
+.mc-cc.c6 .mc-cc-val { color: #7153A0 !important; }
