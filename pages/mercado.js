@@ -1,11 +1,12 @@
 // ============================================================
 // NEXO Intelligence Web — pages/mercado.js
-// Mercado & Clima — v2.5
-// FIX 1: Duplicidade de tooltip — .mc-ht interno desativado
-// FIX 2 (v2.5): Stacking do hover entre grupos
-//   - ÚNICO isolation:isolate no .mc-grupos-outer
-//   - Grupos internos SEM isolation/position (transbordo livre)
-//   - Irmãos em position:static, card expandido em z-index:9999
+// Mercado & Clima — v2.6
+// FIX 1: Duplicidade de tooltip (v2.3)
+// FIX 2: Stacking do hover entre grupos (v2.5)
+// FIX 3 (v2.6): IPCA bars — estrutura correta
+//   .mc-ig > .mc-ig-bars > .mc-ig-col{.mc-ig-lbl + .mc-ig-b}
+//   (antes: labels separadas das barras em duas linhas)
+//   Cores aplicadas via CSS nth-child (sem background inline)
 // ============================================================
 Router.register('mercado', function(main) {
   var MESES = ['Nov/25','Dez/25','Jan/26','Fev/26','Mar/26','Abr/26'];
@@ -407,21 +408,28 @@ Router.register('mercado', function(main) {
   buildCotChart('frango', COT.frango.vals, COT.frango.lc, COT.frango.fc, f2);
 
   // ── IPCA BARS ──────────────────────────────────────────────
+  // Estrutura: .mc-ig > .mc-ig-bars > .mc-ig-col{.mc-ig-lbl + .mc-ig-b}
+  // O CSS pinta as cores via nth-child (não setar background inline).
   (function() {
     var el = main.querySelector('#mc-ipca-bars'); if (!el) return;
     var allV = IPCA_DATA.reduce(function(a,d){ return a.concat([d.g,d.a,d.c]); },[]);
-    var MX = Math.max.apply(null,allV), H = 90;
-    var COLS = ['rgba(12,20,37,0.28)','#C97B2C','#C0504D'];
+    var MX = Math.max.apply(null,allV), H = 70;
     IPCA_DATA.forEach(function(d) {
       var vals = [d.g,d.a,d.c];
       var grp = document.createElement('div'); grp.className='mc-ig';
-      var lblRow = document.createElement('div'); lblRow.className='mc-ig-lbls';
-      vals.forEach(function(v) { var l=document.createElement('div'); l.className='mc-ig-lbl'; l.textContent='+'+v.toFixed(2); lblRow.appendChild(l); });
-      var bRow = document.createElement('div'); bRow.className='mc-ig-bars';
-      vals.forEach(function(v,j) { var b=document.createElement('div'); b.className='mc-ig-b'; b.style.height=Math.max(4,Math.round(v/MX*H))+'px'; b.style.background=COLS[j]; bRow.appendChild(b); });
+      var barsRow = document.createElement('div'); barsRow.className='mc-ig-bars';
+      vals.forEach(function(v) {
+        var col = document.createElement('div'); col.className='mc-ig-col';
+        var lbl = document.createElement('div'); lbl.className='mc-ig-lbl'; lbl.textContent='+'+v.toFixed(2);
+        var b = document.createElement('div'); b.className='mc-ig-b';
+        b.style.height = Math.max(4, Math.round(v/MX*H))+'px';
+        col.appendChild(lbl); col.appendChild(b);
+        barsRow.appendChild(col);
+      });
       var base=document.createElement('div'); base.className='mc-ig-base';
       var lm=document.createElement('div'); lm.className='mc-ig-x'; lm.textContent=d.m;
-      grp.appendChild(lblRow); grp.appendChild(bRow); grp.appendChild(base); grp.appendChild(lm); el.appendChild(grp);
+      grp.appendChild(barsRow); grp.appendChild(base); grp.appendChild(lm);
+      el.appendChild(grp);
     });
   })();
 
