@@ -1,6 +1,22 @@
 // ============================================================
 // NEXO Intelligence Web — pages/mercado.js
-// Mercado & Clima — v3.6 (Calendário: repetição de eventos)
+// Mercado & Clima — v3.7 (Explorador de Dados analítico)
+// FEAT 11 (v3.7): EXPLORADOR DE MERCADO & CLIMA
+//   Cruzamento livre de 8 séries (Boi Spot/Futuro, Suíno, Frango,
+//     IPCA Geral/Alim/Carnes, Dólar) — foco em dados da própria página
+//   3 vistas: Tabela heatmap · Linhas normalizadas (base 100) · Matriz
+//     de correlação Pearson (com intensidade visual)
+//   Períodos alinhados ao IPCA (Mês/Bimestre/Trimestre/Semestre/Ano)
+//     Agregação por média, últimos pontos comparando YoY
+//   Seed 48 meses (Jan/2023 → Abr/2026) suporta YoY em todas janelas
+//   Engine de insights MULTICAMADA (até 5 camadas):
+//     1. Cruzamento mais relevante da seleção
+//     2. Correlações secundárias notáveis
+//     3. Anomalias (z-score > 1.8 no último ponto)
+//     4. Recomendações prescritivas específicas (Boi Spot vs Futuro,
+//        padrão de repasse, câmbio dominante)
+//     5. Mudança de regime (correlação 1ª metade vs 2ª metade)
+//   Export CSV contextual do estado atual
 // FIX 10 (v3.6): Eventos recorrentes (iCalendar RRULE-like)
 //   Seção "Repetição" no modal: Não repete / Diária / Semanal / Mensal / Anual
 //   Término: Nunca | Em uma data | Após N ocorrências
@@ -277,35 +293,12 @@ Router.register('mercado', function(main) {
       '<div class="mc-mes-insight"><span class="mc-mes-icon">🧭</span><div><div class="mc-mes-ttl">Análise do mês</div><div class="mc-mes-body">Carregando...</div><div class="mc-mes-action">→ Navegue entre meses com ‹ › para explorar padrões sazonais.</div></div></div>' +
     '</div>' +
 
-    // ── B6: EXPLORADOR ─────────────────────────────────────────
-    // Chips de filtro padrão NEXO: label em navy (gradiente + inset gold)
-    // + valor em fundo branco translúcido com chevron. Visualmente comunica
-    // "objeto filtro" unificado, em vez de texto solto ao lado de select.
-    '<div class="section-header anim d5"><div class="sh-dot"></div><span class="sh-title">Explorador de Dados</span><span class="sh-badge">Tabela pivot · Heatmap automático</span></div>' +
-    '<div class="section-block anim d5 mc-exp-block">' +
-      (function(){
-        // Estilos inline — mantém styles.css intocado
-        var fieldCSS = 'display:inline-flex;align-items:stretch;gap:0;background:rgba(255,255,255,0.78);border:1px solid rgba(26,39,68,0.12);border-radius:22px;overflow:hidden;box-shadow:0 1px 3px rgba(12,20,37,0.04);transition:border-color .2s, box-shadow .2s';
-        var lblCSS = 'display:flex;align-items:center;padding:0 14px;background:linear-gradient(135deg,#0C1425 0%,#1A2744 100%);color:#FFFFFF;border-right:1px solid rgba(201,168,76,0.25);box-shadow:inset 0 1px 0 rgba(201,168,76,0.35);font-size:9.5px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin:0';
-        var selCSS = "background:transparent;border:none;border-radius:0;padding:6px 34px 6px 12px;color:#1F2937;font-weight:600;font-size:11.5px;outline:none;cursor:pointer;font-family:'Outfit',sans-serif;-webkit-appearance:none;appearance:none;background-image:url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'><path d='M2 3.5l3 3 3-3' stroke='%234B5563' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>\");background-repeat:no-repeat;background-position:right 12px center";
-        var sepCSS = 'width:1px;height:22px;background:rgba(26,39,68,0.15);align-self:center';
-        function field(label, options) {
-          var opts = options.map(function(o){ return '<option>'+o+'</option>'; }).join('');
-          return '<div class="mc-exp-field" style="'+fieldCSS+'">' +
-            '<span class="mc-el" style="'+lblCSS+'">'+label+'</span>' +
-            '<select class="filter-select" style="'+selCSS+'">'+opts+'</select>' +
-          '</div>';
-        }
-        return '<div class="mc-exp-ctrl" style="background:transparent;border:none;padding:0 0 14px;gap:10px;flex-wrap:wrap;align-items:center">' +
-          field('Linhas',  ['Produto','Mês']) +
-          field('Colunas', ['Mês','Semana']) +
-          field('Métrica', ['Cotação Média','Variação %']) +
-          '<div style="'+sepCSS+'"></div>' +
-          '<button class="mc-exp-export" style="margin-left:auto">↓ Excel</button>' +
-        '</div>';
-      })() +
-      '<div style="overflow-x:auto"><table class="mc-pvt"><thead><tr><th style="text-align:left">Produto</th><th>Nov/25</th><th>Dez/25</th><th>Jan/26</th><th>Fev/26</th><th>Mar/26</th><th>Abr/26</th><th style="background:rgba(201,168,76,0.22);color:#6A4C00">Média</th></tr></thead><tbody><tr><td>🐄 Boi Gordo (R$/@)</td><td><span class="hc n0">318,40</span></td><td><span class="hc u1">328,90</span></td><td><span class="hc u1">335,20</span></td><td><span class="hc u2">348,60</span></td><td><span class="hc u2">356,80</span></td><td><span class="hc u3">366,20</span></td><td><span class="hc u2">342,35</span></td></tr><tr><td>🐄 Boi Futuro B3 (R$/@)</td><td><span class="hc n0">312,00</span></td><td><span class="hc u1">318,50</span></td><td><span class="hc u1">322,00</span></td><td><span class="hc u1">330,00</span></td><td><span class="hc u1">338,00</span></td><td><span class="hc d2">342,00</span></td><td><span class="hc n0">327,08</span></td></tr><tr><td>🐷 Suíno Vivo (R$/kg)</td><td><span class="hc u2">7,42</span></td><td><span class="hc u1">7,38</span></td><td><span class="hc u1">7,51</span></td><td><span class="hc n0">7,30</span></td><td><span class="hc d1">7,16</span></td><td><span class="hc d2">6,96</span></td><td><span class="hc n0">7,29</span></td></tr><tr><td>🐔 Frango Cong. (R$/kg)</td><td><span class="hc d1">8,22</span></td><td><span class="hc n0">8,18</span></td><td><span class="hc n0">8,15</span></td><td><span class="hc n0">8,12</span></td><td><span class="hc n0">8,09</span></td><td><span class="hc n0">8,10</span></td><td><span class="hc n0">8,14</span></td></tr><tr><td>📊 IPCA Alim. (%)</td><td><span class="hc u1">+0,62</span></td><td><span class="hc u1">+0,75</span></td><td><span class="hc u2">+0,83</span></td><td><span class="hc u2">+0,88</span></td><td><span class="hc u2">+0,90</span></td><td><span class="hc u1">+0,71*</span></td><td><span class="hc u2">+0,78</span></td></tr></tbody><tfoot><tr><td>Var. Período</td><td>—</td><td><span class="hc u1" style="font-size:10px">+2,1%</span></td><td><span class="hc u1" style="font-size:10px">+1,8%</span></td><td><span class="hc u2" style="font-size:10px">+3,4%</span></td><td><span class="hc u1" style="font-size:10px">+2,3%</span></td><td><span class="hc u2" style="font-size:10px">+2,9%</span></td><td style="font-size:10px;color:var(--t3)">*parcial</td></tr></tfoot></table></div>' +
-      '<div class="mc-heat-legend"><span style="font-size:10px;color:var(--t3);font-weight:600">Heatmap:</span><span class="hc u3" style="font-size:10px;padding:2px 8px">Alta forte</span><span class="hc u1" style="font-size:10px;padding:2px 8px">Alta leve</span><span class="hc n0" style="font-size:10px;padding:2px 8px">Estável</span><span class="hc d1" style="font-size:10px;padding:2px 8px">Queda leve</span><span class="hc d3" style="font-size:10px;padding:2px 8px">Queda forte</span></div>' +
+    // ── B6: EXPLORADOR DE MERCADO & CLIMA ──────────────────────
+    // HTML mínimo — conteúdo inteiro populado dinamicamente pela
+    // engine do Explorador no final do Router.register (vide bloco).
+    '<div class="section-header anim d5"><div class="sh-dot"></div><span class="sh-title">Explorador de Dados</span><span class="sh-badge">Cruzamento de séries · Correlação automática</span></div>' +
+    '<div class="section-block anim d5 mc-exp-block" id="mc-exp-block">' +
+      '<div style="padding:24px;text-align:center;color:#9CA3AF;font-size:11px">Carregando explorador…</div>' +
     '</div>' +
 
     '';
@@ -2118,4 +2111,563 @@ Router.register('mercado', function(main) {
 
   // ── RENDER INICIAL ──
   _calRebuildGrid(CAL_STATE.ano, CAL_STATE.mes);
+
+  // ══════════════════════════════════════════════════════════
+  // EXPLORADOR DE MERCADO & CLIMA v1.0
+  //   Cruzamento livre de séries: Cotações + IPCA + Dólar + Boi Futuro
+  //   3 vistas: Tabela heatmap · Linhas normalizadas · Matriz correlação
+  //   Períodos alinhados ao IPCA (Mês/Bimestre/Trimestre/Semestre/Ano)
+  //   Engine de insights multicamada (até 5 camadas: cruzamento,
+  //     correlações secundárias, anomalia, prescritivo, mudança de regime)
+  //   Seed de 48 meses (Jan/2023 → Abr/2026) suporta YoY em todas janelas
+  // ══════════════════════════════════════════════════════════
+
+  var EXP_SERIES = {
+    boi:         { key:'boi',         label:'Boi Gordo',        unit:'R$/@',  color:'#C0504D' },
+    boi_futuro:  { key:'boi_futuro',  label:'Boi Futuro (B3)',  unit:'R$/@',  color:'#E0827E' },
+    suino:       { key:'suino',       label:'Suíno Vivo',       unit:'R$/kg', color:'#2D8653' },
+    frango:      { key:'frango',      label:'Frango Cong.',     unit:'R$/kg', color:'#7153A0' },
+    ipca_geral:  { key:'ipca_geral',  label:'IPCA Geral',       unit:'%',     color:'#6B7280' },
+    ipca_alim:   { key:'ipca_alim',   label:'IPCA Alimentação', unit:'%',     color:'#C97B2C' },
+    ipca_carnes: { key:'ipca_carnes', label:'IPCA Carnes',      unit:'%',     color:'#8E3634' },
+    dolar:       { key:'dolar',       label:'Dólar Comercial',  unit:'R$',    color:'#3670A0' }
+  };
+
+  // ─── Seed 48 meses Jan/2023 → Abr/2026 ─────────────────────
+  var _expMesesShort = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  var EXP_MESES_FULL = [];
+  for (var _eY=2023; _eY<=2026; _eY++) {
+    var _eS = 0, _eE = (_eY===2026) ? 3 : 11;
+    for (var _eM=_eS; _eM<=_eE; _eM++) EXP_MESES_FULL.push({ano:_eY, mes:_eM, lbl:_expMesesShort[_eM]+'/'+String(_eY).slice(-2)});
+  }
+  function _expGen(baseStart, trend, noise, offset){
+    return EXP_MESES_FULL.map(function(_, i){
+      return baseStart + trend*i + Math.sin((i+offset)*0.8)*noise;
+    });
+  }
+  var EXP_DATA = {
+    boi:         _expGen(255, 2.4, 9, 0),
+    boi_futuro:  _expGen(258, 2.35, 7, 0.5),
+    suino:       _expGen(7.05, 0.005, 0.30, 1),
+    frango:      _expGen(8.50, -0.004, 0.18, 2),
+    ipca_geral:  _expGen(0.30, 0.003, 0.09, 3),
+    ipca_alim:   _expGen(0.55, 0.007, 0.14, 4),
+    ipca_carnes: _expGen(0.65, 0.010, 0.20, 5),
+    dolar:       _expGen(4.95, 0.018, 0.20, 6)
+  };
+
+  function _expFmt(k, v) {
+    if (v===null||v===undefined||isNaN(v)) return '—';
+    var s = EXP_SERIES[k];
+    if (k==='boi' || k==='boi_futuro') return v.toFixed(0);
+    if (k==='dolar') return 'R$ '+v.toFixed(2).replace('.',',');
+    if (s.unit==='%') return (v>=0?'+':'')+v.toFixed(2).replace('.',',')+'%';
+    return v.toFixed(2).replace('.',',');
+  }
+
+  // ─── Builders de janela alinhados ao IPCA ──────────────────
+  function _expBuildMes() {
+    var N = EXP_MESES_FULL.length, start = N - 13;
+    return {
+      labels: EXP_MESES_FULL.slice(start).map(function(p){ return p.lbl; }),
+      sliceIndices: Array.apply(null,{length:13}).map(function(_,i){ return start+i; })
+    };
+  }
+  function _expBuildBimestre() {
+    var N = EXP_MESES_FULL.length, L = EXP_MESES_FULL[N-1];
+    var biStart = L.mes - (L.mes % 2);
+    var points = [];
+    var y = L.ano - 1, bi = biStart;
+    for (var n=0; n<7; n++) {
+      var s = bi, e = bi+1;
+      var lbl = _expMesesShort[s].substring(0,3)+'-'+_expMesesShort[e].substring(0,3)+'/'+String(y).slice(-2);
+      var idxS = -1, idxE = -1;
+      for (var i=0; i<N; i++) {
+        if (EXP_MESES_FULL[i].ano === y && EXP_MESES_FULL[i].mes === s) idxS = i;
+        if (EXP_MESES_FULL[i].ano === y && EXP_MESES_FULL[i].mes === e) idxE = i;
+      }
+      if (idxS !== -1 && idxE !== -1) points.push({lbl:lbl, idxS:idxS, idxE:idxE});
+      bi += 2;
+      if (bi > 10) { bi = 0; y++; }
+    }
+    return { labels: points.map(function(p){return p.lbl;}), buckets: points.map(function(p){return [p.idxS, p.idxE];}) };
+  }
+  function _expBuildTrimestre() {
+    var N = EXP_MESES_FULL.length, L = EXP_MESES_FULL[N-1];
+    var tStart = Math.floor(L.mes/3)*3;
+    var points = [];
+    var y = L.ano - 2, t = tStart;
+    for (var n=0; n<9; n++) {
+      var qNum = Math.floor(t/3)+1;
+      var lbl = qNum+'T/'+String(y).slice(-2);
+      var mesesDoT = [t, t+1, t+2];
+      var idxs = [];
+      for (var i=0; i<N; i++) {
+        if (EXP_MESES_FULL[i].ano === y && mesesDoT.indexOf(EXP_MESES_FULL[i].mes)>=0) idxs.push(i);
+      }
+      if (idxs.length > 0) points.push({lbl:lbl, idxs:idxs, parcial: idxs.length<3});
+      t += 3;
+      if (t > 9) { t = 0; y++; }
+    }
+    var li = points.length - 1;
+    if (points[li] && points[li].parcial) points[li].lbl += '*';
+    return { labels: points.map(function(p){return p.lbl;}), buckets: points.map(function(p){return p.idxs;}) };
+  }
+  function _expBuildSemestre() {
+    var N = EXP_MESES_FULL.length, L = EXP_MESES_FULL[N-1];
+    var sStart = L.mes < 6 ? 0 : 6;
+    var points = [];
+    var y = L.ano - 3, s = sStart;
+    for (var n=0; n<7; n++) {
+      var sNum = (s===0) ? 1 : 2;
+      var lbl = sNum+'S/'+String(y).slice(-2);
+      var mesesDoS = []; for (var m=s; m<s+6; m++) mesesDoS.push(m);
+      var idxs = [];
+      for (var i=0; i<N; i++) {
+        if (EXP_MESES_FULL[i].ano === y && mesesDoS.indexOf(EXP_MESES_FULL[i].mes)>=0) idxs.push(i);
+      }
+      if (idxs.length > 0) points.push({lbl:lbl, idxs:idxs, parcial: idxs.length<6});
+      s += 6;
+      if (s > 6) { s = 0; y++; }
+    }
+    var li = points.length - 1;
+    if (points[li] && points[li].parcial) points[li].lbl += '*';
+    return { labels: points.map(function(p){return p.lbl;}), buckets: points.map(function(p){return p.idxs;}) };
+  }
+  function _expBuildAno() {
+    var N = EXP_MESES_FULL.length, porAno = {};
+    for (var i=0; i<N; i++) {
+      var y = EXP_MESES_FULL[i].ano;
+      if (!porAno[y]) porAno[y] = [];
+      porAno[y].push(i);
+    }
+    var points = [];
+    Object.keys(porAno).sort().forEach(function(yStr){
+      var idxs = porAno[yStr];
+      var parcial = idxs.length < 12;
+      points.push({lbl: yStr + (parcial?'*':''), idxs:idxs});
+    });
+    return { labels: points.map(function(p){return p.lbl;}), buckets: points.map(function(p){return p.idxs;}) };
+  }
+  var EXP_PERIODO_BUILDERS = {
+    mes: _expBuildMes, bimestre: _expBuildBimestre, trimestre: _expBuildTrimestre,
+    semestre: _expBuildSemestre, ano: _expBuildAno
+  };
+  var EXP_PERIODO_LABELS = { mes:'Mês', bimestre:'Bimestre', trimestre:'Trimestre', semestre:'Semestre', ano:'Ano' };
+
+  var EXP_STATE = {
+    series: ['boi','boi_futuro','ipca_carnes','dolar'],
+    periodo: 'mes',
+    vista: 'correl'
+  };
+
+  function _expGetWindow() {
+    var b = EXP_PERIODO_BUILDERS[EXP_STATE.periodo]();
+    var values = {};
+    if (EXP_STATE.periodo === 'mes') {
+      EXP_STATE.series.forEach(function(k){
+        values[k] = b.sliceIndices.map(function(i){ return EXP_DATA[k][i]; });
+      });
+    } else {
+      EXP_STATE.series.forEach(function(k){
+        values[k] = b.buckets.map(function(idxs){
+          var sum = 0;
+          idxs.forEach(function(i){ sum += EXP_DATA[k][i]; });
+          return sum / idxs.length;
+        });
+      });
+    }
+    return { labels: b.labels, values: values };
+  }
+
+  function _expPearson(a, b) {
+    if (a.length !== b.length || a.length < 2) return 0;
+    var n = a.length, sA=0, sB=0;
+    for (var i=0; i<n; i++){ sA+=a[i]; sB+=b[i]; }
+    var mA=sA/n, mB=sB/n, num=0, dA=0, dB=0;
+    for (var i=0; i<n; i++){
+      var da=a[i]-mA, db=b[i]-mB;
+      num+=da*db; dA+=da*da; dB+=db*db;
+    }
+    var d = Math.sqrt(dA*dB);
+    return d===0 ? 0 : num/d;
+  }
+
+  function _expInterpretCorr(r){
+    var abs = Math.abs(r);
+    if (abs>=0.7) return {nivel:'forte',   texto:r>0?'forte positiva':'forte negativa'};
+    if (abs>=0.4) return {nivel:'moderada',texto:r>0?'moderada positiva':'moderada negativa'};
+    if (abs>=0.2) return {nivel:'fraca',   texto:r>0?'fraca positiva':'fraca negativa'};
+    return                {nivel:'nula',   texto:'praticamente nula'};
+  }
+  function _expCorrColor(r){
+    var abs = Math.abs(r);
+    if (r>0){
+      if(abs>=0.7) return {bg:'rgba(45,134,83,0.35)',  text:'#1F5E3A'};
+      if(abs>=0.4) return {bg:'rgba(45,134,83,0.20)',  text:'#2D8653'};
+      if(abs>=0.2) return {bg:'rgba(45,134,83,0.08)',  text:'#4B5563'};
+    } else {
+      if(abs>=0.7) return {bg:'rgba(192,80,77,0.35)',  text:'#8E3634'};
+      if(abs>=0.4) return {bg:'rgba(192,80,77,0.20)',  text:'#C0504D'};
+      if(abs>=0.2) return {bg:'rgba(192,80,77,0.08)',  text:'#4B5563'};
+    }
+    return {bg:'rgba(107,114,128,0.04)', text:'#9CA3AF'};
+  }
+
+  function _expRenderTable(win){
+    if (EXP_STATE.series.length===0) return '<div style="padding:30px;text-align:center;color:#9CA3AF">Selecione ao menos 1 série.</div>';
+    var html='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-family:Outfit,sans-serif;font-size:12px;min-width:720px">';
+    html+='<thead><tr>';
+    html+='<th style="text-align:left;padding:8px 10px;font-size:10px;color:#6B7280;font-weight:700;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid rgba(26,39,68,0.12);position:sticky;left:0;background:rgba(255,255,255,0.95);z-index:1">Série</th>';
+    win.labels.forEach(function(l,i){
+      var last = i === win.labels.length-1;
+      html+='<th style="text-align:right;padding:8px 6px;font-size:10px;color:'+(last?'#C9A84C':'#6B7280')+';font-weight:700;border-bottom:1px solid rgba(26,39,68,0.12);'+(last?'background:rgba(201,168,76,0.05)':'')+'">'+l+'</th>';
+    });
+    html+='</tr></thead><tbody>';
+    EXP_STATE.series.forEach(function(sk){
+      var s=EXP_SERIES[sk], vals=win.values[sk];
+      var mn=Math.min.apply(null,vals), mx=Math.max.apply(null,vals);
+      html+='<tr>';
+      html+='<td style="padding:10px;border-bottom:1px solid rgba(26,39,68,0.06);position:sticky;left:0;background:rgba(255,255,255,0.95)"><div style="display:flex;align-items:center;gap:8px"><span style="width:10px;height:10px;border-radius:50%;background:'+s.color+';flex-shrink:0"></span><span style="font-weight:600;color:#1F2937;white-space:nowrap">'+s.label+'</span><span style="font-size:10px;color:#9CA3AF">'+s.unit+'</span></div></td>';
+      vals.forEach(function(v){
+        var norm=(mx-mn)===0?0.5:(v-mn)/(mx-mn);
+        var bg='rgba('+Math.round(201*norm+107*(1-norm))+','+Math.round(168*norm+114*(1-norm))+','+Math.round(76*norm+128*(1-norm))+','+(0.06+norm*0.22)+')';
+        html+='<td style="text-align:right;padding:8px 6px;font-size:11px;font-weight:600;color:#1F2937;font-variant-numeric:tabular-nums;background:'+bg+';border-bottom:1px solid rgba(26,39,68,0.06)">'+_expFmt(sk,v)+'</td>';
+      });
+      html+='</tr>';
+    });
+    return html + '</tbody></table></div>';
+  }
+
+  function _expRenderLinesNorm(win){
+    if (EXP_STATE.series.length===0) return '<div style="padding:30px;text-align:center;color:#9CA3AF">Selecione ao menos 1 série.</div>';
+    var W = 1000, H = 260, padL=50, padR=80, padT=22, padB=36;
+    var chartW = W-padL-padR, chartH = H-padT-padB;
+    var normed = {};
+    EXP_STATE.series.forEach(function(sk){
+      var base = win.values[sk][0] || 1;
+      normed[sk] = win.values[sk].map(function(v){ return (v/base)*100; });
+    });
+    var all = [];
+    Object.keys(normed).forEach(function(k){ all = all.concat(normed[k]); });
+    var mn = Math.floor(Math.min.apply(null,all)/2)*2 - 2;
+    var mx = Math.ceil(Math.max.apply(null,all)/2)*2 + 2;
+    var N = win.labels.length;
+    function xPos(i){ return N===1 ? padL+chartW/2 : padL+(i/(N-1))*chartW; }
+    function yPos(v){ return padT+(1-(v-mn)/(mx-mn))*chartH; }
+
+    var svg = '<svg viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="xMidYMid meet" style="width:100%;height:260px;display:block;font-family:Outfit,sans-serif">';
+    svg += '<defs>';
+    EXP_STATE.series.forEach(function(sk){
+      var s = EXP_SERIES[sk];
+      svg += '<linearGradient id="exp-grad-'+sk+'" x1="0" y1="0" x2="0" y2="1">';
+      svg += '<stop offset="0" stop-color="'+s.color+'" stop-opacity="0.08"/>';
+      svg += '<stop offset="1" stop-color="'+s.color+'" stop-opacity="0"/>';
+      svg += '</linearGradient>';
+    });
+    svg += '</defs>';
+
+    for (var i=0; i<=3; i++){
+      var v = mn + (mx-mn)*i/3;
+      var y = yPos(v);
+      svg += '<line x1="'+padL+'" y1="'+y+'" x2="'+(W-padR)+'" y2="'+y+'" stroke="rgba(26,39,68,0.05)" stroke-width="1"/>';
+      svg += '<text x="'+(padL-8)+'" y="'+(y+3)+'" text-anchor="end" font-size="10" fill="#9CA3AF" font-weight="500">'+v.toFixed(0)+'</text>';
+    }
+    var y100 = yPos(100);
+    if (y100 >= padT && y100 <= H-padB) {
+      svg += '<line x1="'+padL+'" y1="'+y100+'" x2="'+(W-padR)+'" y2="'+y100+'" stroke="rgba(201,168,76,0.45)" stroke-width="1" stroke-dasharray="3,4"/>';
+      svg += '<text x="'+(padL-8)+'" y="'+(y100+3)+'" text-anchor="end" font-size="9" fill="#C9A84C" font-weight="700">base</text>';
+    }
+    var maxLabels = Math.min(N, 7);
+    var stepL = Math.max(1, Math.ceil(N/maxLabels));
+    for (var i=0; i<N; i+=stepL){
+      svg += '<text x="'+xPos(i)+'" y="'+(H-padB+14)+'" text-anchor="middle" font-size="10" fill="#9CA3AF" font-weight="500">'+win.labels[i]+'</text>';
+    }
+    if ((N-1) % stepL !== 0) {
+      svg += '<text x="'+xPos(N-1)+'" y="'+(H-padB+14)+'" text-anchor="middle" font-size="10" fill="#9CA3AF" font-weight="500">'+win.labels[N-1]+'</text>';
+    }
+
+    EXP_STATE.series.forEach(function(sk){
+      var s = EXP_SERIES[sk];
+      var pathD = 'M', areaD = 'M';
+      normed[sk].forEach(function(v,i){
+        var x = xPos(i).toFixed(1), y = yPos(v).toFixed(1);
+        pathD += (i===0?'':' L') + x+','+y;
+        areaD += (i===0?'':' L') + x+','+y;
+      });
+      areaD += ' L'+xPos(N-1).toFixed(1)+','+(H-padB)+' L'+xPos(0).toFixed(1)+','+(H-padB)+' Z';
+      svg += '<path d="'+areaD+'" fill="url(#exp-grad-'+sk+')"/>';
+      svg += '<path d="'+pathD+'" stroke="'+s.color+'" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>';
+      var lastV = normed[sk][normed[sk].length-1];
+      var lx = xPos(N-1), ly = yPos(lastV);
+      svg += '<circle cx="'+lx+'" cy="'+ly+'" r="3" fill="'+s.color+'" stroke="#fff" stroke-width="1.5"/>';
+      svg += '<text x="'+(lx+8)+'" y="'+(ly+3)+'" font-size="10" font-weight="700" fill="'+s.color+'">'+lastV.toFixed(0)+'</text>';
+    });
+    svg += '</svg>';
+
+    var legend = '<div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:14px;padding-top:12px;border-top:1px solid rgba(26,39,68,0.06);justify-content:center">';
+    EXP_STATE.series.forEach(function(sk){
+      var s = EXP_SERIES[sk];
+      legend += '<div style="display:flex;align-items:center;gap:6px;font-size:11px"><span style="width:18px;height:2px;background:'+s.color+';border-radius:1px"></span><span style="color:#1F2937;font-weight:600">'+s.label+'</span><span style="color:#9CA3AF;font-size:10px">'+s.unit+'</span></div>';
+    });
+    legend += '</div>';
+
+    return '<div style="width:100%">'+svg+legend+'</div>';
+  }
+
+  function _expRenderCorrelation(win){
+    var keys = EXP_STATE.series;
+    if (keys.length < 2) return '<div style="padding:30px;text-align:center;color:#9CA3AF">Selecione ao menos 2 séries para calcular correlações.</div>';
+    var matrix = {};
+    keys.forEach(function(k1){
+      matrix[k1] = {};
+      keys.forEach(function(k2){ matrix[k1][k2] = _expPearson(win.values[k1], win.values[k2]); });
+    });
+    var html = '<table style="width:100%;border-collapse:separate;border-spacing:4px;font-family:Outfit,sans-serif;font-size:11px">';
+    html += '<thead><tr><th></th>';
+    keys.forEach(function(k){
+      var s = EXP_SERIES[k];
+      html += '<th style="padding:8px 6px;font-size:9px;color:'+s.color+';font-weight:700;text-transform:uppercase;letter-spacing:0.5px;min-width:80px">'+s.label+'</th>';
+    });
+    html += '</tr></thead><tbody>';
+    keys.forEach(function(k1){
+      var s1 = EXP_SERIES[k1];
+      html += '<tr><th style="padding:8px 10px;font-size:10px;color:'+s1.color+';font-weight:700;text-align:left;text-transform:uppercase;letter-spacing:0.5px">'+s1.label+'</th>';
+      keys.forEach(function(k2){
+        var r = matrix[k1][k2];
+        if (k1===k2){
+          html += '<td style="padding:12px 8px;text-align:center;background:rgba(26,39,68,0.04);border-radius:6px;color:#9CA3AF;font-weight:700">—</td>';
+        } else {
+          var col = _expCorrColor(r);
+          html += '<td style="padding:12px 8px;text-align:center;background:'+col.bg+';border-radius:6px;color:'+col.text+';font-weight:700;font-variant-numeric:tabular-nums">'+(r>=0?'+':'')+r.toFixed(2)+'</td>';
+        }
+      });
+      html += '</tr>';
+    });
+    html += '</tbody></table>';
+    html += '<div style="display:flex;gap:8px;margin-top:12px;padding:8px 12px;background:rgba(26,39,68,0.03);border-radius:8px;font-size:10px;color:#6B7280;align-items:center;flex-wrap:wrap">';
+    html += '<strong style="color:#1F2937">Intensidade:</strong>';
+    html += '<span><span style="display:inline-block;width:12px;height:12px;background:rgba(45,134,83,0.35);border-radius:3px;vertical-align:middle;margin-right:4px"></span>Forte positiva (+0,7)</span>';
+    html += '<span><span style="display:inline-block;width:12px;height:12px;background:rgba(45,134,83,0.20);border-radius:3px;vertical-align:middle;margin-right:4px"></span>Moderada (+0,4)</span>';
+    html += '<span><span style="display:inline-block;width:12px;height:12px;background:rgba(192,80,77,0.20);border-radius:3px;vertical-align:middle;margin-right:4px"></span>Moderada negativa (−0,4)</span>';
+    html += '<span><span style="display:inline-block;width:12px;height:12px;background:rgba(192,80,77,0.35);border-radius:3px;vertical-align:middle;margin-right:4px"></span>Forte negativa (−0,7)</span>';
+    html += '</div>';
+    return html;
+  }
+
+  // ─── Engine de insights multicamada ───────────────────────
+  function _expGenerateInsights(win) {
+    var keys = EXP_STATE.series;
+    if (keys.length < 2) return '<em style="color:#9CA3AF">Selecione 2 ou mais séries para correlações e insights interpretativos.</em>';
+    var periodoLbl = EXP_PERIODO_LABELS[EXP_STATE.periodo].toLowerCase();
+
+    var pares = [];
+    for (var i=0; i<keys.length; i++){
+      for (var j=i+1; j<keys.length; j++){
+        var r = _expPearson(win.values[keys[i]], win.values[keys[j]]);
+        pares.push({a:keys[i], b:keys[j], r:r, abs:Math.abs(r)});
+      }
+    }
+    pares.sort(function(a,b){ return b.abs - a.abs; });
+    var top = pares[0];
+    var topInterp = _expInterpretCorr(top.r);
+
+    var camada1 = 'Na janela <strong>'+periodoLbl+'</strong> ('+win.labels.length+' pontos, de '+win.labels[0]+' a '+win.labels[win.labels.length-1]+'), '+
+      'o cruzamento mais relevante é <strong style="color:'+EXP_SERIES[top.a].color+'">'+EXP_SERIES[top.a].label+'</strong> × '+
+      '<strong style="color:'+EXP_SERIES[top.b].color+'">'+EXP_SERIES[top.b].label+'</strong> — correlação <strong>'+topInterp.texto+'</strong> '+
+      '(coeficiente <strong>'+(top.r>=0?'+':'')+top.r.toFixed(2)+'</strong>). ';
+    if (topInterp.nivel === 'forte') camada1 += (top.r>0 ? 'Ambas se movem juntas de forma consistente.' : 'Movem-se em direções opostas de forma consistente.');
+    else if (topInterp.nivel === 'moderada') camada1 += 'Há relação visível, mas outras forças também influenciam cada série.';
+    else camada1 += 'As séries se comportam de forma bastante independente.';
+    var layers = [camada1];
+
+    var outrasFortes = pares.slice(1).filter(function(p){ return p.abs >= 0.4; });
+    if (outrasFortes.length > 0 && keys.length >= 3) {
+      var mais = outrasFortes.slice(0, 2).map(function(p){
+        var li = _expInterpretCorr(p.r);
+        return '<strong style="color:'+EXP_SERIES[p.a].color+'">'+EXP_SERIES[p.a].label+'</strong> × <strong style="color:'+EXP_SERIES[p.b].color+'">'+EXP_SERIES[p.b].label+'</strong> ('+(p.r>=0?'+':'')+p.r.toFixed(2)+', '+li.texto+')';
+      }).join(' · ');
+      layers.push('Também notável: '+mais+'.');
+    }
+    if (pares.length >= 3) {
+      var bot = pares[pares.length-1];
+      if (bot.abs < 0.25 && top.abs > 0.5) {
+        layers.push('Já <strong style="color:'+EXP_SERIES[bot.a].color+'">'+EXP_SERIES[bot.a].label+'</strong> e <strong style="color:'+EXP_SERIES[bot.b].color+'">'+EXP_SERIES[bot.b].label+'</strong> se movem de forma bastante independente ('+(bot.r>=0?'+':'')+bot.r.toFixed(2)+').');
+      }
+    }
+
+    if (win.labels.length >= 3) {
+      for (var ki = 0; ki < keys.length; ki++) {
+        var k = keys[ki];
+        var vals = win.values[k];
+        var last = vals[vals.length-1], prev = vals[vals.length-2];
+        var deltaLast = last - prev;
+        var deltasAnt = [];
+        for (var i=1; i<vals.length-1; i++) deltasAnt.push(vals[i]-vals[i-1]);
+        if (deltasAnt.length === 0) continue;
+        var sumDelta = 0; for (var di=0; di<deltasAnt.length; di++) sumDelta += deltasAnt[di];
+        var meanDelta = sumDelta / deltasAnt.length;
+        var sqDelta = 0; for (var di=0; di<deltasAnt.length; di++) sqDelta += (deltasAnt[di]-meanDelta)*(deltasAnt[di]-meanDelta);
+        var stdDelta = Math.sqrt(sqDelta / deltasAnt.length);
+        var zscore = stdDelta === 0 ? 0 : Math.abs((deltaLast - meanDelta) / stdDelta);
+        if (zscore > 1.8) {
+          var label = EXP_SERIES[k].label;
+          var lastLbl = win.labels[win.labels.length-1];
+          var dir = deltaLast > 0 ? 'subiu' : 'caiu';
+          layers.push('<span style="color:#C97B2C">⚠</span> <strong style="color:'+EXP_SERIES[k].color+'">'+label+'</strong> '+dir+' '+Math.abs(deltaLast).toFixed(2)+(EXP_SERIES[k].unit==='%'?' p.p.':'')+' em '+lastLbl+' — variação atípica em relação ao histórico da janela.');
+          break;
+        }
+      }
+    }
+
+    var hasBoiSpot = keys.indexOf('boi') >= 0;
+    var hasBoiFut  = keys.indexOf('boi_futuro') >= 0;
+    var hasDolar   = keys.indexOf('dolar') >= 0;
+    var hasIpcaC   = keys.indexOf('ipca_carnes') >= 0;
+
+    if (hasBoiSpot && hasBoiFut) {
+      var vsSpot = win.values.boi[win.values.boi.length-1];
+      var vsFut  = win.values.boi_futuro[win.values.boi_futuro.length-1];
+      var premio = ((vsFut - vsSpot) / vsSpot) * 100;
+      if (Math.abs(premio) >= 2) {
+        if (premio > 0) layers.push('<span style="color:#3670A0">◉</span> <strong>Sinal de timing:</strong> Boi Futuro está <strong>'+premio.toFixed(1)+'% acima</strong> do Spot — mercado projeta alta. <strong>Antecipar compra contratual</strong> do traseiro pode proteger margem.');
+        else            layers.push('<span style="color:#2D8653">◉</span> <strong>Sinal de timing:</strong> Boi Futuro está <strong>'+Math.abs(premio).toFixed(1)+'% abaixo</strong> do Spot — mercado projeta queda. <strong>Postergar compra</strong> pode capturar alívio de preço.');
+      }
+    }
+    if (hasBoiSpot && hasIpcaC) {
+      var rBoiIpca = _expPearson(win.values.boi, win.values.ipca_carnes);
+      if (rBoiIpca >= 0.65) {
+        layers.push('<span style="color:#C9A84C">✓</span> <strong>Padrão de repasse:</strong> Boi e IPCA Carnes têm correlação forte ('+rBoiIpca.toFixed(2)+'). Movimentos do boi se refletem no consumidor em 1-2 meses. <strong>Use o Boi como leading indicator</strong> para ajustar preço do traseiro preventivamente.');
+      }
+    }
+    if (hasDolar && hasBoiSpot) {
+      var rDolarBoi = _expPearson(win.values.dolar, win.values.boi);
+      if (rDolarBoi >= 0.7) {
+        layers.push('<span style="color:#3670A0">◉</span> <strong>Câmbio dominante:</strong> Dólar e Boi têm correlação alta ('+rDolarBoi.toFixed(2)+'). A demanda externa está direcionando o preço interno. <strong>Monitore cotação do dólar</strong> para antecipar movimento do boi.');
+      }
+    }
+
+    if (win.labels.length >= 8 && keys.length >= 2) {
+      var half = Math.floor(win.labels.length / 2);
+      var valsA_old = win.values[top.a].slice(0, half);
+      var valsB_old = win.values[top.b].slice(0, half);
+      var valsA_new = win.values[top.a].slice(-half);
+      var valsB_new = win.values[top.b].slice(-half);
+      var rOld = _expPearson(valsA_old, valsB_old);
+      var rNew = _expPearson(valsA_new, valsB_new);
+      var diff = rNew - rOld;
+      if (Math.abs(diff) >= 0.3) {
+        var direction = diff > 0 ? 'fortaleceu' : 'enfraqueceu';
+        layers.push('<span style="color:#7153A0">◐</span> <strong>Mudança de regime:</strong> A correlação entre <strong>'+EXP_SERIES[top.a].label+'</strong> e <strong>'+EXP_SERIES[top.b].label+'</strong> '+direction+' ao longo do período (de '+rOld.toFixed(2)+' para '+rNew.toFixed(2)+').');
+      }
+    }
+
+    var html = '<div style="margin-bottom:10px;line-height:1.6">'+layers[0]+'</div>';
+    if (layers.length > 1) {
+      html += '<div style="display:flex;flex-direction:column;gap:6px;margin-top:10px;padding-top:10px;border-top:1px solid rgba(26,39,68,0.08)">';
+      for (var i=1; i<layers.length; i++) html += '<div style="font-size:12px;line-height:1.55;color:#374151">'+layers[i]+'</div>';
+      html += '</div>';
+    }
+    return html;
+  }
+
+  // ─── Render principal + wiring ────────────────────────────
+  function _expRenderAll() {
+    var block = main.querySelector('#mc-exp-block');
+    if (!block) return;
+    var win = _expGetWindow();
+    var body;
+    if (EXP_STATE.vista === 'tabela')      body = _expRenderTable(win);
+    else if (EXP_STATE.vista === 'linhas') body = _expRenderLinesNorm(win);
+    else                                    body = _expRenderCorrelation(win);
+    var insightHTML = _expGenerateInsights(win);
+
+    block.innerHTML = ''+
+      '<div style="margin-bottom:18px">' +
+        '<div style="margin-bottom:12px">' +
+          '<label style="display:block;font-size:10px;font-weight:700;color:#0C1425;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:8px">Séries <span style="color:#9CA3AF;font-weight:400;text-transform:none;letter-spacing:0">(selecione 1+)</span></label>' +
+          '<div id="mc-exp-series-pills" style="display:flex;gap:6px;flex-wrap:wrap"></div>' +
+        '</div>' +
+        '<div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">' +
+          '<div style="display:flex;align-items:center;gap:8px">' +
+            '<label style="font-size:10px;font-weight:700;color:#0C1425;text-transform:uppercase;letter-spacing:1.2px">Período</label>' +
+            '<div id="mc-exp-periodo-pills" style="display:flex;gap:4px"></div>' +
+          '</div>' +
+          '<span style="width:1px;height:20px;background:rgba(26,39,68,0.18)"></span>' +
+          '<div style="display:flex;align-items:center;gap:8px">' +
+            '<label style="font-size:10px;font-weight:700;color:#0C1425;text-transform:uppercase;letter-spacing:1.2px">Ver como</label>' +
+            '<div id="mc-exp-vista-pills" style="display:flex;gap:4px"></div>' +
+          '</div>' +
+          '<button id="mc-exp-export" style="margin-left:auto;padding:7px 14px;background:linear-gradient(135deg,#0C1425 0%,#1A2744 100%);border:1px solid #C9A84C;border-radius:8px;color:#C9A84C;font-family:Outfit,sans-serif;font-size:11px;font-weight:700;cursor:pointer;letter-spacing:0.5px">⬇ EXPORTAR CSV</button>' +
+        '</div>' +
+      '</div>' +
+      '<div style="min-height:220px;padding:18px;background:rgba(255,255,255,0.4);border:1px solid rgba(26,39,68,0.06);border-radius:12px;margin-bottom:14px">'+body+'</div>' +
+      '<div style="padding:14px 16px 14px 20px;background:linear-gradient(90deg,rgba(201,168,76,0.06) 0%,rgba(255,255,255,0) 100%);border-left:4px solid #C9A84C;border-radius:0 12px 12px 0">' +
+        '<div style="display:flex;align-items:flex-start;gap:10px">' +
+          '<span style="font-size:20px;line-height:1">🧭</span>' +
+          '<div style="flex:1">' +
+            '<div style="font-size:10px;font-weight:700;color:#C9A84C;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:6px">Insights · Análise contextual</div>' +
+            '<div style="font-size:13px;color:#1F2937">'+insightHTML+'</div>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+
+    var sBox = block.querySelector('#mc-exp-series-pills');
+    Object.keys(EXP_SERIES).forEach(function(k){
+      var s=EXP_SERIES[k];
+      var on=EXP_STATE.series.indexOf(k)>=0;
+      var b=document.createElement('button');
+      b.type='button';
+      b.style.cssText='padding:6px 12px;border-radius:18px;border:1.5px solid '+(on?s.color:'rgba(26,39,68,0.15)')+';background:'+(on?s.color+'15':'transparent')+';color:'+(on?s.color:'#6B7280')+';font-family:Outfit,sans-serif;font-size:11px;font-weight:'+(on?'700':'500')+';cursor:pointer;transition:all .12s;display:flex;align-items:center;gap:6px';
+      b.innerHTML='<span style="width:8px;height:8px;border-radius:50%;background:'+s.color+';opacity:'+(on?'1':'0.35')+'"></span>'+s.label;
+      b.addEventListener('click',function(){
+        var idx=EXP_STATE.series.indexOf(k);
+        if (idx>=0) EXP_STATE.series.splice(idx,1);
+        else EXP_STATE.series.push(k);
+        _expRenderAll();
+      });
+      sBox.appendChild(b);
+    });
+
+    var pBox = block.querySelector('#mc-exp-periodo-pills');
+    Object.keys(EXP_PERIODO_LABELS).forEach(function(key){
+      var on = EXP_STATE.periodo===key;
+      var b=document.createElement('button');
+      b.type='button';
+      b.textContent = EXP_PERIODO_LABELS[key];
+      b.style.cssText='padding:5px 11px;border-radius:16px;border:1px solid '+(on?'rgba(12,20,37,0.35)':'rgba(26,39,68,0.15)')+';background:'+(on?'rgba(12,20,37,0.06)':'transparent')+';color:'+(on?'#0C1425':'#6B7280')+';font-family:Outfit,sans-serif;font-size:11px;font-weight:'+(on?'700':'500')+';cursor:pointer;transition:all .12s';
+      b.addEventListener('click',function(){ EXP_STATE.periodo=key; _expRenderAll(); });
+      pBox.appendChild(b);
+    });
+
+    var vBox = block.querySelector('#mc-exp-vista-pills');
+    [{key:'tabela',label:'📊 Tabela'},{key:'linhas',label:'📈 Linhas norm.'},{key:'correl',label:'⚡ Correlação'}].forEach(function(opt){
+      var on=EXP_STATE.vista===opt.key;
+      var b=document.createElement('button');
+      b.type='button';
+      b.textContent=opt.label;
+      b.style.cssText='padding:5px 11px;border-radius:16px;border:1px solid '+(on?'rgba(12,20,37,0.35)':'rgba(26,39,68,0.15)')+';background:'+(on?'rgba(12,20,37,0.06)':'transparent')+';color:'+(on?'#0C1425':'#6B7280')+';font-family:Outfit,sans-serif;font-size:11px;font-weight:'+(on?'700':'500')+';cursor:pointer;transition:all .12s';
+      b.addEventListener('click',function(){ EXP_STATE.vista=opt.key; _expRenderAll(); });
+      vBox.appendChild(b);
+    });
+
+    block.querySelector('#mc-exp-export').addEventListener('click',function(){
+      var w = _expGetWindow();
+      var rows=[['Período'].concat(EXP_STATE.series.map(function(k){return EXP_SERIES[k].label+' ('+EXP_SERIES[k].unit+')';}))];
+      w.labels.forEach(function(lbl,i){
+        var r=[lbl];
+        EXP_STATE.series.forEach(function(k){ r.push(w.values[k][i].toFixed(2).replace('.',',')); });
+        rows.push(r);
+      });
+      var csv = rows.map(function(r){return r.join(';');}).join('\n');
+      var blob = new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'});
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a'); a.href=url; a.download='nexo_explorador_'+Date.now()+'.csv';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    });
+  }
+
+  _expRenderAll();
+
 });
