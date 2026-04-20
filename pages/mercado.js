@@ -1,12 +1,12 @@
 // ============================================================
 // NEXO Intelligence Web — pages/mercado.js
-// Mercado & Clima — v2.6
-// FIX 1: Duplicidade de tooltip (v2.3)
-// FIX 2: Stacking do hover entre grupos (v2.5)
-// FIX 3 (v2.6): IPCA bars — estrutura correta
-//   .mc-ig > .mc-ig-bars > .mc-ig-col{.mc-ig-lbl + .mc-ig-b}
-//   (antes: labels separadas das barras em duas linhas)
-//   Cores aplicadas via CSS nth-child (sem background inline)
+// Mercado & Clima — v2.7
+// FIX 1 (v2.3): Duplicidade de tooltip do "?"
+// FIX 2 (v2.5): Stacking do hover entre grupos do Painel
+// FIX 3 (v2.6): IPCA bars — estrutura .mc-ig-col pareando label+barra
+// FIX 4 (v2.7): Tooltip do calendário → insights prescritivos
+//   KB CAL_KB por substring (feriados, pagamentos, clima, sazon)
+//   Badge de prioridade + seções "Por quê" / "Ação recomendada"
 // ============================================================
 Router.register('mercado', function(main) {
   var MESES = ['Nov/25','Dez/25','Jan/26','Fev/26','Mar/26','Abr/26'];
@@ -447,24 +447,141 @@ Router.register('mercado', function(main) {
     });
   })();
 
-  // ── TOOLTIP EVENTOS CALENDÁRIO ─────────────────────────────
+  // ══════════════════════════════════════════════════════════
+  // TOOLTIP EVENTOS CALENDÁRIO — Insights Prescritivos (v2.7)
+  // Cada evento exibe: categoria, prioridade, contexto (por quê)
+  // e ação recomendada. Base de conhecimento KB indexada por
+  // substring do texto do evento.
+  // ══════════════════════════════════════════════════════════
+  var CAL_KB = {
+    'Tira-dentes': {
+      ctx: 'Feriado municipal em diversos estados. Dia útil para comércio, mas tráfego misto — parte das lojas fecha parcialmente.',
+      acao: 'Confirmar escala reduzida. Antecipar entregas logísticas para véspera. Monitorar concorrentes que fecham.',
+      prio: 'baixa'
+    },
+    'Paixão de Cristo': {
+      ctx: 'Sexta-Feira Santa. Pico anual de bacalhau, pescados e ovos. Consumo de carne vermelha cai drasticamente (tabu religioso).',
+      acao: 'Estoque pleno de bacalhau D-3. Mix especial de peixes frescos. Reduzir encomenda de bovino em 30-40%.',
+      prio: 'alta'
+    },
+    'Páscoa': {
+      ctx: 'Pós-Semana Santa. Retomada do consumo de carnes vermelhas + demanda forte de cordeiro e chester para almoço familiar.',
+      acao: 'Oferta de cordeiro e tender. Rotisseria com peças especiais. Comunicação de "almoço de Páscoa" no balcão.',
+      prio: 'alta'
+    },
+    'Tiradentes': {
+      ctx: 'Feriado nacional. Tráfego maior que finais de semana comuns — muitas famílias almoçam em casa. Demanda churrasco sobe 40-60%.',
+      acao: 'Equipe completa + hora extra no balcão. Reforçar picanha, alcatra, costela e linguiça. Abrir mais cedo se possível.',
+      prio: 'alta'
+    },
+    'Pagto. 5': {
+      ctx: 'Dia 5 — primeiro ciclo de pagamento do mês (salários privados). Fluxo de caixa do consumidor renova.',
+      acao: 'Abastecimento pleno de bovino e suíno até 12h. Ativar mix de valor agregado (picanha, costela nobre).',
+      prio: 'media'
+    },
+    'Pagto. 10': {
+      ctx: 'Dia 10 — segundo ciclo de pagamento. Coincide com Paixão de Cristo em 2026 — demanda mista (pescados > carnes).',
+      acao: 'Prioridade máxima em bacalhau e pescados. Bovino em modo estoque mínimo neste dia específico.',
+      prio: 'alta'
+    },
+    'Pagto. 15': {
+      ctx: 'Meio do mês — terceiro ciclo de pagamento (servidores públicos estaduais, aposentados). Perfil mais conservador.',
+      acao: 'Mix balanceado: suíno, frango e cortes de segunda classe. Promoção de sobrecoxa e coxão mole.',
+      prio: 'media'
+    },
+    'Pagto. FGTS': {
+      ctx: 'Dia 20 — pagamento de FGTS + aniversariantes + calendário público. Maior pico mensal de fluxo de caixa no varejo.',
+      acao: 'Estoque 100% + equipe reforçada. Ativar mix premium (picanha, alcatra). D-1 já com preços revisados.',
+      prio: 'alta'
+    },
+    'Último útil': {
+      ctx: 'Último dia útil — pagamento de salários privados do mês. Fluxo forte mesmo com cansaço do mês.',
+      acao: 'Abastecimento reforçado. Preparar campanha do próximo mês. Ativar mix de preparo rápido (rotisseria).',
+      prio: 'media'
+    },
+    'Dia Suíno': {
+      ctx: 'Dia Nacional da Carne Suína (25/04). Suíno vivo em queda (-2,8%) + FGTS D-5 = janela tripla favorável.',
+      acao: 'Campanha D-3 no balcão. Destaque para costelinha, lombo, pernil. Kit churrasco suíno em promoção.',
+      prio: 'alta'
+    },
+    'Dia da Terra': {
+      ctx: 'Dia Mundial da Terra (22/04). Oportunidade ESG: comunicar origem local, bem-estar animal, redução de desperdício.',
+      acao: 'Destacar produtores locais e selos de origem. Campanha "do campo ao balcão". Engajamento em redes.',
+      prio: 'baixa'
+    },
+    '36°C': {
+      ctx: 'Calor extremo previsto. Risco crítico na cadeia do frio + demanda churrasco sobe 50-70% no fim de semana.',
+      acao: 'Checagem de termômetros a cada 2h. Equipe reforçada. Estoque extra de picanha, costela e linguiça.',
+      prio: 'alta'
+    },
+    '34°C': {
+      ctx: 'Calor acima da média. Atenção redobrada na cadeia do frio e rotação de balcão.',
+      acao: 'Checagem de temperatura a cada 3h. Reduzir exposição de cortes sensíveis. Priorizar venda do estoque antigo.',
+      prio: 'media'
+    },
+    'Reunião Rede': {
+      ctx: 'Evento interno agendado pela rede. Possível redução de carga operacional ou ausência de lideranças.',
+      acao: 'Delegar fechamento a substitutos. Adiantar pedidos. Alinhar pautas operacionais com antecedência.',
+      prio: 'baixa'
+    }
+  };
+
+  function calFindKB(text) {
+    for (var k in CAL_KB) { if (text.indexOf(k) >= 0) return CAL_KB[k]; }
+    return null;
+  }
+
+  var CAL_PRIO = {
+    alta:  { bg:'rgba(192,80,77,0.15)',  color:'#FFB8B6', label:'ALTA'  },
+    media: { bg:'rgba(201,123,44,0.15)', color:'#F5C183', label:'MÉDIA' },
+    baixa: { bg:'rgba(54,112,160,0.15)', color:'#A5C8E8', label:'BAIXA' }
+  };
+  var CAL_CAT_COLOR = { feriado:'#C0504D', pagto:'#2D8653', sazon:'#C9A84C', clima:'#3670A0', custom:'#7153A0' };
+  var CAL_CAT_LABEL = { feriado:'Feriado', pagto:'Pagamento', sazon:'Sazonalidade', clima:'Clima', custom:'Evento Próprio' };
+
   var calEvTip = document.getElementById('mc-cal-ev-tip');
   if (!calEvTip) {
-    calEvTip = document.createElement('div'); calEvTip.id = 'mc-cal-ev-tip';
-    calEvTip.style.cssText = 'position:fixed;z-index:99999;background:#0C1425;color:#fff;border-radius:10px;padding:10px 14px;max-width:220px;box-shadow:0 16px 48px rgba(0,0,0,0.35);font-family:Outfit,sans-serif;font-size:11px;line-height:1.5;pointer-events:none;opacity:0;transition:opacity .15s;white-space:normal;display:block';
+    calEvTip = document.createElement('div');
+    calEvTip.id = 'mc-cal-ev-tip';
     document.body.appendChild(calEvTip);
   }
-  main.querySelectorAll('.mc-cev').forEach(function(ev) {
-    var catColor = {feriado:'#C0504D',pagto:'#2D8653',sazon:'#7A5800',clima:'#3670A0',custom:'#7153A0'};
+  calEvTip.style.cssText = 'position:fixed;z-index:99999;background:#0C1425;color:#fff;border-radius:12px;padding:14px 16px;width:280px;box-shadow:0 20px 60px rgba(0,0,0,0.4);font-family:Outfit,sans-serif;font-size:11px;line-height:1.55;pointer-events:none;opacity:0;transition:opacity .18s;display:block;border:1px solid rgba(201,168,76,0.3)';
+
+  // Apenas eventos dentro das células do calendário (não os da legenda)
+  main.querySelectorAll('.mc-cal-grid .mc-cev').forEach(function(ev) {
+    var txt = ev.textContent.trim();
+    var cat = Object.keys(CAL_CAT_COLOR).find(function(k){ return ev.classList.contains(k); }) || 'custom';
+    var kb = calFindKB(txt);
+
     ev.addEventListener('mouseenter', function() {
-      var txt=ev.textContent.trim(), cat=Object.keys(catColor).find(function(k){ return ev.classList.contains(k); })||'custom';
-      calEvTip.innerHTML='<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:'+catColor[cat]+';margin-right:6px;vertical-align:middle"></span><strong>'+txt+'</strong>';
-      var r=ev.getBoundingClientRect();
-      calEvTip.style.left=Math.max(8,Math.min(r.left-20,window.innerWidth-240))+'px';
-      calEvTip.style.top=r.top+'px';
-      calEvTip.style.transform='translateY(-100%) translateY(-6px)';
-      calEvTip.style.opacity='1';
+      var prio = kb ? CAL_PRIO[kb.prio] : null;
+      var html =
+        '<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,0.1)">' +
+          '<span style="width:8px;height:8px;border-radius:50%;background:'+CAL_CAT_COLOR[cat]+';flex-shrink:0"></span>' +
+          '<span style="font-size:9px;color:rgba(255,255,255,0.5);letter-spacing:1px;text-transform:uppercase;font-weight:600">'+CAL_CAT_LABEL[cat]+'</span>' +
+          (prio ? '<span style="margin-left:auto;font-size:9px;font-weight:700;letter-spacing:0.5px;padding:2px 7px;border-radius:20px;background:'+prio.bg+';color:'+prio.color+'">'+prio.label+'</span>' : '') +
+        '</div>' +
+        '<div style="font-size:13px;font-weight:700;color:#fff;margin-bottom:8px">'+txt+'</div>';
+      if (kb) {
+        html +=
+          '<div style="margin-bottom:8px">' +
+            '<div style="font-size:9px;color:#C9A84C;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;margin-bottom:3px">Por quê</div>' +
+            '<div style="color:rgba(255,255,255,0.82)">'+kb.ctx+'</div>' +
+          '</div>' +
+          '<div>' +
+            '<div style="font-size:9px;color:#50D282;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;margin-bottom:3px">Ação recomendada</div>' +
+            '<div style="color:rgba(255,255,255,0.92);font-weight:500">'+kb.acao+'</div>' +
+          '</div>';
+      } else {
+        html += '<div style="color:rgba(255,255,255,0.6);font-style:italic">Evento sem insight cadastrado.</div>';
+      }
+      calEvTip.innerHTML = html;
+      var r = ev.getBoundingClientRect();
+      calEvTip.style.left = Math.max(8, Math.min(r.left - 20, window.innerWidth - 298)) + 'px';
+      calEvTip.style.top = (r.top - 10) + 'px';
+      calEvTip.style.transform = 'translateY(-100%)';
+      calEvTip.style.opacity = '1';
     });
-    ev.addEventListener('mouseleave', function(){ calEvTip.style.opacity='0'; });
+    ev.addEventListener('mouseleave', function(){ calEvTip.style.opacity = '0'; });
   });
 });
