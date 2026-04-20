@@ -1826,18 +1826,13 @@ body::before{
   transition:transform .25s cubic-bezier(0.34,1.4,0.64,1),box-shadow .25s ease,z-index 0s!important;
 }
 /* hover controlado por JS — não usar :hover aqui */
+/* DEPOIS */
 .mc-cc.hovered {
-  transform: scale(1.32) !important;
+  zoom: 1.32 !important;
   box-shadow: 0 20px 56px rgba(12,20,37,0.28), 0 6px 16px rgba(12,20,37,0.14) !important;
   z-index: 200 !important;
   overflow: visible !important;
   position: relative !important;
-}
-.mc-cc.hovered .mc-cc-insight {
-  height: auto !important;
-  -webkit-line-clamp: unset !important;
-  display: block !important;
-  overflow: visible !important;
 }
 /* Vizinhos ficam abaixo do card expandido */
 .mc-grupo-cards:has(.mc-cc.hovered) .mc-cc:not(.hovered) {
