@@ -1,7 +1,10 @@
 // ============================================================
 // NEXO Intelligence Web — pages/mercado.js
-// Mercado & Clima — v2.2
-// Fix: hover via setProperty (contorna stacking context do .anim)
+// Mercado & Clima — v2.3
+// FIX 1: Duplicidade de tooltip — .mc-ht interno desativado,
+//        apenas #mc-global-tip renderiza o popover do "?"
+// FIX 2: Card sobrepondo o expandido — rebaixa TODOS os .mc-cc
+//        do painel (não só os do mesmo grupo) + position:relative
 // ============================================================
 Router.register('mercado', function(main) {
   var MESES = ['Nov/25','Dez/25','Jan/26','Fev/26','Mar/26','Abr/26'];
@@ -215,29 +218,52 @@ Router.register('mercado', function(main) {
   // ── RENDER ─────────────────────────────────────────────────
   main.innerHTML = html;
 
-  // ── HOVER CARDS v2.2 ───────────────────────────────────────
-  // Usa style.setProperty diretamente — contorna o stacking context
-  // criado pelo animation fill-mode:both no elemento pai .anim
+  // ══════════════════════════════════════════════════════════
+  // FIX 1: Desativa o .mc-ht interno — apenas #mc-global-tip
+  // renderiza o popover do "?". Evita duplicidade visual.
+  // ══════════════════════════════════════════════════════════
+  main.querySelectorAll('.mc-hb .mc-ht').forEach(function(ht) {
+    // esconde fisicamente o tooltip-filho do .mc-hb
+    ht.style.setProperty('display', 'none', 'important');
+  });
+
+  // ══════════════════════════════════════════════════════════
+  // FIX 2: Hover dos cards do Painel de Contexto
+  // Rebaixa TODOS os .mc-cc do painel (não só os do grupo)
+  // e força position:relative no card expandido
+  // ══════════════════════════════════════════════════════════
   (function() {
-    main.querySelectorAll('.mc-cc').forEach(function(card) {
+    // captura TODOS os cards do painel de contexto de uma vez
+    var allCards = Array.prototype.slice.call(
+      main.querySelectorAll('.mc-ctx-block .mc-cc')
+    );
+
+    allCards.forEach(function(card) {
       var t = null;
       var insight = card.querySelector('.mc-cc-insight');
 
       function expand() {
-        card.style.setProperty('transform', 'scale(1.32)', 'important');
-        card.style.setProperty('z-index', '200', 'important');
-        card.style.setProperty('overflow', 'visible', 'important');
+        // rebaixa TODOS os irmãos do painel (todos os grupos)
+        allCards.forEach(function(s) {
+          if (s !== card) {
+            s.style.setProperty('z-index', '1', 'important');
+            s.style.setProperty('position', 'relative', 'important');
+          }
+        });
+        // eleva o card atual
         card.style.setProperty('position', 'relative', 'important');
-        card.style.setProperty('box-shadow', '0 20px 56px rgba(12,20,37,0.28),0 6px 16px rgba(12,20,37,0.14)', 'important');
+        card.style.setProperty('z-index', '999', 'important');
+        card.style.setProperty('transform', 'scale(1.32)', 'important');
+        card.style.setProperty('overflow', 'visible', 'important');
+        card.style.setProperty('box-shadow',
+          '0 20px 56px rgba(12,20,37,0.28),0 6px 16px rgba(12,20,37,0.14)',
+          'important');
         if (insight) {
           insight.style.setProperty('height', 'auto', 'important');
           insight.style.setProperty('display', 'block', 'important');
           insight.style.setProperty('overflow', 'visible', 'important');
           insight.style.setProperty('-webkit-line-clamp', 'unset', 'important');
         }
-        Array.from(card.parentElement.querySelectorAll('.mc-cc')).forEach(function(s) {
-          if (s !== card) s.style.setProperty('z-index', '0', 'important');
-        });
       }
 
       function collapse() {
@@ -252,8 +278,12 @@ Router.register('mercado', function(main) {
           insight.style.removeProperty('overflow');
           insight.style.removeProperty('-webkit-line-clamp');
         }
-        Array.from(card.parentElement.querySelectorAll('.mc-cc')).forEach(function(s) {
-          s.style.removeProperty('z-index');
+        // restaura z-index/position dos demais
+        allCards.forEach(function(s) {
+          if (s !== card) {
+            s.style.removeProperty('z-index');
+            s.style.removeProperty('position');
+          }
         });
       }
 
@@ -278,7 +308,11 @@ Router.register('mercado', function(main) {
     });
   });
 
-  // ── TOOLTIP GLOBAL ─────────────────────────────────────────
+  // ══════════════════════════════════════════════════════════
+  // TOOLTIP GLOBAL do "?" (único sistema ativo agora)
+  // Lê o conteúdo do .mc-ht (mesmo escondido) e projeta
+  // num elemento flutuante em document.body
+  // ══════════════════════════════════════════════════════════
   var globalTip = document.getElementById('mc-global-tip');
   if (!globalTip) {
     globalTip = document.createElement('div');
@@ -289,9 +323,15 @@ Router.register('mercado', function(main) {
   main.querySelectorAll('.mc-hb').forEach(function(hbEl) {
     var ht = hbEl.querySelector('.mc-ht');
     if (!ht) return;
+    // innerHTML é capturado ANTES do display:none (que foi aplicado depois via style inline,
+    // mas innerHTML independe de display — sempre retorna o conteúdo)
     var content = ht.innerHTML;
-    hbEl.addEventListener('mouseenter', function() {
+    hbEl.addEventListener('mouseenter', function(e) {
+      // impede o tooltip de disparar quando o mouse está no card expandido
+      e.stopPropagation();
       globalTip.innerHTML = content;
+      // força o tooltip a ser visível no body, sobrescrevendo qualquer display:none herdado
+      globalTip.style.display = 'block';
       var r = hbEl.getBoundingClientRect();
       globalTip.style.left = Math.max(8, Math.min(r.left + r.width/2 - 105, window.innerWidth - 218)) + 'px';
       globalTip.style.top = r.top + 'px';
