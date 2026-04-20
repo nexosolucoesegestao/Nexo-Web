@@ -1,12 +1,15 @@
 // ============================================================
 // NEXO Intelligence Web — pages/mercado.js
-// Mercado & Clima — v2.7
+// Mercado & Clima — v2.8
 // FIX 1 (v2.3): Duplicidade de tooltip do "?"
 // FIX 2 (v2.5): Stacking do hover entre grupos do Painel
 // FIX 3 (v2.6): IPCA bars — estrutura .mc-ig-col pareando label+barra
 // FIX 4 (v2.7): Tooltip do calendário → insights prescritivos
-//   KB CAL_KB por substring (feriados, pagamentos, clima, sazon)
-//   Badge de prioridade + seções "Por quê" / "Ação recomendada"
+// FIX 5 (v2.8): Chips de filtro do Explorador
+//   Label navy + letras brancas (assinatura NEXO)
+//   Valor branco translúcido com chevron ▾
+//   Hover com borda dourada + shadow
+//   Options com fundo branco/texto escuro
 // ============================================================
 Router.register('mercado', function(main) {
   var MESES = ['Nov/25','Dez/25','Jan/26','Fev/26','Mar/26','Abr/26'];
@@ -208,9 +211,32 @@ Router.register('mercado', function(main) {
     '</div>' +
 
     // ── B6: EXPLORADOR ─────────────────────────────────────────
+    // Chips de filtro padrão NEXO: label em navy (gradiente + inset gold)
+    // + valor em fundo branco translúcido com chevron. Visualmente comunica
+    // "objeto filtro" unificado, em vez de texto solto ao lado de select.
     '<div class="section-header anim d5"><div class="sh-dot"></div><span class="sh-title">Explorador de Dados</span><span class="sh-badge">Tabela pivot · Heatmap automático</span></div>' +
     '<div class="section-block anim d5 mc-exp-block">' +
-      '<div class="mc-exp-ctrl"><span class="mc-el">Linhas</span><select class="filter-select"><option>Produto</option><option>Mês</option></select><span class="mc-el">Colunas</span><select class="filter-select"><option>Mês</option><option>Semana</option></select><span class="mc-el">Métrica</span><select class="filter-select"><option>Cotação Média</option><option>Variação %</option></select><button class="mc-exp-export">↓ Excel</button></div>' +
+      (function(){
+        // Estilos inline — mantém styles.css intocado
+        var fieldCSS = 'display:inline-flex;align-items:stretch;gap:0;background:rgba(255,255,255,0.78);border:1px solid rgba(26,39,68,0.12);border-radius:22px;overflow:hidden;box-shadow:0 1px 3px rgba(12,20,37,0.04);transition:border-color .2s, box-shadow .2s';
+        var lblCSS = 'display:flex;align-items:center;padding:0 14px;background:linear-gradient(135deg,#0C1425 0%,#1A2744 100%);color:#FFFFFF;border-right:1px solid rgba(201,168,76,0.25);box-shadow:inset 0 1px 0 rgba(201,168,76,0.35);font-size:9.5px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin:0';
+        var selCSS = "background:transparent;border:none;border-radius:0;padding:6px 34px 6px 12px;color:#1F2937;font-weight:600;font-size:11.5px;outline:none;cursor:pointer;font-family:'Outfit',sans-serif;-webkit-appearance:none;appearance:none;background-image:url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'><path d='M2 3.5l3 3 3-3' stroke='%234B5563' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>\");background-repeat:no-repeat;background-position:right 12px center";
+        var sepCSS = 'width:1px;height:22px;background:rgba(26,39,68,0.15);align-self:center';
+        function field(label, options) {
+          var opts = options.map(function(o){ return '<option>'+o+'</option>'; }).join('');
+          return '<div class="mc-exp-field" style="'+fieldCSS+'">' +
+            '<span class="mc-el" style="'+lblCSS+'">'+label+'</span>' +
+            '<select class="filter-select" style="'+selCSS+'">'+opts+'</select>' +
+          '</div>';
+        }
+        return '<div class="mc-exp-ctrl" style="background:transparent;border:none;padding:0 0 14px;gap:10px;flex-wrap:wrap;align-items:center">' +
+          field('Linhas',  ['Produto','Mês']) +
+          field('Colunas', ['Mês','Semana']) +
+          field('Métrica', ['Cotação Média','Variação %']) +
+          '<div style="'+sepCSS+'"></div>' +
+          '<button class="mc-exp-export" style="margin-left:auto">↓ Excel</button>' +
+        '</div>';
+      })() +
       '<div style="overflow-x:auto"><table class="mc-pvt"><thead><tr><th style="text-align:left">Produto</th><th>Nov/25</th><th>Dez/25</th><th>Jan/26</th><th>Fev/26</th><th>Mar/26</th><th>Abr/26</th><th style="background:rgba(201,168,76,0.22);color:#6A4C00">Média</th></tr></thead><tbody><tr><td>🐄 Boi Gordo (R$/@)</td><td><span class="hc n0">318,40</span></td><td><span class="hc u1">328,90</span></td><td><span class="hc u1">335,20</span></td><td><span class="hc u2">348,60</span></td><td><span class="hc u2">356,80</span></td><td><span class="hc u3">366,20</span></td><td><span class="hc u2">342,35</span></td></tr><tr><td>🐄 Boi Futuro B3 (R$/@)</td><td><span class="hc n0">312,00</span></td><td><span class="hc u1">318,50</span></td><td><span class="hc u1">322,00</span></td><td><span class="hc u1">330,00</span></td><td><span class="hc u1">338,00</span></td><td><span class="hc d2">342,00</span></td><td><span class="hc n0">327,08</span></td></tr><tr><td>🐷 Suíno Vivo (R$/kg)</td><td><span class="hc u2">7,42</span></td><td><span class="hc u1">7,38</span></td><td><span class="hc u1">7,51</span></td><td><span class="hc n0">7,30</span></td><td><span class="hc d1">7,16</span></td><td><span class="hc d2">6,96</span></td><td><span class="hc n0">7,29</span></td></tr><tr><td>🐔 Frango Cong. (R$/kg)</td><td><span class="hc d1">8,22</span></td><td><span class="hc n0">8,18</span></td><td><span class="hc n0">8,15</span></td><td><span class="hc n0">8,12</span></td><td><span class="hc n0">8,09</span></td><td><span class="hc n0">8,10</span></td><td><span class="hc n0">8,14</span></td></tr><tr><td>📊 IPCA Alim. (%)</td><td><span class="hc u1">+0,62</span></td><td><span class="hc u1">+0,75</span></td><td><span class="hc u2">+0,83</span></td><td><span class="hc u2">+0,88</span></td><td><span class="hc u2">+0,90</span></td><td><span class="hc u1">+0,71*</span></td><td><span class="hc u2">+0,78</span></td></tr></tbody><tfoot><tr><td>Var. Período</td><td>—</td><td><span class="hc u1" style="font-size:10px">+2,1%</span></td><td><span class="hc u1" style="font-size:10px">+1,8%</span></td><td><span class="hc u2" style="font-size:10px">+3,4%</span></td><td><span class="hc u1" style="font-size:10px">+2,3%</span></td><td><span class="hc u2" style="font-size:10px">+2,9%</span></td><td style="font-size:10px;color:var(--t3)">*parcial</td></tr></tfoot></table></div>' +
       '<div class="mc-heat-legend"><span style="font-size:10px;color:var(--t3);font-weight:600">Heatmap:</span><span class="hc u3" style="font-size:10px;padding:2px 8px">Alta forte</span><span class="hc u1" style="font-size:10px;padding:2px 8px">Alta leve</span><span class="hc n0" style="font-size:10px;padding:2px 8px">Estável</span><span class="hc d1" style="font-size:10px;padding:2px 8px">Queda leve</span><span class="hc d3" style="font-size:10px;padding:2px 8px">Queda forte</span></div>' +
     '</div>' +
@@ -227,6 +253,29 @@ Router.register('mercado', function(main) {
   main.querySelectorAll('.mc-hb .mc-ht').forEach(function(ht) {
     // esconde fisicamente o tooltip-filho do .mc-hb
     ht.style.setProperty('display', 'none', 'important');
+  });
+
+  // ══════════════════════════════════════════════════════════
+  // EXPLORADOR — hover nos chips + estilo das options do select
+  // Estilos estáticos do chip já vêm inline do HTML; aqui só o
+  // comportamento de hover (borda gold + shadow) e as <option>
+  // (que não aceitam estilo inline pelo HTML em todos os browsers).
+  // ══════════════════════════════════════════════════════════
+  main.querySelectorAll('.mc-exp-field').forEach(function(f) {
+    f.addEventListener('mouseenter', function() {
+      f.style.setProperty('border-color', 'rgba(201,168,76,0.5)', 'important');
+      f.style.setProperty('box-shadow', '0 3px 10px rgba(201,168,76,0.12)', 'important');
+    });
+    f.addEventListener('mouseleave', function() {
+      f.style.setProperty('border-color', 'rgba(26,39,68,0.12)', 'important');
+      f.style.setProperty('box-shadow', '0 1px 3px rgba(12,20,37,0.04)', 'important');
+    });
+    // Options do dropdown aberto — fundo branco + texto escuro
+    f.querySelectorAll('.filter-select option').forEach(function(op) {
+      op.style.setProperty('background', '#ffffff', 'important');
+      op.style.setProperty('color', '#1F2937', 'important');
+      op.style.setProperty('font-weight', '500', 'important');
+    });
   });
 
   // ══════════════════════════════════════════════════════════
