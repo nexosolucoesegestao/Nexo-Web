@@ -1,6 +1,6 @@
 // ============================================================
 // NEXO Intelligence Web — pages/mercado.js
-// Mercado & Clima — v3.4 (IPCA interativo + storytelling)
+// Mercado & Clima — v3.5 (Calendário interativo + storytelling IPCA)
 // FIX 1 (v2.3): Duplicidade de tooltip do "?"
 // FIX 2 (v2.5): Stacking do hover entre grupos do Painel
 // FIX 3 (v2.6): IPCA bars — estrutura .mc-ig-col pareando label+barra
@@ -12,13 +12,17 @@
 //   PILLS unificadas "Período: ... | Exibir: ..."
 //   IBNs com wash da cor da série (ancoragem visual)
 //   FILTRO de série afeta gráfico + IBNs + colunas de insight
-//   ENGINE v3 de insights — funções próprias por série,
-//     sempre gera 2 insights por coluna, direciona a leitura:
-//       Geral: meta BCB, tendência, YoY, estabilidade
-//       Alim:  razão vs geral, tendência, YoY
-//       Carnes: YoY direto, consistência de ciclo, vs alim
-//   INSIGHTS em 3 colunas lado a lado (grid), classificação
-//     explícita via data-ins-serie (não keyword match)
+//   ENGINE v3 de insights — funções próprias por série
+//   INSIGHTS em 3 colunas lado a lado (grid)
+// FEAT 8 (v3.5): CALENDÁRIO INTERATIVO
+//   Engine de dados: feriados 2026/2027, sazonalidades varejo,
+//     pagtos recorrentes (5/10/15/FGTS20/último útil), clima seed
+//   Navegação ‹ › recalcula mês inteiro + análise contextual
+//   Tooltip v2 com event delegation (sobrevive a rebuild)
+//   KB expandida com 30+ entradas + fallback por categoria (clima)
+//   Modal "+ Adicionar evento" com 5 categorias + localStorage
+//   Modo edição ao clicar num evento custom + botão Excluir
+//   Click num dia vazio abre modal com data preenchida
 // ============================================================
 Router.register('mercado', function(main) {
   var MESES = ['Nov/25','Dez/25','Jan/26','Fev/26','Mar/26','Abr/26'];
@@ -252,23 +256,9 @@ Router.register('mercado', function(main) {
       '<div class="mc-cal-nav"><button class="mc-cnb">‹</button><span class="mc-cal-month">Abril 2026</span><button class="mc-cnb">›</button><button class="mc-cal-add">+ Adicionar evento</button></div>' +
       '<div class="mc-cal-grid">' +
         '<div class="mc-cdow">Dom</div><div class="mc-cdow">Seg</div><div class="mc-cdow">Ter</div><div class="mc-cdow">Qua</div><div class="mc-cdow">Qui</div><div class="mc-cdow">Sex</div><div class="mc-cdow">Sáb</div>' +
-        cd('other','29')+cd('other','30')+cd('other','31')+
-        cd('','1',[['feriado','Tira-dentes']])+cd('','2')+cd('','3')+cd('','4',[['clima','☀ 36°C']])+
-        cd('','5',[['pagto','💰 Pagto. 5']])+cd('','6')+cd('','7')+cd('','8')+cd('','9')+
-        cd('','10',[['feriado','Paixão de Cristo'],['pagto','💰 Pagto. 10']])+cd('','11')+
-        cd('','12',[['feriado','Páscoa']])+cd('','13')+cd('','14')+
-        cd('','15',[['pagto','💰 Pagto. 15']])+cd('today','16')+cd('','17')+
-        cd('','18',[['clima','☀ 34°C']])+cd('','19')+
-        cd('pagto','20',[['pagto','💰 Pagto. FGTS']])+
-        cd('','21',[['feriado','Tiradentes']])+cd('','22',[['sazon','Dia da Terra']])+
-        cd('','23',[['custom','Reunião Rede']])+cd('','24')+
-        cd('','25',[['sazon','🐷 Dia Suíno']],'tip-suino')+
-        cd('','26')+cd('','27')+cd('','28')+cd('','29')+
-        cd('pagto','30',[['pagto','💰 Último útil']])+
-        cd('other','1')+cd('other','2')+
       '</div>' +
       '<div class="mc-cal-legend"><span class="mc-cev feriado">Feriado</span><span class="mc-cev sazon">Sazonalidade</span><span class="mc-cev pagto">💰 Pagamento</span><span class="mc-cev clima">Clima</span><span class="mc-cev custom">Evento próprio</span></div>' +
-      '<div class="mc-mes-insight"><span class="mc-mes-icon">🧭</span><div><div class="mc-mes-ttl">Análise de Abril 2026</div><div class="mc-mes-body"><strong>3 feriados + 5 picos de pagamento</strong> neste mês. Páscoa exige mix focado em aves e suíno. Dia da Carne Suína (25/04) + FGTS dia 20 = janela dupla para suíno.</div><div class="mc-mes-action">→ Prioridade: Suíno · Aves (Páscoa + Rotisseria) · Bovino (antecipar revisão de preço)</div></div></div>' +
+      '<div class="mc-mes-insight"><span class="mc-mes-icon">🧭</span><div><div class="mc-mes-ttl">Análise do mês</div><div class="mc-mes-body">Carregando...</div><div class="mc-mes-action">→ Navegue entre meses com ‹ › para explorar padrões sazonais.</div></div></div>' +
     '</div>' +
 
     // ── B6: EXPLORADOR ─────────────────────────────────────────
@@ -302,7 +292,7 @@ Router.register('mercado', function(main) {
       '<div class="mc-heat-legend"><span style="font-size:10px;color:var(--t3);font-weight:600">Heatmap:</span><span class="hc u3" style="font-size:10px;padding:2px 8px">Alta forte</span><span class="hc u1" style="font-size:10px;padding:2px 8px">Alta leve</span><span class="hc n0" style="font-size:10px;padding:2px 8px">Estável</span><span class="hc d1" style="font-size:10px;padding:2px 8px">Queda leve</span><span class="hc d3" style="font-size:10px;padding:2px 8px">Queda forte</span></div>' +
     '</div>' +
 
-    '<div class="mc-cal-tip" id="tip-suino"><div class="mc-ct-title">🐷 Dia da Carne Suína</div><div class="mc-ct-date">Sábado, 25 de Abril · 9 dias</div><div class="mc-ct-body">Suíno vivo em queda (-2,8%) + FGTS dia 20 = janela dupla. Margem favorável para ação promocional com alta demanda.</div><div class="mc-ct-action">→ Reforçar costelinha, lombo e pernil. Comunicar no balcão antes do dia 20.</div></div>';
+    '';
 
   // ── RENDER ─────────────────────────────────────────────────
   main.innerHTML = html;
@@ -1288,86 +1278,282 @@ Router.register('mercado', function(main) {
   applyIpcaJanela('mes');
 
   // ══════════════════════════════════════════════════════════
-  // TOOLTIP EVENTOS CALENDÁRIO — Insights Prescritivos (v2.7)
-  // Cada evento exibe: categoria, prioridade, contexto (por quê)
-  // e ação recomendada. Base de conhecimento KB indexada por
-  // substring do texto do evento.
+  // CALENDÁRIO v1.0 — Interativo completo
+  //   ETAPA 1: Engine de dados (feriados, sazonalidades, pagtos, clima)
+  //            + navegação ‹ › com rebuild do grid
+  //   ETAPA 2: Tooltip rico com event delegation (sobrevive a rebuild)
+  //            + KB expandida + fallback por CATEGORIA (clima = por temp)
+  //   ETAPA 3: Modal "+ Adicionar evento" com localStorage
+  //            + Edição ao clicar num evento custom + botão Excluir
+  //
+  // EVENTOS GERADOS DINAMICAMENTE por mês a partir de:
+  //  - FERIADOS_2026/2027 (nacionais + religiosos)
+  //  - SAZON_2026 (datas do varejo alimentar)
+  //  - Pagamentos recorrentes (5, 10, 15, FGTS 20, último útil)
+  //  - Clima seed (4 pontos por mês)
+  //  - localStorage (eventos custom do usuário)
   // ══════════════════════════════════════════════════════════
-  var CAL_KB = {
-    'Tira-dentes': {
-      ctx: 'Feriado municipal em diversos estados. Dia útil para comércio, mas tráfego misto — parte das lojas fecha parcialmente.',
-      acao: 'Confirmar escala reduzida. Antecipar entregas logísticas para véspera. Monitorar concorrentes que fecham.',
-      prio: 'baixa'
-    },
-    'Paixão de Cristo': {
-      ctx: 'Sexta-Feira Santa. Pico anual de bacalhau, pescados e ovos. Consumo de carne vermelha cai drasticamente (tabu religioso).',
-      acao: 'Estoque pleno de bacalhau D-3. Mix especial de peixes frescos. Reduzir encomenda de bovino em 30-40%.',
-      prio: 'alta'
-    },
-    'Páscoa': {
-      ctx: 'Pós-Semana Santa. Retomada do consumo de carnes vermelhas + demanda forte de cordeiro e chester para almoço familiar.',
-      acao: 'Oferta de cordeiro e tender. Rotisseria com peças especiais. Comunicação de "almoço de Páscoa" no balcão.',
-      prio: 'alta'
-    },
-    'Tiradentes': {
-      ctx: 'Feriado nacional. Tráfego maior que finais de semana comuns — muitas famílias almoçam em casa. Demanda churrasco sobe 40-60%.',
-      acao: 'Equipe completa + hora extra no balcão. Reforçar picanha, alcatra, costela e linguiça. Abrir mais cedo se possível.',
-      prio: 'alta'
-    },
-    'Pagto. 5': {
-      ctx: 'Dia 5 — primeiro ciclo de pagamento do mês (salários privados). Fluxo de caixa do consumidor renova.',
-      acao: 'Abastecimento pleno de bovino e suíno até 12h. Ativar mix de valor agregado (picanha, costela nobre).',
-      prio: 'media'
-    },
-    'Pagto. 10': {
-      ctx: 'Dia 10 — segundo ciclo de pagamento. Coincide com Paixão de Cristo em 2026 — demanda mista (pescados > carnes).',
-      acao: 'Prioridade máxima em bacalhau e pescados. Bovino em modo estoque mínimo neste dia específico.',
-      prio: 'alta'
-    },
-    'Pagto. 15': {
-      ctx: 'Meio do mês — terceiro ciclo de pagamento (servidores públicos estaduais, aposentados). Perfil mais conservador.',
-      acao: 'Mix balanceado: suíno, frango e cortes de segunda classe. Promoção de sobrecoxa e coxão mole.',
-      prio: 'media'
-    },
-    'Pagto. FGTS': {
-      ctx: 'Dia 20 — pagamento de FGTS + aniversariantes + calendário público. Maior pico mensal de fluxo de caixa no varejo.',
-      acao: 'Estoque 100% + equipe reforçada. Ativar mix premium (picanha, alcatra). D-1 já com preços revisados.',
-      prio: 'alta'
-    },
-    'Último útil': {
-      ctx: 'Último dia útil — pagamento de salários privados do mês. Fluxo forte mesmo com cansaço do mês.',
-      acao: 'Abastecimento reforçado. Preparar campanha do próximo mês. Ativar mix de preparo rápido (rotisseria).',
-      prio: 'media'
-    },
-    'Dia Suíno': {
-      ctx: 'Dia Nacional da Carne Suína (25/04). Suíno vivo em queda (-2,8%) + FGTS D-5 = janela tripla favorável.',
-      acao: 'Campanha D-3 no balcão. Destaque para costelinha, lombo, pernil. Kit churrasco suíno em promoção.',
-      prio: 'alta'
-    },
-    'Dia da Terra': {
-      ctx: 'Dia Mundial da Terra (22/04). Oportunidade ESG: comunicar origem local, bem-estar animal, redução de desperdício.',
-      acao: 'Destacar produtores locais e selos de origem. Campanha "do campo ao balcão". Engajamento em redes.',
-      prio: 'baixa'
-    },
-    '36°C': {
-      ctx: 'Calor extremo previsto. Risco crítico na cadeia do frio + demanda churrasco sobe 50-70% no fim de semana.',
-      acao: 'Checagem de termômetros a cada 2h. Equipe reforçada. Estoque extra de picanha, costela e linguiça.',
-      prio: 'alta'
-    },
-    '34°C': {
-      ctx: 'Calor acima da média. Atenção redobrada na cadeia do frio e rotação de balcão.',
-      acao: 'Checagem de temperatura a cada 3h. Reduzir exposição de cortes sensíveis. Priorizar venda do estoque antigo.',
-      prio: 'media'
-    },
-    'Reunião Rede': {
-      ctx: 'Evento interno agendado pela rede. Possível redução de carga operacional ou ausência de lideranças.',
-      acao: 'Delegar fechamento a substitutos. Adiantar pedidos. Alinhar pautas operacionais com antecedência.',
-      prio: 'baixa'
-    }
+
+  var CAL_MESES_LONG  = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
+  function _calKey(y,m,d){ return y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0'); }
+
+  // ── Feriados nacionais (fixos e móveis) ──
+  var CAL_FERIADOS = {
+    '2026-01-01':'Ano Novo',
+    '2026-02-16':'Carnaval (seg)', '2026-02-17':'Carnaval (ter)', '2026-02-18':'Quarta de Cinzas',
+    '2026-04-03':'Sexta-Feira Santa', '2026-04-05':'Páscoa',
+    '2026-04-21':'Tiradentes',
+    '2026-05-01':'Dia do Trabalho',
+    '2026-06-04':'Corpus Christi',
+    '2026-09-07':'Independência',
+    '2026-10-12':'N. Sra. Aparecida',
+    '2026-11-02':'Finados', '2026-11-15':'Proclamação Rep.', '2026-11-20':'Consciência Negra',
+    '2026-12-25':'Natal',
+    '2027-01-01':'Ano Novo', '2027-02-08':'Carnaval (seg)', '2027-02-09':'Carnaval (ter)'
   };
 
-  function calFindKB(text) {
+  // ── Sazonalidades do varejo alimentar ──
+  var CAL_SAZON = {
+    '2026-03-19':'🐔 Dia do Frango',
+    '2026-03-29':'Dom. Ramos', '2026-04-02':'Quinta Santa',
+    '2026-04-22':'Dia da Terra',
+    '2026-04-25':'🐷 Dia da Carne Suína',
+    '2026-05-10':'🌹 Dia das Mães',
+    '2026-06-12':'💕 Dia dos Namorados', '2026-06-24':'São João (festa junina)',
+    '2026-08-09':'👔 Dia dos Pais',
+    '2026-09-21':'Primavera',
+    '2026-10-12':'🎈 Dia das Crianças', '2026-10-28':'Dia do Servidor',
+    '2026-11-27':'🛒 Black Friday',
+    '2026-12-08':'Imaculada Conceição', '2026-12-24':'🎄 Véspera de Natal', '2026-12-31':'🎆 Virada'
+  };
+
+  // ── Pagamentos recorrentes (dias 5, 10, 15, FGTS 20, último útil) ──
+  function _calPagamentos(ano, mes) {
+    var p = {};
+    [5,10,15].forEach(function(d){ p[_calKey(ano,mes,d)] = '💰 Pagto. '+d; });
+    p[_calKey(ano,mes,20)] = '💰 FGTS';
+    var ultimoDia = new Date(ano, mes+1, 0).getDate();
+    var d = new Date(ano, mes, ultimoDia);
+    while (d.getDay()===0 || d.getDay()===6) d.setDate(d.getDate()-1);
+    p[_calKey(ano,mes,d.getDate())] = '💰 Último útil';
+    return p;
+  }
+
+  // ── Clima seed (4 pontos/mês com ruído sazonal) ──
+  function _calClima(ano, mes) {
+    var c = {};
+    var tempMed = {0:33,1:32,2:30,3:28,4:25,5:22,6:21,7:23,8:25,9:28,10:30,11:32}[mes];
+    var ultimoDia = new Date(ano, mes+1, 0).getDate();
+    [4,11,18,25].forEach(function(d){
+      if (d > ultimoDia) return;
+      var t = tempMed + Math.floor((Math.sin(d*0.7)*3));
+      var icon = t>=30 ? '☀' : (t>=24 ? '⛅' : '🌧');
+      c[_calKey(ano,mes,d)] = icon+' '+t+'°C';
+    });
+    return c;
+  }
+
+  // ── localStorage para eventos custom ──
+  function _calLoadCustom() {
+    try { return JSON.parse(localStorage.getItem('nexo_cal_custom_events')||'{}'); }
+    catch(e){ return {}; }
+  }
+  function _calSaveCustom(obj) {
+    try { localStorage.setItem('nexo_cal_custom_events', JSON.stringify(obj)); } catch(e){}
+  }
+  function _calFindCustom(id) {
+    var all = _calLoadCustom();
+    for (var k in all) {
+      for (var i=0; i<all[k].length; i++) if (all[k][i].id === id) return { data:k, idx:i, evento:all[k][i] };
+    }
+    return null;
+  }
+
+  // ── Monta eventos de um dia específico ──
+  function _calEventsForDay(ano, mes, dia) {
+    var k = _calKey(ano,mes,dia);
+    var events = [];
+    if (CAL_FERIADOS[k]) events.push(['feriado', CAL_FERIADOS[k]]);
+    if (CAL_SAZON[k])    events.push(['sazon',   CAL_SAZON[k]]);
+    var pagtos = _calPagamentos(ano,mes);
+    if (pagtos[k]) events.push(['pagto', pagtos[k]]);
+    var clima = _calClima(ano,mes);
+    if (clima[k])  events.push(['clima', clima[k]]);
+    var custom = _calLoadCustom();
+    if (custom[k]) custom[k].forEach(function(c){
+      events.push([c.tipo || 'custom', c.titulo, c.id, c.nota]);
+    });
+    return events;
+  }
+
+  // ── Análise adaptativa do mês ──
+  function _calAnalyze(ano, mes) {
+    var mesNome = CAL_MESES_LONG[mes];
+    var totalDias = new Date(ano,mes+1,0).getDate();
+    var feriados = 0, sazons = 0;
+    for (var d=1; d<=totalDias; d++) {
+      _calEventsForDay(ano,mes,d).forEach(function(e){
+        if (e[0]==='feriado') feriados++;
+        if (e[0]==='sazon') sazons++;
+      });
+    }
+    var narrativas = [
+      '<strong>Volta às aulas + 13º retornando</strong>. Consumidor ainda endividado das festas. Foco em proteínas acessíveis.',
+      '<strong>Carnaval + volta às aulas</strong>. Janela promocional curta; demanda alta para churrasco e petiscos.',
+      '<strong>Quaresma + Dia do Frango (19/03)</strong>. Pico de aves e pescados. Reduzir exposição de carnes vermelhas.',
+      '<strong>Páscoa + Tiradentes + Dia Suíno (25/04)</strong>. Janela premium para aves e suíno. FGTS dia 20 = pico duplo.',
+      '<strong>Dia do Trabalho + Dia das Mães (10/05)</strong>. Feriado prolongado + data comercial forte. Reforçar picanha e fraldinha.',
+      '<strong>Dia dos Namorados + festas juninas + Corpus Christi</strong>. Demanda alta por cortes nobres e linguiças artesanais.',
+      '<strong>Férias escolares + frio no Sul/Sudeste</strong>. Consumidor em casa: pico de ensopados, sopas, cortes para cozimento longo.',
+      '<strong>Dia dos Pais (09/08)</strong>. Segunda maior data de churrasco do ano. Reforçar linha premium e acessórios.',
+      '<strong>Independência + início primavera</strong>. Feriado prolongado (07/09) + retomada de churrasco ao ar livre.',
+      '<strong>Dia das Crianças + N. Sra. Aparecida + feriado prolongado</strong>. Aumentar mix família e itens de conveniência.',
+      '<strong>Black Friday (27/11) + Consciência Negra + Proclamação</strong>. Mês mais promocional do varejo. Preparar estoque e comunicação.',
+      '<strong>Natal + Virada + 13º integral</strong>. Pico absoluto de vendas. Reforçar aves, suíno pernil, tender e peças premium.'
+    ];
+    return { titulo:'Análise de '+mesNome+' '+ano, narrativa:narrativas[mes], feriados:feriados, sazons:sazons };
+  }
+
+  // ── Rebuild do grid inteiro para (ano, mes) ──
+  function _calRebuildGrid(ano, mes) {
+    var grid = main.querySelector('.mc-cal-grid');
+    if (!grid) return;
+
+    var dowHtml = '<div class="mc-cdow">Dom</div><div class="mc-cdow">Seg</div><div class="mc-cdow">Ter</div><div class="mc-cdow">Qua</div><div class="mc-cdow">Qui</div><div class="mc-cdow">Sex</div><div class="mc-cdow">Sáb</div>';
+    grid.innerHTML = dowHtml;
+
+    var primDiaSem = new Date(ano,mes,1).getDay();
+    var ultDia     = new Date(ano,mes+1,0).getDate();
+    var ultDiaAnt  = new Date(ano,mes,0).getDate();
+    var hoje = new Date();
+    var isCurrent = (hoje.getFullYear()===ano && hoje.getMonth()===mes);
+    var hojeDia = hoje.getDate();
+
+    function makeCell(num, extraCls, events) {
+      var evHtml = (events||[]).map(function(e){
+        var extraAttr = e[0]==='custom' ? ' data-custom-id="'+(e[2]||'')+'"' : '';
+        var titleAttr = e[0]==='custom' && e[3] ? ' title="'+String(e[3]).replace(/"/g,'&quot;')+'"' : '';
+        return '<div class="mc-cev '+e[0]+'"'+extraAttr+titleAttr+'>'+e[1]+'</div>';
+      }).join('');
+      var numHtml = extraCls==='today'
+        ? '<span style="background:var(--navy,#0C1425);color:#fff;width:20px;height:20px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px">'+num+'</span>'
+        : num;
+      return '<div class="mc-cd '+(extraCls||'')+'">' +
+        '<div class="mc-cdn">'+numHtml+'</div>' +
+        (evHtml?'<div class="mc-cevts">'+evHtml+'</div>':'') +
+      '</div>';
+    }
+
+    var cells = '';
+    for (var i=primDiaSem-1; i>=0; i--) cells += makeCell(ultDiaAnt-i,'other');
+    for (var d=1; d<=ultDia; d++) {
+      var events = _calEventsForDay(ano,mes,d);
+      var cls = '';
+      if (isCurrent && d===hojeDia) cls = 'today';
+      else if (events.some(function(e){ return e[0]==='pagto'; })) cls = 'pagto';
+      cells += makeCell(d, cls, events);
+    }
+    var total = primDiaSem + ultDia;
+    var remaining = (7 - (total%7)) % 7;
+    for (var i=1; i<=remaining; i++) cells += makeCell(i,'other');
+    grid.innerHTML += cells;
+
+    var mesEl = main.querySelector('.mc-cal-month');
+    if (mesEl) mesEl.textContent = CAL_MESES_LONG[mes]+' '+ano;
+
+    var insEl = main.querySelector('.mc-mes-insight');
+    if (insEl) {
+      var anl = _calAnalyze(ano,mes);
+      insEl.innerHTML =
+        '<span class="mc-mes-icon">🧭</span>' +
+        '<div>' +
+          '<div class="mc-mes-ttl">'+anl.titulo+'</div>' +
+          '<div class="mc-mes-body"><strong>'+anl.feriados+' feriados + '+anl.sazons+' datas sazonais</strong> neste mês. '+anl.narrativa+'</div>' +
+          '<div class="mc-mes-action">→ Navegue entre meses com ‹ › para explorar padrões sazonais.</div>' +
+        '</div>';
+    }
+  }
+
+  // ── Estado do calendário + navegação ‹ › ──
+  var CAL_STATE = { ano:2026, mes:3 }; // Abril 2026 (default)
+
+  main.querySelectorAll('.mc-cal-nav .mc-cnb').forEach(function(b, i) {
+    b.addEventListener('click', function() {
+      if (i === 0) { // ‹
+        CAL_STATE.mes--;
+        if (CAL_STATE.mes < 0) { CAL_STATE.mes = 11; CAL_STATE.ano--; }
+      } else {       // ›
+        CAL_STATE.mes++;
+        if (CAL_STATE.mes > 11) { CAL_STATE.mes = 0; CAL_STATE.ano++; }
+      }
+      _calRebuildGrid(CAL_STATE.ano, CAL_STATE.mes);
+    });
+  });
+
+  // ══════════════════════════════════════════════════════════
+  // TOOLTIP v2 — Event delegation + KB expandida + fallback por categoria
+  // ══════════════════════════════════════════════════════════
+
+  var CAL_KB = {
+    // Semana Santa
+    'Quarta de Cinzas':  { ctx:'Início da Quaresma. Consumo de carne vermelha cai nas próximas 6 semanas.', acao:'Reforçar aves e pescados; reduzir vermelhas gradualmente.', prio:'media' },
+    'Dom. Ramos':        { ctx:'Início da Semana Santa. Planejamento de pico Sexta-feira e Páscoa.', acao:'Iniciar comunicação de aves e pescados. Ajustar pedidos para a semana.', prio:'media' },
+    'Quinta Santa':      { ctx:'Preparação do pico da Semana Santa. Movimento crescente.', acao:'Reforçar exposição de bacalhau, salmão e aves.', prio:'media' },
+    'Sexta-Feira Santa': { ctx:'Feriado + pico absoluto de pescado/bacalhau. Carne vermelha em baixa total.', acao:'Dobrar exposição de pescados. Reduzir vermelhas 40%. Ação em bacalhau.', prio:'alta' },
+    'Páscoa':            { ctx:'Pico de aves (chester/peru) e cordeiro. Carne vermelha em retomada gradual.', acao:'Dobrar exposição de aves premium. Ativar cordeiro. Kit de Páscoa.', prio:'alta' },
+    'Corpus Christi':    { ctx:'Feriado religioso + fim de semana prolongado em muitas cidades.', acao:'Kit churrasco prolongado. Reforçar suprimento.', prio:'media' },
+    // Feriados nacionais
+    'Ano Novo':          { ctx:'Réveillon — pico de cortes nobres e frutos do mar.', acao:'Linha premium + frutos do mar. Pré-reserva ativada.', prio:'alta' },
+    'Tiradentes':        { ctx:'Feriado prolongado favorece churrasco doméstico.', acao:'Reforçar picanha, fraldinha, linguiça. Kits promocionais.', prio:'alta' },
+    'Tira-dentes':       { ctx:'Feriado nacional (substituição histórica). Fluxo reduzido em centros urbanos.', acao:'Reduzir produção; estoque mínimo.', prio:'baixa' },
+    'Dia do Trabalho':   { ctx:'Feriado + início de mês = pico de vendas de fim de semana prolongado.', acao:'Reforçar churrasco + itens de conveniência.', prio:'alta' },
+    'Independência':     { ctx:'Feriado prolongado + retomada do churrasco ao ar livre (primavera).', acao:'Picanha, fraldinha, linguiça. Kit patriótico opcional.', prio:'alta' },
+    'Aparecida':         { ctx:'Feriado + Dia das Crianças concentra consumo em família.', acao:'Mix família: frango, linguiça, kits infantis.', prio:'media' },
+    'Finados':           { ctx:'Feriado reflexivo; movimento moderado, pico no dia anterior.', acao:'Reforçar D-1. Pão de mel e doces na padaria.', prio:'baixa' },
+    'Proclamação':       { ctx:'Feriado próximo à Black Friday — pode antecipar compras.', acao:'Monitorar tráfego; preparar pré-Black.', prio:'baixa' },
+    'Consciência':       { ctx:'Feriado nacional (nov). Movimento moderado em regiões urbanas.', acao:'Estoque normal; observar pico local.', prio:'baixa' },
+    'Carnaval':          { ctx:'Feriado prolongado; muitos viajam. Demanda localizada em destinos turísticos.', acao:'Estoque reduzido exceto em regiões turísticas. Kits portáteis.', prio:'media' },
+    'Natal':             { ctx:'Tender, pernil, peru, chester = pico absoluto do ano.', acao:'Pré-reserva + linha de festas. Reforçar suíno pernil.', prio:'alta' },
+    'Virada':            { ctx:'Carne vermelha + frutos do mar para réveillon.', acao:'Linha premium + frutos do mar embalados.', prio:'alta' },
+    // Sazonalidades
+    'Dia das Mães':      { ctx:'Segundo maior volume de churrasco do ano. Reposição alta no sábado.', acao:'Picanha, maminha, alcatra + linha premium. Kit para presente.', prio:'alta' },
+    'Namorados':         { ctx:'Jantar em casa crescente. Cortes nobres em duplas.', acao:'Filé mignon, picanha bovina, salmão. Kits "jantar a dois".', prio:'media' },
+    'Dia dos Pais':      { ctx:'Maior volume de churrasco anual em muitas regiões.', acao:'Linha premium (wagyu, angus, costela premium), kits.', prio:'alta' },
+    'Dia das Crianças':  { ctx:'Almoço em família; frango é rei.', acao:'Frango passarinho, nuggets, linguiça artesanal.', prio:'media' },
+    'Black Friday':      { ctx:'Mais promocional do varejo. Consumidor caça oferta.', acao:'Kits com ticket médio alto. Promoção cirúrgica em carro-chefe.', prio:'alta' },
+    'São João':          { ctx:'Festa junina; pico regional de quentão, pipoca, linguiça.', acao:'Reforçar linguiça artesanal, paçoca, linha caipira.', prio:'media' },
+    'Dia da Carne Suína':{ ctx:'Data setorial (25/04). Suíno em queda de preço + FGTS = janela dupla.', acao:'Ação promocional em costelinha, lombo, pernil. Comunicar no balcão.', prio:'alta' },
+    'Dia do Frango':     { ctx:'Data setorial (19/03). Quaresma favorece aves.', acao:'Frango passarinho, coxa, sobrecoxa em destaque.', prio:'media' },
+    'Dia da Terra':      { ctx:'Data ESG emergente. Ativar comunicação sobre origem e sustentabilidade.', acao:'Destacar carnes rastreadas, orgânicas. Mensagem de origem responsável.', prio:'baixa' },
+    'Primavera':         { ctx:'Início da estação — retomada do churrasco ao ar livre.', acao:'Comunicação "tempo de churrasco". Reforçar cortes para grelha.', prio:'baixa' },
+    'Dia do Servidor':   { ctx:'Feriado municipal/estadual em várias regiões. Movimento variável.', acao:'Verificar calendário local. Estoque normal.', prio:'baixa' },
+    'Imaculada Conceição': { ctx:'Feriado religioso em várias regiões. Movimento moderado.', acao:'Estoque normal. Observar demanda regional.', prio:'baixa' },
+    // Pagamentos
+    'FGTS':              { ctx:'Pagamento via Caixa; pico de movimento no dia e D+1.', acao:'Reforçar exposição e caixas; garantir produção antecipada.', prio:'media' },
+    'Pagto':             { ctx:'Data de pagamento (salário ou benefício). Pico de movimento previsível.', acao:'Reforçar equipe em caixas e balcão. Garantir disponibilidade.', prio:'media' },
+    'Último útil':       { ctx:'Último dia útil do mês — pico de pagamento de salários CLT.', acao:'Reforçar todos os canais. Produção em D-1. Garantir abastecimento.', prio:'alta' }
+  };
+  function _calFindKB(text) {
     for (var k in CAL_KB) { if (text.indexOf(k) >= 0) return CAL_KB[k]; }
+    return null;
+  }
+
+  // Fallback por categoria (clima principalmente)
+  function _calKBByCategory(cat, txt) {
+    if (cat === 'clima') {
+      var m = txt.match(/(\d+)\s*°/);
+      var t = m ? parseInt(m[1]) : null;
+      if (t === null) return null;
+      if (t >= 32) return { ctx:'Calor acima da média ('+t+'°C). Demanda por churrasco ao ar livre e proteínas leves.', acao:'Reforçar exposição de linguiça, cortes leves e salgados. Reduzir tempo de produto em balcão quente.', prio:'media' };
+      if (t >= 28) return { ctx:'Dia ameno-quente ('+t+'°C). Típico padrão de demanda.', acao:'Mix regular. Oportunidade para comunicação de frescor.', prio:'baixa' };
+      if (t >= 22) return { ctx:'Temperatura amena ('+t+'°C). Demanda estável.', acao:'Mix regular sem ajustes específicos.', prio:'baixa' };
+      if (t >= 15) return { ctx:'Frio ameno ('+t+'°C). Aumenta demanda por ensopados e cortes para cozimento longo.', acao:'Reforçar acém, músculo, costela de cozinhar. Linguiça artesanal em alta.', prio:'media' };
+      return { ctx:'Frio intenso ('+t+'°C). Pico de ensopados, sopas, feijoada.', acao:'Dobrar cortes para cozimento longo. Linha de ossobuco e dobradinha.', prio:'media' };
+    }
+    if (cat === 'pagto') {
+      return { ctx:'Data de pagamento (salário ou benefício). Pico de movimento previsível.', acao:'Reforçar equipe em caixas e balcão. Garantir disponibilidade dos carros-chefe.', prio:'media' };
+    }
     return null;
   }
 
@@ -1387,41 +1573,303 @@ Router.register('mercado', function(main) {
   }
   calEvTip.style.cssText = 'position:fixed;z-index:99999;background:#0C1425;color:#fff;border-radius:12px;padding:14px 16px;width:280px;box-shadow:0 20px 60px rgba(0,0,0,0.4);font-family:Outfit,sans-serif;font-size:11px;line-height:1.55;pointer-events:none;opacity:0;transition:opacity .18s;display:block;border:1px solid rgba(201,168,76,0.3)';
 
-  // Apenas eventos dentro das células do calendário (não os da legenda)
-  main.querySelectorAll('.mc-cal-grid .mc-cev').forEach(function(ev) {
+  function _calRenderTip(ev) {
     var txt = ev.textContent.trim();
     var cat = Object.keys(CAL_CAT_COLOR).find(function(k){ return ev.classList.contains(k); }) || 'custom';
-    var kb = calFindKB(txt);
+    var kb = _calFindKB(txt) || _calKBByCategory(cat, txt);
+    var prio = kb ? CAL_PRIO[kb.prio] : null;
+    var customNote = cat === 'custom' ? ev.getAttribute('title') : null;
 
-    ev.addEventListener('mouseenter', function() {
-      var prio = kb ? CAL_PRIO[kb.prio] : null;
-      var html =
-        '<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,0.1)">' +
-          '<span style="width:8px;height:8px;border-radius:50%;background:'+CAL_CAT_COLOR[cat]+';flex-shrink:0"></span>' +
-          '<span style="font-size:9px;color:rgba(255,255,255,0.5);letter-spacing:1px;text-transform:uppercase;font-weight:600">'+CAL_CAT_LABEL[cat]+'</span>' +
-          (prio ? '<span style="margin-left:auto;font-size:9px;font-weight:700;letter-spacing:0.5px;padding:2px 7px;border-radius:20px;background:'+prio.bg+';color:'+prio.color+'">'+prio.label+'</span>' : '') +
+    var html =
+      '<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,0.1)">' +
+        '<span style="width:8px;height:8px;border-radius:50%;background:'+CAL_CAT_COLOR[cat]+';flex-shrink:0"></span>' +
+        '<span style="font-size:9px;color:rgba(255,255,255,0.5);letter-spacing:1px;text-transform:uppercase;font-weight:600">'+CAL_CAT_LABEL[cat]+'</span>' +
+        (prio ? '<span style="margin-left:auto;font-size:9px;font-weight:700;letter-spacing:0.5px;padding:2px 7px;border-radius:20px;background:'+prio.bg+';color:'+prio.color+'">'+prio.label+'</span>' : '') +
+      '</div>' +
+      '<div style="font-size:13px;font-weight:700;color:#fff;margin-bottom:8px">'+txt+'</div>';
+    if (kb) {
+      html +=
+        '<div style="margin-bottom:8px">' +
+          '<div style="font-size:9px;color:#C9A84C;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;margin-bottom:3px">Por quê</div>' +
+          '<div style="color:rgba(255,255,255,0.82)">'+kb.ctx+'</div>' +
         '</div>' +
-        '<div style="font-size:13px;font-weight:700;color:#fff;margin-bottom:8px">'+txt+'</div>';
-      if (kb) {
-        html +=
-          '<div style="margin-bottom:8px">' +
-            '<div style="font-size:9px;color:#C9A84C;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;margin-bottom:3px">Por quê</div>' +
-            '<div style="color:rgba(255,255,255,0.82)">'+kb.ctx+'</div>' +
-          '</div>' +
-          '<div>' +
-            '<div style="font-size:9px;color:#50D282;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;margin-bottom:3px">Ação recomendada</div>' +
-            '<div style="color:rgba(255,255,255,0.92);font-weight:500">'+kb.acao+'</div>' +
-          '</div>';
-      } else {
-        html += '<div style="color:rgba(255,255,255,0.6);font-style:italic">Evento sem insight cadastrado.</div>';
-      }
-      calEvTip.innerHTML = html;
-      var r = ev.getBoundingClientRect();
-      calEvTip.style.left = Math.max(8, Math.min(r.left - 20, window.innerWidth - 298)) + 'px';
-      calEvTip.style.top = (r.top - 10) + 'px';
-      calEvTip.style.transform = 'translateY(-100%)';
-      calEvTip.style.opacity = '1';
+        '<div>' +
+          '<div style="font-size:9px;color:#50D282;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;margin-bottom:3px">Ação recomendada</div>' +
+          '<div style="color:rgba(255,255,255,0.92);font-weight:500">'+kb.acao+'</div>' +
+        '</div>';
+    } else if (customNote) {
+      html += '<div><div style="font-size:9px;color:#C9A84C;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;margin-bottom:3px">Nota</div><div style="color:rgba(255,255,255,0.82)">'+customNote+'</div></div>';
+    } else {
+      html += '<div style="color:rgba(255,255,255,0.6);font-style:italic">Evento sem insight detalhado.</div>';
+    }
+    calEvTip.innerHTML = html;
+    var r = ev.getBoundingClientRect();
+    calEvTip.style.left = Math.max(8, Math.min(r.left - 20, window.innerWidth - 298)) + 'px';
+    calEvTip.style.top = (r.top - 10) + 'px';
+    calEvTip.style.transform = 'translateY(-100%)';
+    calEvTip.style.opacity = '1';
+  }
+
+  // Event delegation: UM listener no grid, funciona após rebuild
+  var calGrid = main.querySelector('.mc-cal-grid');
+  if (calGrid) {
+    calGrid.addEventListener('mouseover', function(e){
+      var ev = e.target.closest('.mc-cev');
+      if (!ev || !calGrid.contains(ev)) return;
+      _calRenderTip(ev);
     });
-    ev.addEventListener('mouseleave', function(){ calEvTip.style.opacity = '0'; });
+    calGrid.addEventListener('mouseout', function(e){
+      var ev = e.target.closest('.mc-cev');
+      if (!ev) return;
+      var related = e.relatedTarget;
+      if (related && ev.contains(related)) return;
+      calEvTip.style.opacity = '0';
+    });
+  }
+
+  // ══════════════════════════════════════════════════════════
+  // MODAL "+ Adicionar evento" + modo edição + exclusão
+  // ══════════════════════════════════════════════════════════
+
+  function _calEnsureModal() {
+    var m = document.getElementById('mc-cal-modal');
+    if (m) return m;
+    m = document.createElement('div');
+    m.id = 'mc-cal-modal';
+    m.style.cssText = 'position:fixed;inset:0;z-index:99998;background:rgba(12,20,37,0.55);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;font-family:Outfit,sans-serif;opacity:0;transition:opacity .2s';
+    m.innerHTML = ''+
+      '<div id="mc-cal-modal-card" style="width:440px;max-width:90vw;background:linear-gradient(160deg, rgba(255,255,255,0.97) 0%, rgba(248,250,253,0.97) 100%);border:1px solid rgba(26,39,68,0.12);border-radius:20px;padding:24px 26px;box-shadow:0 30px 90px rgba(12,20,37,0.35), 0 0 0 1px rgba(201,168,76,0.15) inset;transform:scale(0.96);transition:transform .2s">' +
+        '<div style="display:flex;align-items:center;gap:10px;margin-bottom:18px">' +
+          '<div id="mc-cal-modal-icon" style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#0C1425 0%,#1A2744 100%);display:flex;align-items:center;justify-content:center;color:#C9A84C;font-size:20px;font-weight:700">+</div>' +
+          '<div style="flex:1">' +
+            '<div id="mc-cal-modal-ttl" style="font-size:15px;font-weight:700;color:#0C1425">Adicionar evento</div>' +
+            '<div style="font-size:11px;color:#6B7280">Eventos salvos ficam disponíveis apenas neste navegador</div>' +
+          '</div>' +
+          '<button id="mc-cal-modal-close" style="background:transparent;border:none;color:#6B7280;font-size:20px;cursor:pointer;width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center" title="Fechar (ESC)">×</button>' +
+        '</div>' +
+        '<div style="display:flex;flex-direction:column;gap:14px">' +
+          '<div><label style="display:block;font-size:10px;font-weight:700;color:#0C1425;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Data</label>' +
+            '<input type="date" id="mc-cal-modal-data" style="width:100%;padding:10px 12px;border:1px solid rgba(26,39,68,0.18);border-radius:10px;font-family:Outfit,sans-serif;font-size:13px;color:#0C1425;background:#fff;box-sizing:border-box"></div>' +
+          '<div><label style="display:block;font-size:10px;font-weight:700;color:#0C1425;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Categoria</label>' +
+            '<div id="mc-cal-modal-tipo" style="display:flex;gap:6px;flex-wrap:wrap"></div></div>' +
+          '<div><label style="display:block;font-size:10px;font-weight:700;color:#0C1425;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Título <span style="color:#9CA3AF;font-weight:400;text-transform:none;letter-spacing:0">(curto, aparece no calendário)</span></label>' +
+            '<input type="text" id="mc-cal-modal-titulo" maxlength="40" placeholder="Ex: Reunião Rede, Promoção Suíno" style="width:100%;padding:10px 12px;border:1px solid rgba(26,39,68,0.18);border-radius:10px;font-family:Outfit,sans-serif;font-size:13px;color:#0C1425;background:#fff;box-sizing:border-box"></div>' +
+          '<div><label style="display:block;font-size:10px;font-weight:700;color:#0C1425;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Nota <span style="color:#9CA3AF;font-weight:400;text-transform:none;letter-spacing:0">(opcional, aparece no tooltip)</span></label>' +
+            '<textarea id="mc-cal-modal-nota" rows="2" maxlength="200" placeholder="Ex: Revisar preço da picanha antes do dia da carne suína" style="width:100%;padding:10px 12px;border:1px solid rgba(26,39,68,0.18);border-radius:10px;font-family:Outfit,sans-serif;font-size:13px;color:#0C1425;background:#fff;box-sizing:border-box;resize:vertical"></textarea></div>' +
+        '</div>' +
+        '<div id="mc-cal-modal-footer" style="display:flex;gap:10px;margin-top:20px;padding-top:16px;border-top:1px solid rgba(26,39,68,0.08)">' +
+          '<button id="mc-cal-modal-cancel" style="flex:1;padding:10px;background:transparent;border:1px solid rgba(26,39,68,0.18);border-radius:10px;color:#4B5563;font-family:Outfit,sans-serif;font-size:12px;font-weight:600;cursor:pointer">Cancelar</button>' +
+          '<button id="mc-cal-modal-save" style="flex:1;padding:10px;background:linear-gradient(135deg,#0C1425 0%,#1A2744 100%);border:1px solid #C9A84C;border-radius:10px;color:#C9A84C;font-family:Outfit,sans-serif;font-size:12px;font-weight:700;cursor:pointer;letter-spacing:0.5px">SALVAR EVENTO</button>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(m);
+
+    // Pills de categoria
+    var CATS = [
+      { key:'custom',  label:'Evento Próprio', color:'#7153A0', bg:'rgba(113,83,160,0.10)', border:'rgba(113,83,160,0.35)' },
+      { key:'feriado', label:'Feriado',        color:'#C0504D', bg:'rgba(192,80,77,0.10)',  border:'rgba(192,80,77,0.35)' },
+      { key:'sazon',   label:'Sazonalidade',   color:'#C9A84C', bg:'rgba(201,168,76,0.10)', border:'rgba(201,168,76,0.35)' },
+      { key:'pagto',   label:'Pagamento',      color:'#2D8653', bg:'rgba(45,134,83,0.10)',  border:'rgba(45,134,83,0.35)' },
+      { key:'clima',   label:'Clima',          color:'#3670A0', bg:'rgba(54,112,160,0.10)', border:'rgba(54,112,160,0.35)' }
+    ];
+    var tipoBox = m.querySelector('#mc-cal-modal-tipo');
+    tipoBox.dataset.selected = 'custom';
+    CATS.forEach(function(cfg, i){
+      var b = document.createElement('button');
+      b.dataset.cat = cfg.key;
+      b.textContent = cfg.label;
+      b.style.cssText = 'padding:7px 12px;border-radius:20px;border:1px solid '+cfg.border+';background:'+(i===0?cfg.bg:'transparent')+';color:'+(i===0?cfg.color:'#6B7280')+';font-family:Outfit,sans-serif;font-size:11px;font-weight:'+(i===0?'700':'500')+';cursor:pointer;letter-spacing:0.3px;transition:all .15s';
+      b.addEventListener('click', function(){
+        tipoBox.querySelectorAll('button').forEach(function(x){
+          x.style.background = 'transparent';
+          x.style.color = '#6B7280';
+          x.style.fontWeight = '500';
+        });
+        b.style.background = cfg.bg;
+        b.style.color = cfg.color;
+        b.style.fontWeight = '700';
+        tipoBox.dataset.selected = cfg.key;
+      });
+      tipoBox.appendChild(b);
+    });
+
+    return m;
+  }
+
+  function _calOpenModal(opts) {
+    var m = _calEnsureModal();
+    opts = typeof opts === 'string' ? { mode:'create', presetDate:opts } : (opts||{ mode:'create' });
+
+    var dataInput = m.querySelector('#mc-cal-modal-data');
+    var tituloInput = m.querySelector('#mc-cal-modal-titulo');
+    var notaInput = m.querySelector('#mc-cal-modal-nota');
+    var tipoBox = m.querySelector('#mc-cal-modal-tipo');
+    var saveBtn = m.querySelector('#mc-cal-modal-save');
+    var ttlEl = m.querySelector('#mc-cal-modal-ttl');
+    var iconEl = m.querySelector('#mc-cal-modal-icon');
+    var footer = m.querySelector('#mc-cal-modal-footer');
+
+    var oldDelete = m.querySelector('#mc-cal-modal-delete');
+    if (oldDelete) oldDelete.remove();
+
+    if (opts.mode === 'edit' && opts.editId) {
+      var loc = _calFindCustom(opts.editId);
+      if (!loc) { opts.mode = 'create'; }
+      else {
+        dataInput.value = loc.data;
+        tituloInput.value = loc.evento.titulo;
+        notaInput.value = loc.evento.nota || '';
+        var btnCat = Array.from(tipoBox.querySelectorAll('button')).find(function(b){ return b.dataset.cat === loc.evento.tipo; });
+        if (btnCat) btnCat.click();
+        if (ttlEl) ttlEl.textContent = 'Editar evento';
+        if (iconEl) iconEl.innerHTML = '✎';
+        saveBtn.textContent = 'SALVAR ALTERAÇÕES';
+        m.dataset.editId = opts.editId;
+
+        var delBtn = document.createElement('button');
+        delBtn.id = 'mc-cal-modal-delete';
+        delBtn.innerHTML = '🗑 Excluir';
+        delBtn.style.cssText = 'padding:10px 14px;background:transparent;border:1px solid rgba(192,80,77,0.35);border-radius:10px;color:#C0504D;font-family:Outfit,sans-serif;font-size:12px;font-weight:600;cursor:pointer;margin-right:auto';
+        footer.insertBefore(delBtn, footer.firstChild);
+      }
+    }
+
+    if (opts.mode === 'create') {
+      if (opts.presetDate) {
+        dataInput.value = opts.presetDate;
+      } else {
+        var hoje = new Date();
+        var dia = (CAL_STATE.ano===hoje.getFullYear()&&CAL_STATE.mes===hoje.getMonth()) ? hoje.getDate() : 1;
+        dataInput.value = CAL_STATE.ano+'-'+String(CAL_STATE.mes+1).padStart(2,'0')+'-'+String(dia).padStart(2,'0');
+      }
+      tituloInput.value = '';
+      notaInput.value = '';
+      tipoBox.querySelectorAll('button').forEach(function(b,i){ if (i===0) b.click(); });
+      if (ttlEl) ttlEl.textContent = 'Adicionar evento';
+      if (iconEl) iconEl.innerHTML = '+';
+      saveBtn.textContent = 'SALVAR EVENTO';
+      delete m.dataset.editId;
+    }
+
+    m.style.display = 'flex';
+    setTimeout(function(){
+      m.style.opacity = '1';
+      m.querySelector('#mc-cal-modal-card').style.transform = 'scale(1)';
+      tituloInput.focus();
+    }, 10);
+  }
+
+  function _calCloseModal() {
+    var m = document.getElementById('mc-cal-modal');
+    if (!m) return;
+    m.style.opacity = '0';
+    m.querySelector('#mc-cal-modal-card').style.transform = 'scale(0.96)';
+    setTimeout(function(){ m.style.display = 'none'; }, 200);
+  }
+
+  function _calSubmit() {
+    var m = document.getElementById('mc-cal-modal');
+    if (!m) return;
+    var data = m.querySelector('#mc-cal-modal-data').value;
+    var titulo = m.querySelector('#mc-cal-modal-titulo').value.trim();
+    var nota = m.querySelector('#mc-cal-modal-nota').value.trim();
+    var tipo = m.querySelector('#mc-cal-modal-tipo').dataset.selected || 'custom';
+    if (!data) { alert('Preencha a data.'); return; }
+    if (!titulo) { alert('Preencha o título.'); return; }
+
+    var editId = m.dataset.editId;
+    if (editId) {
+      // Edição: remove da posição antiga, adiciona na nova
+      var all = _calLoadCustom();
+      for (var k in all) {
+        all[k] = all[k].filter(function(e){ return e.id !== editId; });
+        if (all[k].length === 0) delete all[k];
+      }
+      if (!all[data]) all[data] = [];
+      all[data].push({ id:editId, tipo:tipo, titulo:titulo, nota:nota });
+      _calSaveCustom(all);
+    } else {
+      // Criação
+      var all = _calLoadCustom();
+      if (!all[data]) all[data] = [];
+      var id = 'c_'+Date.now()+'_'+Math.floor(Math.random()*1000);
+      all[data].push({ id:id, tipo:tipo, titulo:titulo, nota:nota });
+      _calSaveCustom(all);
+    }
+    _calCloseModal();
+    _calRebuildGrid(CAL_STATE.ano, CAL_STATE.mes);
+  }
+
+  function _calDelete() {
+    var m = document.getElementById('mc-cal-modal');
+    if (!m) return;
+    var editId = m.dataset.editId;
+    if (!editId) return;
+    if (!confirm('Excluir este evento? Essa ação não pode ser desfeita.')) return;
+    var all = _calLoadCustom();
+    for (var k in all) {
+      all[k] = all[k].filter(function(e){ return e.id !== editId; });
+      if (all[k].length === 0) delete all[k];
+    }
+    _calSaveCustom(all);
+    _calCloseModal();
+    _calRebuildGrid(CAL_STATE.ano, CAL_STATE.mes);
+  }
+
+  // Botão "+ Adicionar evento"
+  var calAddBtn = main.querySelector('.mc-cal-add');
+  if (calAddBtn) calAddBtn.addEventListener('click', function(){ _calOpenModal(); });
+
+  // Click em dia vazio → abre modal com data
+  if (calGrid) {
+    calGrid.addEventListener('click', function(e){
+      if (e.target.closest('.mc-cev')) return; // clique em evento tratado abaixo
+      var cell = e.target.closest('.mc-cd');
+      if (!cell || cell.classList.contains('other')) return;
+      var numEl = cell.querySelector('.mc-cdn');
+      if (!numEl) return;
+      var dia = parseInt(numEl.textContent.trim());
+      if (isNaN(dia)) return;
+      var iso = CAL_STATE.ano+'-'+String(CAL_STATE.mes+1).padStart(2,'0')+'-'+String(dia).padStart(2,'0');
+      _calOpenModal(iso);
+    });
+
+    // Click em evento custom → abre modal em modo edição
+    calGrid.addEventListener('click', function(e){
+      var ev = e.target.closest('.mc-cev');
+      if (!ev) return;
+      if (!ev.classList.contains('custom')) return;
+      var customId = ev.getAttribute('data-custom-id');
+      if (!customId) return;
+      e.stopPropagation();
+      e.preventDefault();
+      _calOpenModal({ mode:'edit', editId:customId });
+    }, true);
+  }
+
+  // Listeners do modal
+  document.addEventListener('click', function(e){
+    if (e.target.id === 'mc-cal-modal-close' || e.target.id === 'mc-cal-modal-cancel') _calCloseModal();
+    else if (e.target.id === 'mc-cal-modal-save') _calSubmit();
+    else if (e.target.id === 'mc-cal-modal-delete') _calDelete();
+    else if (e.target.id === 'mc-cal-modal') _calCloseModal();
   });
+  document.addEventListener('keydown', function(e){
+    var m = document.getElementById('mc-cal-modal');
+    if (!m || m.style.display === 'none') return;
+    if (e.key === 'Escape') _calCloseModal();
+    if (e.key === 'Enter' && e.ctrlKey) _calSubmit();
+  });
+
+  // Cursor pointer em eventos custom
+  if (!document.getElementById('mc-cal-custom-cursor')) {
+    var s = document.createElement('style');
+    s.id = 'mc-cal-custom-cursor';
+    s.textContent = '.mc-cal-grid .mc-cev.custom { cursor: pointer !important; }' +
+                    '.mc-cal-grid .mc-cev.custom:hover { transform: translateX(2px); transition: transform .15s; }';
+    document.head.appendChild(s);
+  }
+
+  // ── RENDER INICIAL ──
+  _calRebuildGrid(CAL_STATE.ano, CAL_STATE.mes);
 });
