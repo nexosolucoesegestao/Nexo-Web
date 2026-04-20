@@ -1,10 +1,13 @@
 // ============================================================
 // NEXO Intelligence Web — pages/mercado.js
-// Mercado & Clima — v2.3
+// Mercado & Clima — v2.4
 // FIX 1: Duplicidade de tooltip — .mc-ht interno desativado,
 //        apenas #mc-global-tip renderiza o popover do "?"
-// FIX 2: Card sobrepondo o expandido — rebaixa TODOS os .mc-cc
-//        do painel (não só os do mesmo grupo) + position:relative
+// FIX 2 (revisado): Stacking correto no hover
+//        - isolation:isolate em .mc-grupos-outer e .mc-grupo-cards
+//        - position:relative no container dos grupos
+//        - Irmãos ficam em position:static (sem competir)
+//        - Apenas o card expandido recebe position:relative + z-index
 // ============================================================
 Router.register('mercado', function(main) {
   var MESES = ['Nov/25','Dez/25','Jan/26','Fev/26','Mar/26','Abr/26'];
@@ -228,31 +231,48 @@ Router.register('mercado', function(main) {
   });
 
   // ══════════════════════════════════════════════════════════
-  // FIX 2: Hover dos cards do Painel de Contexto
-  // Rebaixa TODOS os .mc-cc do painel (não só os do grupo)
-  // e força position:relative no card expandido
+  // FIX 2 (v2.4): Stacking correto no hover dos cards
+  //
+  // Raciocínio:
+  //  - transform:scale cria novo stacking context no card.
+  //  - Se os irmãos também tiverem position:relative, eles
+  //    competem no MESMO contexto pai e o último no DOM pinta
+  //    por cima. Por isso o fix anterior falhou.
+  //  - Solução: deixar os irmãos em `position:static` (padrão)
+  //    e só o card expandido com position:relative + z-index.
+  //  - Promover .mc-grupos-outer a `isolation:isolate` garante
+  //    que o stacking fique contido no painel e o card elevado
+  //    não seja rebaixado por nada externo.
   // ══════════════════════════════════════════════════════════
   (function() {
-    // captura TODOS os cards do painel de contexto de uma vez
     var allCards = Array.prototype.slice.call(
       main.querySelectorAll('.mc-ctx-block .mc-cc')
     );
+
+    // Promove o container pai a stacking context isolado
+    var outer = main.querySelector('.mc-ctx-block .mc-grupos-outer');
+    if (outer) {
+      outer.style.setProperty('isolation', 'isolate', 'important');
+    }
+
+    // Todos os grupos também isolados — garante que a ordem
+    // natural do DOM entre grupos não interfira
+    main.querySelectorAll('.mc-ctx-block .mc-grupo-cards').forEach(function(gc) {
+      gc.style.setProperty('isolation', 'isolate', 'important');
+      // Grupo também precisa de position para o card expandido
+      // poder escapar visualmente do grid
+      gc.style.setProperty('position', 'relative', 'important');
+    });
 
     allCards.forEach(function(card) {
       var t = null;
       var insight = card.querySelector('.mc-cc-insight');
 
       function expand() {
-        // rebaixa TODOS os irmãos do painel (todos os grupos)
-        allCards.forEach(function(s) {
-          if (s !== card) {
-            s.style.setProperty('z-index', '1', 'important');
-            s.style.setProperty('position', 'relative', 'important');
-          }
-        });
-        // eleva o card atual
+        // Eleva APENAS o card atual. Os irmãos permanecem em
+        // `position:static` (padrão) — sem competir por z-index.
         card.style.setProperty('position', 'relative', 'important');
-        card.style.setProperty('z-index', '999', 'important');
+        card.style.setProperty('z-index', '9999', 'important');
         card.style.setProperty('transform', 'scale(1.32)', 'important');
         card.style.setProperty('overflow', 'visible', 'important');
         card.style.setProperty('box-shadow',
@@ -278,13 +298,6 @@ Router.register('mercado', function(main) {
           insight.style.removeProperty('overflow');
           insight.style.removeProperty('-webkit-line-clamp');
         }
-        // restaura z-index/position dos demais
-        allCards.forEach(function(s) {
-          if (s !== card) {
-            s.style.removeProperty('z-index');
-            s.style.removeProperty('position');
-          }
-        });
       }
 
       card.addEventListener('mouseenter', function() {
