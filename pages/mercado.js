@@ -1,6 +1,14 @@
 // ============================================================
 // NEXO Intelligence Web — pages/mercado.js
-// Mercado & Clima — v3.5.1 (fix 4 bugs do calendário)
+// Mercado & Clima — v3.6 (Calendário: repetição de eventos)
+// FIX 10 (v3.6): Eventos recorrentes (iCalendar RRULE-like)
+//   Seção "Repetição" no modal: Não repete / Diária / Semanal / Mensal / Anual
+//   Término: Nunca | Em uma data | Após N ocorrências
+//   Engine _calOccursOn expande séries em qualquer dia/mês/ano
+//   _calEventsForDay varre todas as datas-base e expande
+//   Badge "↻ série semanal até DD/MM/YYYY" no modo edição
+//   Edição sempre afeta a série inteira (simples, seguro)
+//   Indicador ↻ inline no título dos eventos recorrentes
 // FIX 9 (v3.5.1): Eventos do usuário de QUALQUER tipo são editáveis
 //   Bug: tipo diferente de 'custom' não tinha data-custom-id nem title
 //   Bug: click handler só reagia a classe 'custom'
@@ -1379,6 +1387,63 @@ Router.register('mercado', function(main) {
   }
 
   // ── Monta eventos de um dia específico ──
+  // ── Verifica se um evento recorrente ocorre num dia específico ──
+  // evento.data = "YYYY-MM-DD" (data base, primeira ocorrência)
+  // evento.repeat = { freq: 'daily'|'weekly'|'monthly'|'yearly'|'none', end: {tipo,valor} }
+  // Retorna { ocorre: bool, nOcorrencia: int } — número 1 = 1ª ocorrência
+  function _calOccursOn(evento, ano, mes, dia) {
+    var base = new Date(evento.data + 'T00:00:00');
+    var target = new Date(ano, mes, dia);
+    if (target < base) return { ocorre:false };
+
+    var freq = evento.repeat && evento.repeat.freq;
+    if (!freq || freq === 'none') {
+      // Sem repetição → só ocorre no dia base
+      var sameDay = (target.getFullYear()===base.getFullYear() &&
+                     target.getMonth()===base.getMonth() &&
+                     target.getDate()===base.getDate());
+      return { ocorre:sameDay, nOcorrencia:1 };
+    }
+
+    // Verifica fim "em uma data"
+    var endType = evento.repeat.end ? evento.repeat.end.tipo : 'never';
+    if (endType === 'date' && evento.repeat.end.valor) {
+      var endDate = new Date(evento.repeat.end.valor + 'T23:59:59');
+      if (target > endDate) return { ocorre:false };
+    }
+
+    var msPerDay = 86400000;
+    var daysDiff = Math.floor((target - base) / msPerDay);
+    var matches = false, n = 1;
+
+    if (freq === 'daily') {
+      matches = daysDiff >= 0;
+      n = daysDiff + 1;
+    } else if (freq === 'weekly') {
+      matches = (daysDiff >= 0 && daysDiff % 7 === 0);
+      n = Math.floor(daysDiff/7) + 1;
+    } else if (freq === 'monthly') {
+      if (target.getDate() !== base.getDate()) return { ocorre:false };
+      var md = (target.getFullYear()-base.getFullYear())*12 + (target.getMonth()-base.getMonth());
+      if (md < 0) return { ocorre:false };
+      matches = true; n = md + 1;
+    } else if (freq === 'yearly') {
+      if (target.getDate() !== base.getDate()) return { ocorre:false };
+      if (target.getMonth() !== base.getMonth()) return { ocorre:false };
+      var yd = target.getFullYear()-base.getFullYear();
+      if (yd < 0) return { ocorre:false };
+      matches = true; n = yd + 1;
+    }
+
+    if (!matches) return { ocorre:false };
+
+    // Verifica fim "após N ocorrências"
+    if (endType === 'count' && evento.repeat.end.valor) {
+      if (n > evento.repeat.end.valor) return { ocorre:false };
+    }
+    return { ocorre:true, nOcorrencia:n };
+  }
+
   function _calEventsForDay(ano, mes, dia) {
     var k = _calKey(ano,mes,dia);
     var events = [];
@@ -1388,10 +1453,28 @@ Router.register('mercado', function(main) {
     if (pagtos[k]) events.push(['pagto', pagtos[k]]);
     var clima = _calClima(ano,mes);
     if (clima[k])  events.push(['clima', clima[k]]);
+
+    // Eventos custom: varre TODAS as datas no storage (não só k)
+    // porque séries recorrentes têm data-base em outro dia
     var custom = _calLoadCustom();
-    if (custom[k]) custom[k].forEach(function(c){
-      events.push([c.tipo || 'custom', c.titulo, c.id, c.nota]);
-    });
+    for (var baseKey in custom) {
+      custom[baseKey].forEach(function(c){
+        // Evento sem repetição — só entra se baseKey === k (pega só o dia-exato)
+        if (!c.repeat || c.repeat.freq === 'none' || !c.repeat.freq) {
+          if (baseKey === k) {
+            events.push([c.tipo || 'custom', c.titulo, c.id, c.nota]);
+          }
+          return;
+        }
+        // Com repetição — garante que c.data existe (fallback: baseKey)
+        if (!c.data) c.data = baseKey;
+        var res = _calOccursOn(c, ano, mes, dia);
+        if (!res.ocorre) return;
+        // Indicador ↻ no título pra deixar claro que é série
+        var tituloFinal = c.titulo + ' ↻';
+        events.push([c.tipo || 'custom', tituloFinal, c.id, c.nota]);
+      });
+    }
     return events;
   }
 
@@ -1682,6 +1765,21 @@ Router.register('mercado', function(main) {
             '<div id="mc-cal-modal-tipo" style="display:flex;gap:6px;flex-wrap:wrap"></div></div>' +
           '<div><label style="display:block;font-size:10px;font-weight:700;color:#0C1425;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Título <span style="color:#9CA3AF;font-weight:400;text-transform:none;letter-spacing:0">(curto, aparece no calendário)</span></label>' +
             '<input type="text" id="mc-cal-modal-titulo" maxlength="40" placeholder="Ex: Reunião Rede, Promoção Suíno" style="width:100%;padding:10px 12px;border:1px solid rgba(26,39,68,0.18);border-radius:10px;font-family:Outfit,sans-serif;font-size:13px;color:#0C1425;background:#fff;box-sizing:border-box"></div>' +
+          // ── Seção Repetição ──
+          '<div>' +
+            '<label style="display:block;font-size:10px;font-weight:700;color:#0C1425;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Repetição</label>' +
+            '<div id="mc-cal-modal-repeat" style="display:flex;gap:4px;flex-wrap:wrap"></div>' +
+            '<div id="mc-cal-modal-repeat-end" style="display:none;margin-top:10px;padding:10px 12px;background:rgba(201,168,76,0.06);border:1px solid rgba(201,168,76,0.25);border-radius:10px">' +
+              '<div style="font-size:10px;font-weight:700;color:#0C1425;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Termina</div>' +
+              '<div style="display:flex;flex-direction:column;gap:6px">' +
+                '<label style="display:flex;align-items:center;gap:8px;font-size:12px;color:#4B5563;cursor:pointer"><input type="radio" name="mc-cal-repend" value="never" checked style="accent-color:#0C1425"><span>Nunca</span></label>' +
+                '<label style="display:flex;align-items:center;gap:8px;font-size:12px;color:#4B5563;cursor:pointer"><input type="radio" name="mc-cal-repend" value="date" style="accent-color:#0C1425"><span>Em uma data:</span>' +
+                  '<input type="date" id="mc-cal-modal-repend-date" disabled style="padding:5px 8px;border:1px solid rgba(26,39,68,0.18);border-radius:6px;font-family:Outfit,sans-serif;font-size:11px;color:#0C1425;background:#fff;opacity:0.5"></label>' +
+                '<label style="display:flex;align-items:center;gap:8px;font-size:12px;color:#4B5563;cursor:pointer"><input type="radio" name="mc-cal-repend" value="count" style="accent-color:#0C1425"><span>Após</span>' +
+                  '<input type="number" id="mc-cal-modal-repend-count" disabled min="1" max="365" value="10" style="width:52px;padding:5px 6px;border:1px solid rgba(26,39,68,0.18);border-radius:6px;font-family:Outfit,sans-serif;font-size:11px;color:#0C1425;background:#fff;opacity:0.5;text-align:center"><span>ocorrências</span></label>' +
+              '</div>' +
+            '</div>' +
+          '</div>' +
           '<div><label style="display:block;font-size:10px;font-weight:700;color:#0C1425;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Nota <span style="color:#9CA3AF;font-weight:400;text-transform:none;letter-spacing:0">(opcional, aparece no tooltip)</span></label>' +
             '<textarea id="mc-cal-modal-nota" rows="2" maxlength="200" placeholder="Ex: Revisar preço da picanha antes do dia da carne suína" style="width:100%;padding:10px 12px;border:1px solid rgba(26,39,68,0.18);border-radius:10px;font-family:Outfit,sans-serif;font-size:13px;color:#0C1425;background:#fff;box-sizing:border-box;resize:vertical"></textarea></div>' +
         '</div>' +
@@ -1721,6 +1819,57 @@ Router.register('mercado', function(main) {
       tipoBox.appendChild(b);
     });
 
+    // ── Pills de REPETIÇÃO ──
+    var REPEAT_OPTS = [
+      { key:'none',    label:'Não repete' },
+      { key:'daily',   label:'Diária'     },
+      { key:'weekly',  label:'Semanal'    },
+      { key:'monthly', label:'Mensal'     },
+      { key:'yearly',  label:'Anual'      }
+    ];
+    var repBox = m.querySelector('#mc-cal-modal-repeat');
+    repBox.dataset.freq = 'none';
+    REPEAT_OPTS.forEach(function(opt, i){
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.dataset.freq = opt.key;
+      b.textContent = opt.label;
+      var active = (i === 0);
+      b.style.cssText = 'padding:6px 11px;border-radius:18px;border:1px solid '+(active?'rgba(12,20,37,0.3)':'rgba(26,39,68,0.15)')+';background:'+(active?'rgba(12,20,37,0.06)':'transparent')+';color:'+(active?'#0C1425':'#6B7280')+';font-family:Outfit,sans-serif;font-size:11px;font-weight:'+(active?'700':'500')+';cursor:pointer;letter-spacing:0.2px;transition:all .12s';
+      b.addEventListener('click', function(){
+        repBox.querySelectorAll('button').forEach(function(x){
+          x.style.background = 'transparent';
+          x.style.color = '#6B7280';
+          x.style.fontWeight = '500';
+          x.style.border = '1px solid rgba(26,39,68,0.15)';
+        });
+        b.style.background = 'rgba(12,20,37,0.06)';
+        b.style.color = '#0C1425';
+        b.style.fontWeight = '700';
+        b.style.border = '1px solid rgba(12,20,37,0.3)';
+        repBox.dataset.freq = opt.key;
+        var endBox = document.getElementById('mc-cal-modal-repeat-end');
+        if (endBox) endBox.style.display = opt.key === 'none' ? 'none' : 'block';
+      });
+      repBox.appendChild(b);
+    });
+
+    // Radios de término: habilita/desabilita inputs
+    m.querySelectorAll('input[name="mc-cal-repend"]').forEach(function(r){
+      r.addEventListener('change', function(){
+        var dInp = m.querySelector('#mc-cal-modal-repend-date');
+        var cInp = m.querySelector('#mc-cal-modal-repend-count');
+        dInp.disabled = r.value !== 'date';
+        cInp.disabled = r.value !== 'count';
+        dInp.style.opacity = r.value === 'date' ? '1' : '0.5';
+        cInp.style.opacity = r.value === 'count' ? '1' : '0.5';
+      });
+    });
+
+    // Data padrão de fim = 3 meses à frente
+    var dFin = new Date(); dFin.setMonth(dFin.getMonth()+3);
+    m.querySelector('#mc-cal-modal-repend-date').value = dFin.toISOString().slice(0,10);
+
     return m;
   }
 
@@ -1749,10 +1898,48 @@ Router.register('mercado', function(main) {
         notaInput.value = loc.evento.nota || '';
         var btnCat = Array.from(tipoBox.querySelectorAll('button')).find(function(b){ return b.dataset.cat === loc.evento.tipo; });
         if (btnCat) btnCat.click();
+
+        // Pré-preencher repetição se existir
+        var rep = loc.evento.repeat;
+        var repBtns = m.querySelectorAll('#mc-cal-modal-repeat button');
+        var freqKey = (rep && rep.freq) ? rep.freq : 'none';
+        var repBtn = Array.from(repBtns).find(function(x){ return x.dataset.freq === freqKey; });
+        if (repBtn) repBtn.click();
+        if (rep && rep.end) {
+          var endType = rep.end.tipo;
+          var radio = m.querySelector('input[name="mc-cal-repend"][value="'+endType+'"]');
+          if (radio) {
+            radio.checked = true;
+            radio.dispatchEvent(new Event('change'));
+            if (endType === 'date' && rep.end.valor) {
+              m.querySelector('#mc-cal-modal-repend-date').value = rep.end.valor;
+            } else if (endType === 'count' && rep.end.valor) {
+              m.querySelector('#mc-cal-modal-repend-count').value = rep.end.valor;
+            }
+          }
+        }
+
         if (ttlEl) ttlEl.textContent = 'Editar evento';
         if (iconEl) iconEl.innerHTML = '✎';
         saveBtn.textContent = 'SALVAR ALTERAÇÕES';
         m.dataset.editId = opts.editId;
+
+        // Badge de ocorrência no topo do modal (se é série)
+        var oldBadge = m.querySelector('#mc-cal-modal-series-badge');
+        if (oldBadge) oldBadge.remove();
+        if (rep && rep.freq && rep.freq !== 'none') {
+          var freqLbl = { daily:'diária', weekly:'semanal', monthly:'mensal', yearly:'anual' }[rep.freq];
+          var endLbl = rep.end && rep.end.tipo === 'date' ? ' até '+rep.end.valor.split('-').reverse().join('/')
+                     : rep.end && rep.end.tipo === 'count' ? ' · '+rep.end.valor+' ocorrências'
+                     : ' · sem data de fim';
+          var badge = document.createElement('div');
+          badge.id = 'mc-cal-modal-series-badge';
+          badge.style.cssText = 'margin-bottom:14px;padding:8px 10px;background:rgba(113,83,160,0.08);border:1px solid rgba(113,83,160,0.25);border-radius:8px;font-size:11px;color:#7153A0;font-weight:600';
+          badge.innerHTML = '↻ Esta é uma <strong>série '+freqLbl+'</strong>'+endLbl+'. Alterações afetam todas as ocorrências.';
+          // Insere antes do primeiro campo (Data)
+          var firstField = m.querySelector('#mc-cal-modal-data').parentNode;
+          firstField.parentNode.insertBefore(badge, firstField);
+        }
 
         var delBtn = document.createElement('button');
         delBtn.id = 'mc-cal-modal-delete';
@@ -1773,6 +1960,15 @@ Router.register('mercado', function(main) {
       tituloInput.value = '';
       notaInput.value = '';
       tipoBox.querySelectorAll('button').forEach(function(b,i){ if (i===0) b.click(); });
+      // Reset repetição → "Não repete"
+      var repBtnNone = m.querySelector('#mc-cal-modal-repeat button[data-freq="none"]');
+      if (repBtnNone) repBtnNone.click();
+      var radioNever = m.querySelector('input[name="mc-cal-repend"][value="never"]');
+      if (radioNever) { radioNever.checked = true; radioNever.dispatchEvent(new Event('change')); }
+      // Remove badge de série (se veio de edição anterior)
+      var oldBadge = m.querySelector('#mc-cal-modal-series-badge');
+      if (oldBadge) oldBadge.remove();
+
       if (ttlEl) ttlEl.textContent = 'Adicionar evento';
       if (iconEl) iconEl.innerHTML = '+';
       saveBtn.textContent = 'SALVAR EVENTO';
@@ -1805,6 +2001,24 @@ Router.register('mercado', function(main) {
     if (!data) { alert('Preencha a data.'); return; }
     if (!titulo) { alert('Preencha o título.'); return; }
 
+    // Coleta configuração de repetição
+    var freq = (m.querySelector('#mc-cal-modal-repeat') || {}).dataset;
+    freq = freq ? freq.freq : 'none';
+    var repeat = null;
+    if (freq && freq !== 'none') {
+      var endRadio = m.querySelector('input[name="mc-cal-repend"]:checked');
+      var endType = endRadio ? endRadio.value : 'never';
+      var endValor = null;
+      if (endType === 'date') {
+        endValor = m.querySelector('#mc-cal-modal-repend-date').value;
+        if (!endValor) { alert('Escolha a data de término da repetição.'); return; }
+      } else if (endType === 'count') {
+        endValor = parseInt(m.querySelector('#mc-cal-modal-repend-count').value);
+        if (!endValor || endValor < 1) { alert('Informe um número válido de ocorrências.'); return; }
+      }
+      repeat = { freq:freq, end:{ tipo:endType, valor:endValor } };
+    }
+
     var editId = m.dataset.editId;
     if (editId) {
       // Edição: remove da posição antiga, adiciona na nova
@@ -1814,14 +2028,18 @@ Router.register('mercado', function(main) {
         if (all[k].length === 0) delete all[k];
       }
       if (!all[data]) all[data] = [];
-      all[data].push({ id:editId, tipo:tipo, titulo:titulo, nota:nota });
+      var evObj = { id:editId, tipo:tipo, titulo:titulo, nota:nota, data:data };
+      if (repeat) evObj.repeat = repeat;
+      all[data].push(evObj);
       _calSaveCustom(all);
     } else {
       // Criação
       var all = _calLoadCustom();
       if (!all[data]) all[data] = [];
       var id = 'c_'+Date.now()+'_'+Math.floor(Math.random()*1000);
-      all[data].push({ id:id, tipo:tipo, titulo:titulo, nota:nota });
+      var evObj = { id:id, tipo:tipo, titulo:titulo, nota:nota, data:data };
+      if (repeat) evObj.repeat = repeat;
+      all[data].push(evObj);
       _calSaveCustom(all);
     }
     _calCloseModal();
