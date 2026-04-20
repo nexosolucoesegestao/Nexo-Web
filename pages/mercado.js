@@ -343,7 +343,23 @@ Router.register('mercado', function(main) {
 
   // ── RENDER ─────────────────────────────────────────────────
   main.innerHTML = html;
-
+// ── HOVER CARDS (controle JS) ────────────────────────────
+  (function() {
+    main.querySelectorAll('.mc-cc').forEach(function(card) {
+      var t = null;
+      card.addEventListener('mouseenter', function() {
+        if (t) { clearTimeout(t); t = null; }
+        card.classList.add('hovered');
+      });
+      card.addEventListener('mouseleave', function(e) {
+        if (card.contains(e.relatedTarget)) return;
+        t = setTimeout(function() {
+          card.classList.remove('hovered');
+          t = null;
+        }, 80);
+      });
+    });
+  })();
   // ── PILLS ──────────────────────────────────────────────────
   main.querySelectorAll('.mc-pills').forEach(function(g) {
     g.querySelectorAll('.mc-pill').forEach(function(p) {
