@@ -1,6 +1,14 @@
 // ============================================================
 // NEXO Intelligence Web — pages/mercado.js
-// Mercado & Clima — v3.5 (Calendário interativo + storytelling IPCA)
+// Mercado & Clima — v3.5.1 (fix 4 bugs do calendário)
+// FIX 9 (v3.5.1): Eventos do usuário de QUALQUER tipo são editáveis
+//   Bug: tipo diferente de 'custom' não tinha data-custom-id nem title
+//   Bug: click handler só reagia a classe 'custom'
+//   Bug: tooltip só mostrava nota se tipo era 'custom'
+//   Bug: análise do mês não contava eventos do usuário
+//   Fix: atributos e handlers agora usam data-custom-id (independente
+//        do tipo) — tooltip mostra "Sua nota" + KB quando ambos existem
+//        — análise mostra "+ N eventos seus" em roxo quando > 0
 // FIX 1 (v2.3): Duplicidade de tooltip do "?"
 // FIX 2 (v2.5): Stacking do hover entre grupos do Painel
 // FIX 3 (v2.6): IPCA bars — estrutura .mc-ig-col pareando label+barra
@@ -1391,11 +1399,15 @@ Router.register('mercado', function(main) {
   function _calAnalyze(ano, mes) {
     var mesNome = CAL_MESES_LONG[mes];
     var totalDias = new Date(ano,mes+1,0).getDate();
-    var feriados = 0, sazons = 0;
+    var feriados = 0, sazons = 0, meus = 0, pagtos = 0;
     for (var d=1; d<=totalDias; d++) {
       _calEventsForDay(ano,mes,d).forEach(function(e){
-        if (e[0]==='feriado') feriados++;
-        if (e[0]==='sazon') sazons++;
+        // e[2] = id (existe só nos customs do usuário)
+        var isCustom = !!e[2];
+        if (isCustom) meus++;
+        else if (e[0]==='feriado') feriados++;
+        else if (e[0]==='sazon') sazons++;
+        else if (e[0]==='pagto') pagtos++;
       });
     }
     var narrativas = [
@@ -1412,7 +1424,7 @@ Router.register('mercado', function(main) {
       '<strong>Black Friday (27/11) + Consciência Negra + Proclamação</strong>. Mês mais promocional do varejo. Preparar estoque e comunicação.',
       '<strong>Natal + Virada + 13º integral</strong>. Pico absoluto de vendas. Reforçar aves, suíno pernil, tender e peças premium.'
     ];
-    return { titulo:'Análise de '+mesNome+' '+ano, narrativa:narrativas[mes], feriados:feriados, sazons:sazons };
+    return { titulo:'Análise de '+mesNome+' '+ano, narrativa:narrativas[mes], feriados:feriados, sazons:sazons, pagtos:pagtos, meus:meus };
   }
 
   // ── Rebuild do grid inteiro para (ano, mes) ──
@@ -1432,8 +1444,11 @@ Router.register('mercado', function(main) {
 
     function makeCell(num, extraCls, events) {
       var evHtml = (events||[]).map(function(e){
-        var extraAttr = e[0]==='custom' ? ' data-custom-id="'+(e[2]||'')+'"' : '';
-        var titleAttr = e[0]==='custom' && e[3] ? ' title="'+String(e[3]).replace(/"/g,'&quot;')+'"' : '';
+        // Atributos de evento editável: setados sempre que houver customId (e[2])
+        // — independente do tipo (custom/feriado/sazon/pagto/clima)
+        var hasCustomId = !!e[2];
+        var extraAttr = hasCustomId ? ' data-custom-id="'+e[2]+'"' : '';
+        var titleAttr = hasCustomId && e[3] ? ' title="'+String(e[3]).replace(/"/g,'&quot;')+'"' : '';
         return '<div class="mc-cev '+e[0]+'"'+extraAttr+titleAttr+'>'+e[1]+'</div>';
       }).join('');
       var numHtml = extraCls==='today'
@@ -1465,11 +1480,16 @@ Router.register('mercado', function(main) {
     var insEl = main.querySelector('.mc-mes-insight');
     if (insEl) {
       var anl = _calAnalyze(ano,mes);
+      // Linha base + sufixo com eventos do usuário quando houver
+      var baseLine = '<strong>'+anl.feriados+' feriados + '+anl.sazons+' datas sazonais</strong> neste mês.';
+      if (anl.meus > 0) {
+        baseLine += ' <strong style="color:#7153A0">+ '+anl.meus+' evento'+(anl.meus>1?'s':'')+' seu'+(anl.meus>1?'s':'')+'</strong>.';
+      }
       insEl.innerHTML =
         '<span class="mc-mes-icon">🧭</span>' +
         '<div>' +
           '<div class="mc-mes-ttl">'+anl.titulo+'</div>' +
-          '<div class="mc-mes-body"><strong>'+anl.feriados+' feriados + '+anl.sazons+' datas sazonais</strong> neste mês. '+anl.narrativa+'</div>' +
+          '<div class="mc-mes-body">'+baseLine+' '+anl.narrativa+'</div>' +
           '<div class="mc-mes-action">→ Navegue entre meses com ‹ › para explorar padrões sazonais.</div>' +
         '</div>';
     }
@@ -1578,7 +1598,8 @@ Router.register('mercado', function(main) {
     var cat = Object.keys(CAL_CAT_COLOR).find(function(k){ return ev.classList.contains(k); }) || 'custom';
     var kb = _calFindKB(txt) || _calKBByCategory(cat, txt);
     var prio = kb ? CAL_PRIO[kb.prio] : null;
-    var customNote = cat === 'custom' ? ev.getAttribute('title') : null;
+    // Nota do usuário: qualquer evento editável (data-custom-id) com título
+    var userNote = ev.getAttribute('data-custom-id') ? ev.getAttribute('title') : null;
 
     var html =
       '<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,0.1)">' +
@@ -1593,13 +1614,20 @@ Router.register('mercado', function(main) {
           '<div style="font-size:9px;color:#C9A84C;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;margin-bottom:3px">Por quê</div>' +
           '<div style="color:rgba(255,255,255,0.82)">'+kb.ctx+'</div>' +
         '</div>' +
-        '<div>' +
+        '<div style="margin-bottom:'+(userNote?'8px':'0')+'">' +
           '<div style="font-size:9px;color:#50D282;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;margin-bottom:3px">Ação recomendada</div>' +
           '<div style="color:rgba(255,255,255,0.92);font-weight:500">'+kb.acao+'</div>' +
         '</div>';
-    } else if (customNote) {
-      html += '<div><div style="font-size:9px;color:#C9A84C;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;margin-bottom:3px">Nota</div><div style="color:rgba(255,255,255,0.82)">'+customNote+'</div></div>';
-    } else {
+    }
+    // Nota do usuário aparece SEMPRE que existe, mesmo junto com KB
+    if (userNote) {
+      html +=
+        '<div style="'+(kb?'padding-top:8px;border-top:1px solid rgba(255,255,255,0.1)':'')+'">' +
+          '<div style="font-size:9px;color:#C9A84C;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;margin-bottom:3px">Sua nota</div>' +
+          '<div style="color:rgba(255,255,255,0.82)">'+userNote+'</div>' +
+        '</div>';
+    }
+    if (!kb && !userNote) {
       html += '<div style="color:rgba(255,255,255,0.6);font-style:italic">Evento sem insight detalhado.</div>';
     }
     calEvTip.innerHTML = html;
@@ -1834,13 +1862,13 @@ Router.register('mercado', function(main) {
       _calOpenModal(iso);
     });
 
-    // Click em evento custom → abre modal em modo edição
+    // Click em evento editável (qualquer tipo, desde que tenha data-custom-id)
+    // → abre modal em modo edição
     calGrid.addEventListener('click', function(e){
       var ev = e.target.closest('.mc-cev');
       if (!ev) return;
-      if (!ev.classList.contains('custom')) return;
       var customId = ev.getAttribute('data-custom-id');
-      if (!customId) return;
+      if (!customId) return; // evento de sistema (sem id), ignora
       e.stopPropagation();
       e.preventDefault();
       _calOpenModal({ mode:'edit', editId:customId });
@@ -1861,12 +1889,12 @@ Router.register('mercado', function(main) {
     if (e.key === 'Enter' && e.ctrlKey) _calSubmit();
   });
 
-  // Cursor pointer em eventos custom
+  // Cursor pointer em eventos editáveis (qualquer tipo com data-custom-id)
   if (!document.getElementById('mc-cal-custom-cursor')) {
     var s = document.createElement('style');
     s.id = 'mc-cal-custom-cursor';
-    s.textContent = '.mc-cal-grid .mc-cev.custom { cursor: pointer !important; }' +
-                    '.mc-cal-grid .mc-cev.custom:hover { transform: translateX(2px); transition: transform .15s; }';
+    s.textContent = '.mc-cal-grid .mc-cev[data-custom-id] { cursor: pointer !important; }' +
+                    '.mc-cal-grid .mc-cev[data-custom-id]:hover { transform: translateX(2px); transition: transform .15s; }';
     document.head.appendChild(s);
   }
 
