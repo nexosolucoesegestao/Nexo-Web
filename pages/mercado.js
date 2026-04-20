@@ -1,13 +1,11 @@
 // ============================================================
 // NEXO Intelligence Web — pages/mercado.js
-// Mercado & Clima — v2.4
-// FIX 1: Duplicidade de tooltip — .mc-ht interno desativado,
-//        apenas #mc-global-tip renderiza o popover do "?"
-// FIX 2 (revisado): Stacking correto no hover
-//        - isolation:isolate em .mc-grupos-outer e .mc-grupo-cards
-//        - position:relative no container dos grupos
-//        - Irmãos ficam em position:static (sem competir)
-//        - Apenas o card expandido recebe position:relative + z-index
+// Mercado & Clima — v2.5
+// FIX 1: Duplicidade de tooltip — .mc-ht interno desativado
+// FIX 2 (v2.5): Stacking do hover entre grupos
+//   - ÚNICO isolation:isolate no .mc-grupos-outer
+//   - Grupos internos SEM isolation/position (transbordo livre)
+//   - Irmãos em position:static, card expandido em z-index:9999
 // ============================================================
 Router.register('mercado', function(main) {
   var MESES = ['Nov/25','Dez/25','Jan/26','Fev/26','Mar/26','Abr/26'];
@@ -231,46 +229,42 @@ Router.register('mercado', function(main) {
   });
 
   // ══════════════════════════════════════════════════════════
-  // FIX 2 (v2.4): Stacking correto no hover dos cards
+  // FIX 2 (v2.5): Stacking correto no hover dos cards
   //
-  // Raciocínio:
-  //  - transform:scale cria novo stacking context no card.
-  //  - Se os irmãos também tiverem position:relative, eles
-  //    competem no MESMO contexto pai e o último no DOM pinta
-  //    por cima. Por isso o fix anterior falhou.
-  //  - Solução: deixar os irmãos em `position:static` (padrão)
-  //    e só o card expandido com position:relative + z-index.
-  //  - Promover .mc-grupos-outer a `isolation:isolate` garante
-  //    que o stacking fique contido no painel e o card elevado
-  //    não seja rebaixado por nada externo.
+  // Aprendizado da v2.4: `isolation:isolate` em cada
+  // `.mc-grupo-cards` criava fronteiras de pintura que
+  // impediam o card expandido de um grupo transbordar para
+  // cima do grupo vizinho (o 1º card do grupo seguinte ficava
+  // por cima do último card expandido do grupo anterior).
+  //
+  // Solução: UM ÚNICO stacking context no `.mc-grupos-outer`.
+  // Os grupos internos NÃO recebem isolation nem position,
+  // funcionam só como layout. Os 9 cards competem todos no
+  // mesmo contexto — z-index alto vence qualquer ordem DOM.
+  //
+  // Irmãos ficam em position:static (sem z-index), apenas o
+  // card expandido recebe position:relative + z-index:9999.
   // ══════════════════════════════════════════════════════════
   (function() {
     var allCards = Array.prototype.slice.call(
       main.querySelectorAll('.mc-ctx-block .mc-cc')
     );
 
-    // Promove o container pai a stacking context isolado
+    // ÚNICO stacking context: no wrapper externo dos grupos
     var outer = main.querySelector('.mc-ctx-block .mc-grupos-outer');
     if (outer) {
       outer.style.setProperty('isolation', 'isolate', 'important');
     }
 
-    // Todos os grupos também isolados — garante que a ordem
-    // natural do DOM entre grupos não interfira
-    main.querySelectorAll('.mc-ctx-block .mc-grupo-cards').forEach(function(gc) {
-      gc.style.setProperty('isolation', 'isolate', 'important');
-      // Grupo também precisa de position para o card expandido
-      // poder escapar visualmente do grid
-      gc.style.setProperty('position', 'relative', 'important');
-    });
+    // IMPORTANTE: NÃO adicionar isolation nem position nos
+    // .mc-grupo-cards — isso criaria fronteiras internas
+    // impedindo o transbordo visual entre grupos.
 
     allCards.forEach(function(card) {
       var t = null;
       var insight = card.querySelector('.mc-cc-insight');
 
       function expand() {
-        // Eleva APENAS o card atual. Os irmãos permanecem em
-        // `position:static` (padrão) — sem competir por z-index.
         card.style.setProperty('position', 'relative', 'important');
         card.style.setProperty('z-index', '9999', 'important');
         card.style.setProperty('transform', 'scale(1.32)', 'important');
