@@ -2131,3 +2131,20 @@ body::before{
 .mc-cc.c7 .mc-cc-val { color: #C0504D !important; }
 .mc-cc.c8 .mc-cc-val { color: #2D8653 !important; }
 .mc-cc.c6 .mc-cc-val { color: #7153A0 !important; }
+
+/* =========================================================
+   FIX v3.14 — Barra lateral do section-block na frente do
+   card expandido do Painel de Contexto.
+   
+   Causa: .mc-grupos-outer tem isolation:isolate, criando
+   stacking context próprio. No contexto pai (section-block),
+   o wrapper fica em z:auto (=0), abaixo do ::before (z:1).
+   z-index:9999 do card hover é LOCAL e não vence a barra.
+   
+   Fix: promove o wrapper a z:2, garantindo que todos os
+   cards fiquem sempre acima da barra decorativa.
+   ========================================================= */
+.mc-grupos-outer {
+  position: relative !important;
+  z-index: 2 !important;
+}
